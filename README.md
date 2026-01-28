@@ -1,4 +1,4 @@
-# BIMSC Studio HB1
+# BIMSC Studio HB1 - Hi hello
 
 A webapp for MACAD BIMSC Studio Hyperbuilding 1, built by the Data team of HB1.
 
@@ -23,6 +23,7 @@ Then open http://localhost:5173 in your browser.
 | `npm run preview` | Preview production build |
 
 ## Project Structure
+
 
 ```
 src/
