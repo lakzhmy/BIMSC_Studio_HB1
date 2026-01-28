@@ -1,8 +1,13 @@
 import { useState } from 'react';
 import { Sidebar } from './components/Sidebar';
-import { Dashboard } from './pages/Dashboard';
-import { KPIDashboard } from './pages/KPIDashboard';
-import { PlaceholderPage } from './pages/PlaceholderPage';
+import {
+  Dashboard,
+  KPIDashboard,
+  MeetingsPage,
+  ActionsPage,
+  Viewer3DPage,
+  TeamsPage,
+} from './pages';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('dashboard');
@@ -14,33 +19,13 @@ function App() {
       case 'kpi':
         return <KPIDashboard />;
       case 'meetings':
-        return (
-          <PlaceholderPage
-            title="Meetings"
-            description="View and manage team meetings, meeting notes, and outcomes."
-          />
-        );
+        return <MeetingsPage />;
       case 'actions':
-        return (
-          <PlaceholderPage
-            title="Action Items"
-            description="Track action items across all teams with a Kanban-style board."
-          />
-        );
+        return <ActionsPage />;
       case '3d-viewer':
-        return (
-          <PlaceholderPage
-            title="3D Viewer"
-            description="View and interact with 3D models via Speckle integration."
-          />
-        );
+        return <Viewer3DPage />;
       case 'teams':
-        return (
-          <PlaceholderPage
-            title="Teams"
-            description="Manage team members and view team-specific dashboards."
-          />
-        );
+        return <TeamsPage />;
       default:
         return <Dashboard onNavigate={setCurrentPage} />;
     }

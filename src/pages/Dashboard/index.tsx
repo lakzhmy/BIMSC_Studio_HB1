@@ -1,5 +1,5 @@
 import { ArrowRight, Calendar, CheckCircle, AlertCircle } from 'lucide-react';
-import { currentKPIs, actionItems, meetings, teams } from '../data/sampleData';
+import { currentKPIs, actionItems, meetings, teams } from '../../data/sampleData';
 
 interface DashboardProps {
   onNavigate: (page: string) => void;

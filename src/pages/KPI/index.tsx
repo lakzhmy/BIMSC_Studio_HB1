@@ -12,8 +12,8 @@ import {
   Area,
 } from 'recharts';
 import { Calendar, Download, RefreshCw, Filter } from 'lucide-react';
-import { KPICard } from '../components/KPICard';
-import { currentKPIs, kpiHistory, teams } from '../data/sampleData';
+import { KPICard } from './components/KPICard';
+import { currentKPIs, kpiHistory, teams } from '../../data/sampleData';
 
 type TimeRange = '1w' | '1m' | '3m' | 'all';
 type KPIMetric = 'embodied_carbon' | 'floor_area' | 'energy_use' | 'facade_ratio' | 'structural_efficiency' | 'daylight_factor';
