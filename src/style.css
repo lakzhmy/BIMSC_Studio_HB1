@@ -1,0 +1,69 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-white text-slate-900;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+}
+
+@layer components {
+  /* ============ LIGHT MODE STYLES ============ */
+  
+  /* Breathing container effect - Light Mode */
+  .breathing-container {
+    @apply animate-breathe-slow;
+    background: linear-gradient(135deg, #fafafa 0%, #f1f5f9 50%, #e2e8f0 100%);
+  }
+
+  /* Floating bubble particles - Light Mode */
+  .bubble {
+    @apply absolute rounded-full pointer-events-none;
+    background: radial-gradient(circle at 30% 30%, rgba(59, 130, 246, 0.15), rgba(139, 92, 246, 0.08));
+    box-shadow: 0 4px 20px rgba(99, 102, 241, 0.1);
+  }
+
+  /* Cellular blob styles - Light Mode */
+  .blob {
+    @apply relative rounded-full transition-all duration-500;
+    background: linear-gradient(45deg, #667eea 0%, #764ba2 100%);
+    box-shadow: 0 10px 40px rgba(102, 126, 234, 0.3);
+  }
+
+  .blob-animated {
+    @apply animate-pulse-blob;
+  }
+
+  /* Card styles */
+  .card {
+    @apply bg-white border border-slate-200 rounded-xl shadow-sm;
+  }
+
+  .card-hover {
+    @apply transition-all duration-200 hover:shadow-md hover:border-slate-300;
+  }
+
+  /* Input styles */
+  .input-field {
+    @apply w-full px-4 py-2.5 bg-white border border-slate-300 rounded-lg
+           focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
+           text-slate-900 placeholder-slate-400 transition-all;
+  }
+
+  /* Button styles */
+  .btn-primary {
+    @apply px-6 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600
+           hover:from-blue-700 hover:to-purple-700 text-white font-medium rounded-lg
+           transition-all duration-200 transform hover:scale-105
+           focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2;
+  }
+
+  /* Organic machine aesthetic */
+  .organic-glow {
+    box-shadow: 0 0 20px rgba(99, 102, 241, 0.15),
+                0 0 40px rgba(139, 92, 246, 0.1);
+  }
+}
+
