@@ -1,4 +1,4 @@
-# Lung Tower Studio
+# BIMSC Studio HB1 - Hi hello
 
 A modern Vue 3 single-page application for architectural BIM project management. This application is designed to facilitate team collaboration, KPI tracking, meeting management, and 3D visualization for a high-rise building project called "Lung Tower."
 
@@ -75,6 +75,7 @@ npm run preview
 Serves the production build locally for testing before deployment.
 
 ## Project Structure
+
 
 ```
 ├── src/
