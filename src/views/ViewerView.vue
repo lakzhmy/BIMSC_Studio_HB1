@@ -110,28 +110,6 @@
               <div class="text-white/60 text-xs mt-2 whitespace-nowrap font-medium">(Click to delete)</div>
             </div>
           </div>
-          <div class="bg-slate-100 border-t border-slate-200 p-6">
-            <div class="flex flex-col gap-4">
-              <div class="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
-                <span class="text-sm font-medium text-slate-700 whitespace-nowrap">Timeline:</span>
-                <input
-                  v-model.number="currentVersion"
-                  type="range"
-                  min="1"
-                  max="10"
-                  class="flex-1 h-2 bg-slate-300 rounded-lg appearance-none cursor-pointer"
-                  @input="updateModelVersion"
-                />
-                <div class="text-sm font-semibold text-slate-900 bg-white px-4 py-2 rounded-lg min-w-fit text-center">
-                  Version {{ currentVersion }} / 10
-                </div>
-              </div>
-              <div class="text-sm text-slate-700">
-                <span class="font-medium block mb-1">Showing:</span>
-                <span class="font-semibold text-slate-900 text-base">{{ versionLabels[currentVersion - 1] }}</span>
-              </div>
-            </div>
-          </div>
         </div>
 
         <!-- Info Panel -->
@@ -140,9 +118,6 @@
             <h4 class="font-semibold text-slate-900 mb-2">Current View</h4>
             <p class="text-sm text-slate-600">
               Rotation: {{ modelRotation.x.toFixed(2) }} rad, {{ modelRotation.y.toFixed(2) }} rad
-            </p>
-            <p class="text-sm text-slate-600 mt-1">
-              Zoom: {{ zoomLevel.toFixed(2) }}x
             </p>
           </div>
           <div class="bg-white p-4 rounded-lg border border-slate-200">
@@ -181,7 +156,6 @@ const userStore = useUserStore()
 
 const canvas = ref(null)
 const canvasContainer = ref(null)
-const currentVersion = ref(1)
 const stickyNotes = ref([])
 const annotation3DMarkers = ref([]) // 3D markers
 const nextMarkerId = ref(0)
@@ -189,8 +163,6 @@ const hoveredAnnotationIdx = ref(null)
 const hoveredAnnotationPos = ref({ x: 0, y: 0 })
 const hoveredAnnotationColor = ref('#000000')
 const modelRotation = ref({ x: 0, y: 0 })
-const zoomLevel = ref(1)
-const userColor = ref('#3b82f6')
 const showAnnotationInput = ref(false)
 const pendingAnnotation = ref({ floor: 0, zone: '', text: '', x: 0, y: 0, z: 0, team: 'data', point: null })
 
@@ -198,19 +170,6 @@ const teamOptions = [
   { label: 'Data', value: 'data', color: '#ef4444' },
   { label: 'Structure', value: 'structure', color: '#22c55e' },
   { label: 'Program', value: 'program', color: '#3b82f6' }
-]
-
-const versionLabels = [
-  'Foundation Phase',
-  'Structural Core',
-  'Lower Levels (1-50)',
-  'Mid Levels (51-100)',
-  'Upper Levels (101-150)',
-  'Top Levels (151-200)',
-  'MEP Installation',
-  'Interior Finishes',
-  'Systems Testing',
-  'Final Review'
 ]
 
 const navigationItems = [
@@ -223,18 +182,11 @@ const navigationItems = [
 ]
 
 let scene, camera, renderer, tower, towerMesh
-let raycaster, mouse, intersects
+let raycaster, mouse
 let isDragging = false
 let previousMousePosition = { x: 0, y: 0 }
 
 function initThreeJS() {
-  // Get user color from store
-  const teamColors = {
-    'structure-facade': '#ef4444',
-    'program': '#22c55e',
-    'data': '#3b82f6'
-  }
-  userColor.value = teamColors[userStore.selectedTeam] || '#3b82f6'
 
   // Scene setup
   scene = new THREE.Scene()
@@ -359,7 +311,6 @@ function onMouseDown(event) {
 }
 
 function onMouseMove(event) {
-  window.console.log('onMouseMove called')
   // Handle camera dragging
   if (isDragging && tower) {
     const deltaX = event.clientX - previousMousePosition.x
@@ -449,14 +400,11 @@ function onCanvasClick(event) {
   // First check if clicking on a marker to delete
   if (annotation3DMarkers.value.length > 0) {
     const markerIntersects = raycaster.intersectObjects(annotation3DMarkers.value)
-    console.log('Marker intersects:', markerIntersects.length)
     if (markerIntersects.length > 0) {
       const clickedMarker = markerIntersects[0].object
       const markerId = clickedMarker.userData.markerId
-      console.log('Clicked marker with ID:', markerId)
       // Find note with this marker ID and remove it
       const noteIdx = stickyNotes.value.findIndex(note => note.markerId === markerId)
-      console.log('Found note at index:', noteIdx)
       if (noteIdx !== -1) {
         removeNote(noteIdx)
         return
@@ -508,8 +456,6 @@ function saveAnnotation() {
     const teamColor = teamOptions.find(t => t.value === pendingAnnotation.value.team)?.color || '#3b82f6'
     const markerId = nextMarkerId.value++
     
-    console.log('Saving annotation with markerId:', markerId)
-    
     const note = {
       floor: pendingAnnotation.value.floor,
       zone: pendingAnnotation.value.zone,
@@ -538,7 +484,6 @@ function saveAnnotation() {
       scene.add(marker)
       
       annotation3DMarkers.value.push(marker)
-      console.log('Marker created and added to scene. Total markers:', annotation3DMarkers.value.length)
     }
   }
   cancelAnnotation()
@@ -565,44 +510,6 @@ function onMouseWheel(event) {
   camera.position.copy(currentDir.multiplyScalar(currentDistance).add(towerCenter))
   camera.lookAt(towerCenter)
   
-  zoomLevel.value = currentDistance
-}
-
-function updateModelVersion() {
-  // Color transition based on version
-  if (towerMesh && towerMesh.material) {
-    const versionFraction = (currentVersion.value - 1) / 9
-    
-    // Create new gradient based on version
-    const canvas = document.createElement('canvas')
-    canvas.width = 64
-    canvas.height = 512
-    const ctx = canvas.getContext('2d')
-    
-    // Shift hue based on version
-    const hueShift = versionFraction * 0.3
-    
-    // Create gradient that shifts colors
-    const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height)
-    
-    // Base colors that shift with version
-    const bottomHue = (0.33 + hueShift) % 1 // Green shifting
-    const topHue = (0.66 + hueShift) % 1    // Blue shifting
-    
-    const bottomColor = new THREE.Color().setHSL(bottomHue, 0.7, 0.5)
-    const topColor = new THREE.Color().setHSL(topHue, 0.7, 0.5)
-    
-    gradient.addColorStop(0, '#' + bottomColor.getHexString())
-    gradient.addColorStop(1, '#' + topColor.getHexString())
-    
-    ctx.fillStyle = gradient
-    ctx.fillRect(0, 0, canvas.width, canvas.height)
-    
-    const texture = new THREE.CanvasTexture(canvas)
-    texture.magFilter = THREE.NearestFilter
-    towerMesh.material.map = texture
-    towerMesh.material.map.needsUpdate = true
-  }
 }
 
 function removeNote(idx) {
@@ -611,22 +518,15 @@ function removeNote(idx) {
   const noteToRemove = stickyNotes.value[idx]
   const markerId = noteToRemove.markerId
   
-  console.log('Removing note with markerId:', markerId, 'from', annotation3DMarkers.value.length, 'markers')
-  
   // Find and remove the marker from scene by markerId
   const markerToRemoveIdx = annotation3DMarkers.value.findIndex(
     marker => marker.userData.markerId === markerId
   )
   
-  console.log('Found marker at index:', markerToRemoveIdx)
-  
   if (markerToRemoveIdx !== -1) {
     const markerToRemove = annotation3DMarkers.value[markerToRemoveIdx]
-    console.log('Marker to remove:', markerToRemove)
-    console.log('Scene:', scene)
     if (scene && markerToRemove) {
       scene.remove(markerToRemove)
-      console.log('Removed from scene')
       // Dispose of geometry and material
       if (markerToRemove.geometry) markerToRemove.geometry.dispose()
       if (markerToRemove.material) markerToRemove.material.dispose()
