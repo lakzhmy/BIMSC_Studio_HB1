@@ -25,7 +25,7 @@
       <div class="max-w-7xl mx-auto">
         <div class="mb-6">
           <h1 class="text-3xl font-bold text-slate-900">3D Building Viewer</h1>
-          <p class="text-slate-600 mt-1">Click on the tower to add sticky notes • Use the timeline to travel through versions</p>
+          <p class="text-slate-600 mt-1">Explore building versions with the timeline slider</p>
         </div>
 
         <!-- Main Viewer Area -->
@@ -33,100 +33,39 @@
           <!-- 3D Canvas -->
           <div ref="canvasContainer" class="flex-1 relative">
             <canvas ref="canvas" class="w-full h-full"></canvas>
-            
-            <!-- Instructions Overlay -->
-            <div class="absolute top-4 left-4 bg-slate-900/80 text-white text-xs rounded-lg p-3 max-w-xs">
-              <p class="font-semibold mb-2">3D Tower Controls:</p>
-              <ul class="space-y-1 text-slate-300">
-                <li>• <strong>Drag</strong> to rotate</li>
-                <li>• <strong>Scroll</strong> to zoom (Rhino-style)</li>
-                <li>• <strong>Click</strong> to add annotation</li>
-                <li>• <strong>Hover</strong> point to see annotation</li>
-              </ul>
-            </div>
+          </div>
+        </div>
 
-            <!-- Annotation Input Modal -->
-            <div
-              v-if="showAnnotationInput"
-              class="absolute inset-0 bg-black/40 flex items-center justify-center z-50"
-              @click.self="cancelAnnotation"
-            >
-              <div class="bg-white rounded-lg shadow-xl p-6 max-w-sm w-full mx-4">
-                <h3 class="text-lg font-semibold text-slate-900 mb-2">Add Annotation</h3>
-                <p class="text-sm text-slate-600 mb-4">
-                  Level {{ pendingAnnotation.floor }} - {{ pendingAnnotation.zone }}
-                </p>
-                <textarea
-                  v-model="pendingAnnotation.text"
-                  class="w-full h-24 px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm mb-4"
-                  placeholder="Enter your annotation text..."
-                ></textarea>
-                
-                <!-- Team Selection Dropdown -->
-                <div class="mb-4">
-                  <label class="block text-sm font-medium text-slate-700 mb-2">Assign to Team:</label>
-                  <select
-                    v-model="pendingAnnotation.team"
-                    class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                  >
-                    <option v-for="team in teamOptions" :key="team.value" :value="team.value">
-                      {{ team.label }}
-                    </option>
-                  </select>
-                </div>
-                
-                <div class="flex gap-3">
-                  <button
-                    @click="cancelAnnotation"
-                    class="flex-1 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-900 rounded-lg font-medium transition-colors text-sm"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    @click="saveAnnotation"
-                    class="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors text-sm"
-                  >
-                    Save
-                  </button>
-                </div>
+        <!-- Timeline Control -->
+        <div class="bg-white rounded-lg border border-slate-200 p-6 mt-6">
+          <div class="flex flex-col gap-4">
+            <div class="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+              <span class="text-sm font-medium text-slate-700 whitespace-nowrap">Project Timeline:</span>
+              <input
+                v-model.number="currentVersion"
+                type="range"
+                min="1"
+                max="10"
+                class="flex-1 h-2 bg-slate-300 rounded-lg appearance-none cursor-pointer"
+                @input="updateModelVersion"
+              />
+              <div class="text-sm font-semibold text-slate-900 bg-slate-100 px-4 py-2 rounded-lg min-w-fit text-center">
+                Version {{ currentVersion }} / 10
               </div>
             </div>
-
-            <!-- 3D Annotation Hover Tooltip -->
-            <div
-              v-if="hoveredAnnotationIdx !== null"
-              class="absolute text-white text-xs rounded-lg p-3 shadow-xl z-20 cursor-pointer transition-opacity hover:opacity-90"
-              :style="{ 
-                left: hoveredAnnotationPos.x + 'px', 
-                top: hoveredAnnotationPos.y + 'px', 
-                transform: 'translate(-50%, -100%)',
-                backgroundColor: hoveredAnnotationColor
-              }"
-              @click="removeNote(hoveredAnnotationIdx)"
-            >
-              <div class="font-semibold whitespace-nowrap">L{{ stickyNotes.value[hoveredAnnotationIdx].floor }} - {{ stickyNotes.value[hoveredAnnotationIdx].zone }}</div>
-              <div class="text-white/90 text-xs mt-2 max-w-xs">{{ stickyNotes.value[hoveredAnnotationIdx].text }}</div>
-              <div class="text-white/70 text-xs mt-2 whitespace-nowrap">{{ new Date(stickyNotes.value[hoveredAnnotationIdx].timestamp).toLocaleString() }}</div>
-              <div class="text-white/60 text-xs mt-2 whitespace-nowrap font-medium">(Click to delete)</div>
+            <div class="text-sm text-slate-700">
+              <span class="font-medium block mb-1">Current Phase:</span>
+              <span class="font-semibold text-slate-900 text-base">{{ versionLabels[currentVersion - 1] }}</span>
             </div>
           </div>
         </div>
 
         <!-- Info Panel -->
-        <div class="grid grid-cols-3 gap-4 mt-6">
+        <div class="grid grid-cols-2 gap-4 mt-6">
           <div class="bg-white p-4 rounded-lg border border-slate-200">
             <h4 class="font-semibold text-slate-900 mb-2">Current View</h4>
             <p class="text-sm text-slate-600">
               Rotation: {{ modelRotation.x.toFixed(2) }} rad, {{ modelRotation.y.toFixed(2) }} rad
-            </p>
-          </div>
-          <div class="bg-white p-4 rounded-lg border border-slate-200">
-            <h4 class="font-semibold text-slate-900 mb-2">Annotations</h4>
-            <p class="text-sm text-slate-600">
-              Total sticky notes: <span class="font-semibold">{{ stickyNotes.length }}</span>
-            </p>
-            <p class="text-sm text-slate-600 mt-1">
-              Click on tower to add more
             </p>
           </div>
           <div class="bg-white p-4 rounded-lg border border-slate-200">
@@ -156,20 +95,20 @@ const userStore = useUserStore()
 
 const canvas = ref(null)
 const canvasContainer = ref(null)
-const stickyNotes = ref([])
-const annotation3DMarkers = ref([]) // 3D markers
-const nextMarkerId = ref(0)
-const hoveredAnnotationIdx = ref(null)
-const hoveredAnnotationPos = ref({ x: 0, y: 0 })
-const hoveredAnnotationColor = ref('#000000')
+const currentVersion = ref(1)
 const modelRotation = ref({ x: 0, y: 0 })
-const showAnnotationInput = ref(false)
-const pendingAnnotation = ref({ floor: 0, zone: '', text: '', x: 0, y: 0, z: 0, team: 'data', point: null })
 
-const teamOptions = [
-  { label: 'Data', value: 'data', color: '#ef4444' },
-  { label: 'Structure', value: 'structure', color: '#22c55e' },
-  { label: 'Program', value: 'program', color: '#3b82f6' }
+const versionLabels = [
+  'Foundation Phase',
+  'Structural Core',
+  'Lower Levels (1-50)',
+  'Mid Levels (51-100)',
+  'Upper Levels (101-150)',
+  'Top Levels (151-200)',
+  'MEP Installation',
+  'Interior Finishes',
+  'Systems Testing',
+  'Final Review'
 ]
 
 const navigationItems = [
@@ -182,33 +121,41 @@ const navigationItems = [
 ]
 
 let scene, camera, renderer, tower, towerMesh
-let raycaster, mouse
 let isDragging = false
 let previousMousePosition = { x: 0, y: 0 }
 
 function initThreeJS() {
+  console.log('initThreeJS called')
+  console.log('canvasContainer.value:', canvasContainer.value)
+  console.log('canvas.value:', canvas.value)
 
   // Scene setup
   scene = new THREE.Scene()
-  scene.background = new THREE.Color(0xffffff)
+  scene.background = new THREE.Color(0xd1d5db)
 
   // Perspective Camera setup
-  const width = canvasContainer.value.clientWidth
-  const height = canvasContainer.value.clientHeight
+  const width = canvasContainer.value.clientWidth || window.innerWidth
+  const height = canvasContainer.value.clientHeight || 700
+  console.log('Canvas dimensions:', width, 'x', height)
+  
+  if (width === 0 || height === 0) {
+    console.warn('Canvas has invalid dimensions, retrying...')
+    setTimeout(initThreeJS, 100)
+    return
+  }
   
   camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 2000)
-  camera.position.set(80, 50, 80)
+  camera.position.set(50, 60, 50)
   camera.lookAt(0, 50, 0)
 
   // Renderer setup
+  canvas.value.width = width
+  canvas.value.height = height
   renderer = new THREE.WebGLRenderer({ canvas: canvas.value, antialias: true })
   renderer.setSize(width, height)
   renderer.setPixelRatio(window.devicePixelRatio)
   renderer.shadowMap.enabled = true
-
-  // Raycaster for clicking
-  raycaster = new THREE.Raycaster()
-  mouse = new THREE.Vector2()
+  console.log('Renderer created and sized:', width, 'x', height)
 
   // Lighting
   const ambientLight = new THREE.AmbientLight(0xffffff, 0.7)
@@ -223,6 +170,10 @@ function initThreeJS() {
 
   // Create tower
   createTower()
+
+  // Add axes helper for debugging
+  const axesHelper = new THREE.AxesHelper(50)
+  scene.add(axesHelper)
 
   // Create ground plane
   const groundGeometry = new THREE.PlaneGeometry(300, 300)
@@ -241,7 +192,6 @@ function initThreeJS() {
   canvas.value.addEventListener('mousedown', onMouseDown)
   canvas.value.addEventListener('mousemove', onMouseMove)
   canvas.value.addEventListener('mouseup', onMouseUp)
-  canvas.value.addEventListener('click', onCanvasClick)
   canvas.value.addEventListener('wheel', onMouseWheel, { passive: false })
   window.addEventListener('resize', onWindowResize)
 
@@ -250,6 +200,7 @@ function initThreeJS() {
 }
 
 function createTower() {
+  console.log('createTower called')
   tower = new THREE.Group()
   
   // Create a single tower that sits on the ground
@@ -262,19 +213,19 @@ function createTower() {
   const geometry = new THREE.BoxGeometry(towerWidth, towerHeight, towerDepth)
   
   // Create a canvas texture with vertical gradient
-  const canvas = document.createElement('canvas')
-  canvas.width = 64
-  canvas.height = 512
-  const ctx = canvas.getContext('2d')
+  const textureCanvas = document.createElement('canvas')
+  textureCanvas.width = 64
+  textureCanvas.height = 512
+  const ctx = textureCanvas.getContext('2d')
   
   // Draw gradient from green (bottom) to blue (top)
-  const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height)
+  const gradient = ctx.createLinearGradient(0, 0, 0, textureCanvas.height)
   gradient.addColorStop(0, '#22c55e') // Green at bottom
   gradient.addColorStop(1, '#3b82f6') // Blue at top
   ctx.fillStyle = gradient
-  ctx.fillRect(0, 0, canvas.width, canvas.height)
+  ctx.fillRect(0, 0, textureCanvas.width, textureCanvas.height)
   
-  const texture = new THREE.CanvasTexture(canvas)
+  const texture = new THREE.CanvasTexture(textureCanvas)
   texture.magFilter = THREE.NearestFilter
   
   const material = new THREE.MeshStandardMaterial({
@@ -303,6 +254,7 @@ function createTower() {
   tower.add(mesh)
   tower.position.y = 0
   scene.add(tower)
+  console.log('Tower added to scene:', tower)
 }
 
 function onMouseDown(event) {
@@ -336,162 +288,48 @@ function onMouseMove(event) {
     camera.lookAt(towerCenter)
     
     previousMousePosition = { x: event.clientX, y: event.clientY }
-    return
   }
-  
-  // Check for marker hover (only when not dragging)
-  if (!canvas.value) return
-  
-  const rect = canvas.value.getBoundingClientRect()
-  mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1
-  mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1
-  
-  raycaster.setFromCamera(mouse, camera)
-  
-  // Check intersection with all markers
-  if (annotation3DMarkers.value && annotation3DMarkers.value.length > 0) {
-    // Pass the actual array values to raycaster
-    const intersects = raycaster.intersectObjects(annotation3DMarkers.value, false)
-    
-    if (intersects && intersects.length > 0) {
-      const hoverMarker = intersects[0].object
-      const markerId = hoverMarker.userData?.markerId
-      
-      // Find the note with this markerId
-      const noteIdx = stickyNotes.value.findIndex(note => note.markerId === markerId)
-      
-      if (noteIdx !== -1) {
-        hoveredAnnotationIdx.value = noteIdx
-        hoveredAnnotationColor.value = stickyNotes.value[noteIdx]?.color || '#000000'
-        
-        // Convert 3D position to screen coordinates
-        const screenPos = new THREE.Vector3()
-        screenPos.copy(hoverMarker.position)
-        screenPos.project(camera)
-        
-        hoveredAnnotationPos.value = {
-          x: (screenPos.x * 0.5 + 0.5) * rect.width,
-          y: (screenPos.y * -0.5 + 0.5) * rect.height
-        }
-        return
-      }
-    }
-  }
-  
-  hoveredAnnotationIdx.value = null
 }
 
 function onMouseUp() {
   isDragging = false
 }
 
-function onCanvasClick(event) {
-  // Don't add annotation if input modal is showing
-  if (showAnnotationInput.value) return
-  
-  // Calculate mouse position in normalized device coordinates
-  const rect = canvas.value.getBoundingClientRect()
-  mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1
-  mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1
-
-  // Update raycaster
-  raycaster.setFromCamera(mouse, camera)
-  
-  // First check if clicking on a marker to delete
-  if (annotation3DMarkers.value.length > 0) {
-    const markerIntersects = raycaster.intersectObjects(annotation3DMarkers.value)
-    if (markerIntersects.length > 0) {
-      const clickedMarker = markerIntersects[0].object
-      const markerId = clickedMarker.userData.markerId
-      // Find note with this marker ID and remove it
-      const noteIdx = stickyNotes.value.findIndex(note => note.markerId === markerId)
-      if (noteIdx !== -1) {
-        removeNote(noteIdx)
-        return
-      }
-    }
+function updateModelVersion() {
+  // Color transition based on version
+  if (towerMesh && towerMesh.material) {
+    const versionFraction = (currentVersion.value - 1) / 9
+    
+    // Create new gradient based on version
+    const textureCanvas = document.createElement('canvas')
+    textureCanvas.width = 64
+    textureCanvas.height = 512
+    const ctx = textureCanvas.getContext('2d')
+    
+    // Shift hue based on version
+    const hueShift = versionFraction * 0.3
+    
+    // Create gradient that shifts colors
+    const gradient = ctx.createLinearGradient(0, 0, 0, textureCanvas.height)
+    
+    // Base colors that shift with version
+    const bottomHue = (0.33 + hueShift) % 1
+    const topHue = (0.66 + hueShift) % 1
+    
+    const bottomColor = new THREE.Color().setHSL(bottomHue, 0.7, 0.5)
+    const topColor = new THREE.Color().setHSL(topHue, 0.7, 0.5)
+    
+    gradient.addColorStop(0, '#' + bottomColor.getHexString())
+    gradient.addColorStop(1, '#' + topColor.getHexString())
+    
+    ctx.fillStyle = gradient
+    ctx.fillRect(0, 0, textureCanvas.width, textureCanvas.height)
+    
+    const texture = new THREE.CanvasTexture(textureCanvas)
+    texture.magFilter = THREE.NearestFilter
+    towerMesh.material.map = texture
+    towerMesh.material.map.needsUpdate = true
   }
-  
-  // Then check tower for new annotations - raycast against all objects in tower group
-  if (tower) {
-    // Get all meshes from tower
-    const meshes = []
-    tower.traverse((child) => {
-      if (child.isMesh && child.userData.type === 'tower') {
-        meshes.push(child)
-      }
-    })
-    
-    if (meshes.length > 0) {
-      const intersects = raycaster.intersectObjects(meshes)
-      
-      if (intersects.length > 0) {
-        const intersection = intersects[0]
-        const point = intersection.point
-        
-        // Calculate floor level based on Y position (0 to towerHeight)
-        const userData = intersection.object.userData
-        if (userData && userData.type === 'tower') {
-          const normalizedHeight = (point.y / userData.towerHeight) * 200
-          const floorLevel = Math.max(1, Math.min(200, Math.floor(normalizedHeight)))
-          
-          pendingAnnotation.value = {
-            floor: floorLevel,
-            zone: 'Tower',
-            text: '',
-            x: 0,
-            y: 0,
-            team: 'data',
-            point: point.clone()
-          }
-          showAnnotationInput.value = true
-        }
-      }
-    }
-  }
-}
-
-function saveAnnotation() {
-  if (pendingAnnotation.value.text.trim()) {
-    const teamColor = teamOptions.find(t => t.value === pendingAnnotation.value.team)?.color || '#3b82f6'
-    const markerId = nextMarkerId.value++
-    
-    const note = {
-      floor: pendingAnnotation.value.floor,
-      zone: pendingAnnotation.value.zone,
-      text: pendingAnnotation.value.text,
-      timestamp: new Date(),
-      team: pendingAnnotation.value.team,
-      color: teamColor,
-      userId: userStore.currentUser.id,
-      point: pendingAnnotation.value.point,
-      markerId: markerId // Store unique marker ID
-    }
-    
-    stickyNotes.value.push(note)
-    
-    // Create 3D marker on tower
-    if (scene && pendingAnnotation.value.point) {
-      const markerGeometry = new THREE.SphereGeometry(0.75, 16, 16)
-      const markerMaterial = new THREE.MeshBasicMaterial({ 
-        color: new THREE.Color(teamColor),
-        emissive: new THREE.Color(teamColor),
-        emissiveIntensity: 0.5
-      })
-      const marker = new THREE.Mesh(markerGeometry, markerMaterial)
-      marker.position.copy(pendingAnnotation.value.point)
-      marker.userData = { type: 'annotation', markerId: markerId }
-      scene.add(marker)
-      
-      annotation3DMarkers.value.push(marker)
-    }
-  }
-  cancelAnnotation()
-}
-
-function cancelAnnotation() {
-  showAnnotationInput.value = false
-  pendingAnnotation.value = { floor: 0, zone: '', text: '', x: 0, y: 0, z: 0, team: 'data', point: null }
 }
 
 function onMouseWheel(event) {
@@ -509,36 +347,6 @@ function onMouseWheel(event) {
   
   camera.position.copy(currentDir.multiplyScalar(currentDistance).add(towerCenter))
   camera.lookAt(towerCenter)
-  
-}
-
-function removeNote(idx) {
-  if (idx < 0 || idx >= stickyNotes.value.length) return
-  
-  const noteToRemove = stickyNotes.value[idx]
-  const markerId = noteToRemove.markerId
-  
-  // Find and remove the marker from scene by markerId
-  const markerToRemoveIdx = annotation3DMarkers.value.findIndex(
-    marker => marker.userData.markerId === markerId
-  )
-  
-  if (markerToRemoveIdx !== -1) {
-    const markerToRemove = annotation3DMarkers.value[markerToRemoveIdx]
-    if (scene && markerToRemove) {
-      scene.remove(markerToRemove)
-      // Dispose of geometry and material
-      if (markerToRemove.geometry) markerToRemove.geometry.dispose()
-      if (markerToRemove.material) markerToRemove.material.dispose()
-    }
-    annotation3DMarkers.value.splice(markerToRemoveIdx, 1)
-  }
-  
-  // Remove the note
-  stickyNotes.value.splice(idx, 1)
-  
-  // Clear hover state
-  hoveredAnnotationIdx.value = null
 }
 
 function onWindowResize() {
@@ -555,7 +363,9 @@ function onWindowResize() {
 
 function animate() {
   requestAnimationFrame(animate)
-  renderer.render(scene, camera)
+  if (renderer && scene && camera) {
+    renderer.render(scene, camera)
+  }
 }
 
 function isActiveRoute(path) {
@@ -576,7 +386,6 @@ onUnmounted(() => {
     canvas.value.removeEventListener('mousedown', onMouseDown)
     canvas.value.removeEventListener('mousemove', onMouseMove)
     canvas.value.removeEventListener('mouseup', onMouseUp)
-    canvas.value.removeEventListener('click', onCanvasClick)
     canvas.value.removeEventListener('wheel', onMouseWheel)
   }
   window.removeEventListener('resize', onWindowResize)
