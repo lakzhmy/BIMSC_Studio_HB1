@@ -23,6 +23,7 @@
     </header>
     <main class="py-8 px-6">
       <div class="max-w-7xl mx-auto space-y-6">
+        <!-- KPI Cards Grid -->
         <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           <div v-for="kpi in kpiMetrics" :key="kpi.id" class="bg-white p-6 rounded-lg border border-slate-200 hover:shadow-lg transition-shadow cursor-pointer">
             <div class="flex items-start justify-between mb-4">
@@ -57,6 +58,24 @@
             </div>
           </div>
         </div>
+
+        <!-- Visualization Charts -->
+        <div class="grid lg:grid-cols-2 gap-6">
+          <!-- Breathing Chart -->
+          <div class="bg-white p-6 rounded-lg border border-slate-200 hover:shadow-lg transition-shadow">
+            <BreathingChart />
+          </div>
+
+          <!-- Project Complexity -->
+          <div class="bg-white p-6 rounded-lg border border-slate-200 hover:shadow-lg transition-shadow">
+            <ProjectComplexity />
+          </div>
+        </div>
+
+        <!-- Porous Visualization (Full Width) -->
+        <div class="bg-white p-6 rounded-lg border border-slate-200 hover:shadow-lg transition-shadow">
+          <PorousVisualization />
+        </div>
       </div>
     </main>
   </div>
@@ -66,6 +85,9 @@
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/userStore'
 import UserAvatar from '@/components/UserAvatar.vue'
+import BreathingChart from '@/components/BreathingChart.vue'
+import PorousVisualization from '@/components/PorousVisualization.vue'
+import ProjectComplexity from '@/components/ProjectComplexity.vue'
 import { kpiMetrics } from '@/data/sampleData'
 
 const router = useRouter()

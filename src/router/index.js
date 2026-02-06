@@ -64,11 +64,16 @@ const router = createRouter({
 router.beforeEach((to, from, next) => {
   const userStore = useUserStore()
   
-  if (to.meta.requiresAuth && !userStore.isLoggedIn) {
+  // If trying to access login page, allow it (don't redirect even if logged in)
+  if (to.name === 'login') {
+    next()
+  }
+  // If trying to access protected route without being logged in
+  else if (to.meta.requiresAuth && !userStore.isLoggedIn) {
     next({ name: 'login' })
-  } else if (to.name === 'login' && userStore.isLoggedIn) {
-    next({ name: 'profile' })
-  } else if (to.name === 'dashboard' && !userStore.selectedTeam) {
+  }
+  // If logged in but no team selected, go to profile
+  else if (to.name === 'dashboard' && !userStore.selectedTeam) {
     next({ name: 'profile' })
   } else {
     next()
