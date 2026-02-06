@@ -59,9 +59,9 @@ export function KPIDashboard() {
   };
 
   const toggleMetric = (metric: KPIMetric) => {
-    setSelectedMetrics(prev =>
+    setSelectedMetrics((prev: KPIMetric[]) =>
       prev.includes(metric)
-        ? prev.filter(m => m !== metric)
+        ? prev.filter((m: KPIMetric) => m !== metric)
         : [...prev, metric]
     );
   };
@@ -300,7 +300,7 @@ export function KPIDashboard() {
                       borderRadius: '8px',
                       boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
                     }}
-                    formatter={(value: number) => [`${value} kgCO2e/m²`, 'Embodied Carbon']}
+                    formatter={(value: number | undefined) => value !== undefined ? [`${value} kgCO2e/m²`, 'Embodied Carbon'] : []}
                   />
                   <defs>
                     <linearGradient id="carbonGradient" x1="0" y1="0" x2="0" y2="1">
@@ -341,6 +341,7 @@ export function KPIDashboard() {
             </div>
           </div>
         )}
+      </div>
 
       {/* Team Performance Summary */}
       <div className="mt-6 bg-white rounded-xl shadow-sm border border-slate-200 p-5">

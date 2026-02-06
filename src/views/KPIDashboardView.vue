@@ -23,8 +23,27 @@
     </header>
     <main class="py-8 px-6">
       <div class="max-w-7xl mx-auto space-y-6">
-        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div v-for="kpi in kpiMetrics" :key="kpi.id" class="bg-white p-6 rounded-lg border border-slate-200 hover:shadow-lg transition-shadow cursor-pointer">
+        <!-- Category Tabs -->
+        <div class="flex gap-2">
+          <button
+            v-for="category in categories"
+            :key="category.id"
+            @click="selectedCategory = category.id"
+            :class="[
+              'px-6 py-2 text-sm font-medium rounded-lg transition-colors',
+              selectedCategory === category.id
+                ? 'text-white'
+                : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+            ]"
+            :style="selectedCategory === category.id ? { backgroundColor: category.color } : {}"
+          >
+            {{ category.label }}
+          </button>
+        </div>
+
+        <!-- KPI Cards Grid -->
+        <div v-if="selectedCategory !== 'vitals'" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div v-for="kpi in filteredKPIs" :key="kpi.id" class="bg-white p-6 rounded-lg border border-slate-200 hover:shadow-lg transition-shadow cursor-pointer">
             <div class="flex items-start justify-between mb-4">
               <div class="flex-1">
                 <h3 class="text-sm font-semibold text-slate-700 mb-1">{{ kpi.name }}</h3>
@@ -57,12 +76,21 @@
             </div>
           </div>
         </div>
+
+        <!-- Vitals Placeholder -->
+        <div v-if="selectedCategory === 'vitals'" class="bg-white rounded-lg border border-slate-200 p-12">
+          <div class="text-center">
+            <h2 class="text-2xl font-bold text-slate-900 mb-2">Vitals</h2>
+            <p class="text-slate-500">Building performance visualization and real-time monitoring coming soon.</p>
+          </div>
+        </div>
       </div>
     </main>
   </div>
 </template>
 
 <script setup>
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/userStore'
 import UserAvatar from '@/components/UserAvatar.vue'
@@ -70,10 +98,34 @@ import { kpiMetrics } from '@/data/sampleData'
 
 const router = useRouter()
 const userStore = useUserStore()
+const selectedCategory = ref('program')
+
+const categories = [
+  { id: 'program', label: 'Program', color: '#3b82f6' },
+  { id: 'structure', label: 'Structure', color: '#10b981' },
+  { id: 'data', label: 'Data', color: '#ef4444' },
+  { id: 'vitals', label: 'Vitals', color: '#8b5cf6' },
+]
+
+// Map KPIs to categories
+const categoryMapping = {
+  program: ['Embodied Carbon'],
+  structure: ['Structural Efficiency', 'Facade to Floor Ratio'],
+  data: ['Energy Intensity', 'Daylight Factor', 'Natural Ventilation'],
+}
+
+// Filtered KPIs based on selected category
+const filteredKPIs = computed(() => {
+  if (selectedCategory.value === 'vitals') {
+    return [] // Placeholder for vitals/graphs section
+  }
+  const allowedNames = categoryMapping[selectedCategory.value] || []
+  return kpiMetrics.filter(kpi => allowedNames.includes(kpi.name))
+})
 
 const navigationItems = [
   { path: '/dashboard', label: 'Dashboard' },
-  { path: '/kpi', label: 'KPI Dashboard' },
+  { path: '/kpi', label: 'KPI' },
   { path: '/meetings', label: 'Meetings' },
   { path: '/actions', label: 'Actions' },
   { path: '/viewer', label: '3D Viewer' },
