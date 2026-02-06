@@ -34,7 +34,7 @@
         </div>
 
         <!-- Week and Scenario Selectors -->
-        <div v-if="selectedCategory !== 'vitals'" class="flex gap-4">
+        <div v-if="selectedCategory !== 'vitals' && selectedCategory !== 'program'" class="flex flex-wrap gap-4 p-4 bg-white rounded-lg border border-slate-200">
           <div class="flex flex-col gap-2">
             <label class="text-sm font-medium text-slate-700">Week</label>
             <select v-model="selectedWeek" class="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm">
@@ -42,6 +42,7 @@
               <option v-for="week in weeks" :key="week" :value="week">{{ week }}</option>
             </select>
           </div>
+
           <div class="flex flex-col gap-2">
             <label class="text-sm font-medium text-slate-700">Scenario</label>
             <select v-model="selectedScenario" class="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm">
@@ -51,13 +52,25 @@
           </div>
         </div>
 
+        <!-- Program Selector (isolated component) -->
+        <ProgramKPISelector v-if="selectedCategory === 'program' && currentSheetData" :sheetData="currentSheetData" />
+
         <!-- Loading State -->
-        <div v-if="isLoading" class="text-center py-8">
-          <p class="text-slate-500">Loading KPI data...</p>
+        <div v-if="isLoading" class="text-center py-16">
+          <p class="text-slate-500 text-lg">Loading KPI data...</p>
         </div>
 
-        <!-- KPI Cards -->
-        <div v-else-if="selectedCategory !== 'vitals'" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- Error State -->
+        <div v-else-if="loadError" class="bg-red-50 border border-red-200 rounded-lg p-6">
+          <h3 class="text-red-900 font-semibold mb-2">Error Loading Data</h3>
+          <p class="text-red-700 text-sm">{{ loadError }}</p>
+          <button @click="loadData" class="mt-4 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded text-sm font-medium">
+            Retry
+          </button>
+        </div>
+
+        <!-- KPI Cards (not for PROGRAM) -->
+        <div v-if="selectedCategory !== 'vitals' && selectedCategory !== 'program' && filteredKPIs.length > 0" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           <div v-for="kpi in filteredKPIs" :key="kpi.id" class="bg-white p-6 rounded-lg border border-slate-200 hover:shadow-lg transition-shadow cursor-pointer">
             <div class="flex items-start justify-between mb-4">
               <div class="flex-1">
@@ -69,7 +82,6 @@
             <div class="space-y-3">
               <div class="flex items-end gap-2">
                 <div class="text-3xl font-bold text-slate-900">{{ typeof kpi.value === 'number' ? kpi.value.toFixed(2) : kpi.value }}</div>
-                <div class="text-sm text-slate-600 mb-1">{{ kpi.unit }}</div>
               </div>
               <div class="flex items-center gap-2 text-xs text-slate-500">
                 <span class="capitalize">Status: {{ kpi.status }}</span>
@@ -78,8 +90,13 @@
           </div>
         </div>
 
+        <!-- No Data State -->
+        <div v-else-if="selectedCategory !== 'vitals' && selectedCategory !== 'program'" class="bg-slate-100 rounded-lg p-12 text-center">
+          <p class="text-slate-500">Select a week and scenario to view KPI data</p>
+        </div>
+
         <!-- Vitals Placeholder -->
-        <div v-if="selectedCategory === 'vitals' && !isLoading" class="bg-white rounded-lg border border-slate-200 p-12">
+        <div v-if="selectedCategory === 'vitals'" class="bg-white rounded-lg border border-slate-200 p-12">
           <div class="text-center">
             <h2 class="text-2xl font-bold text-slate-900 mb-2">Vitals</h2>
             <p class="text-slate-500">Building performance visualization and real-time monitoring coming soon.</p>
@@ -91,10 +108,12 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/userStore'
 import UserAvatar from '@/components/UserAvatar.vue'
+import ProgramKPISelector from '@/components/ProgramKPISelector.vue'
+import { fetchKPIsByCategory, getKPIsForSelection } from '@/services/googleSheetsService'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -102,6 +121,7 @@ const selectedCategory = ref('program')
 const selectedWeek = ref('')
 const selectedScenario = ref('')
 const isLoading = ref(false)
+const loadError = ref('')
 
 const categories = [
   { id: 'program', label: 'Program', color: '#3b82f6' },
@@ -110,47 +130,38 @@ const categories = [
   { id: 'vitals', label: 'Vitals', color: '#8b5cf6' },
 ]
 
-const mockData = {
-  program: [
-    { week: 'Week 1', scenario: 'Scenario A', kpis: [
-      { id: '1', name: 'Budget', value: 85000, unit: '$', status: 'good' },
-      { id: '2', name: 'Timeline', value: 92, unit: '%', status: 'good' },
-    ]},
-    { week: 'Week 2', scenario: 'Scenario A', kpis: [
-      { id: '1', name: 'Budget', value: 87000, unit: '$', status: 'warning' },
-      { id: '2', name: 'Timeline', value: 88, unit: '%', status: 'good' },
-    ]},
-  ],
-  structure: [
-    { week: 'Week 1', scenario: 'Scenario A', kpis: [
-      { id: '3', name: 'Load', value: 450, unit: 'kN', status: 'good' },
-      { id: '4', name: 'Stress', value: 125, unit: 'MPa', status: 'good' },
-    ]},
-  ],
-  data: [
-    { week: 'Week 1', scenario: 'Scenario A', kpis: [
-      { id: '5', name: 'Points', value: 50000, unit: 'count', status: 'good' },
-    ]},
-  ],
-}
+const sheetDataByCategory = ref({
+  program: null,
+  structure: null,
+  data: null,
+  vitals: null,
+})
+
+const currentSheetData = computed(() => sheetDataByCategory.value[selectedCategory.value])
 
 const weeks = computed(() => {
-  const data = mockData[selectedCategory.value] || []
-  return [...new Set(data.map(d => d.week))]
+  const data = currentSheetData.value
+  return (data && Array.isArray(data.weeks)) ? data.weeks : []
 })
 
 const scenarios = computed(() => {
-  const data = mockData[selectedCategory.value] || []
-  return [...new Set(data.map(d => d.scenario))]
+  if (!selectedWeek.value || !currentSheetData.value) {
+    return []
+  }
+  const data = currentSheetData.value.data || []
+  const scenariosForWeek = data
+    .filter(row => row && row.week === selectedWeek.value)
+    .map(row => row?.scenario)
+    .filter(v => v && v.trim())
+  return [...new Set(scenariosForWeek)]
 })
 
 const filteredKPIs = computed(() => {
-  if (!selectedWeek.value || !selectedScenario.value) {
+  if (!selectedWeek.value || !selectedScenario.value || !currentSheetData.value) {
     return []
   }
-  const data = mockData[selectedCategory.value] || []
-  const item = data.find(d => d.week === selectedWeek.value && d.scenario === selectedScenario.value)
-  return item?.kpis || []
+  const result = getKPIsForSelection(currentSheetData.value, selectedWeek.value, selectedScenario.value)
+  return Array.isArray(result) ? result : []
 })
 
 const navigationItems = [
@@ -171,13 +182,56 @@ function handleLogout() {
   router.push('/')
 }
 
+async function loadData() {
+  isLoading.value = true
+  loadError.value = ''
+  try {
+    console.log('Loading KPI data from Google Sheets...')
+    const [programData, structureData, dataData, vitalsData] = await Promise.all([
+      fetchKPIsByCategory('program'),
+      fetchKPIsByCategory('structure'),
+      fetchKPIsByCategory('data'),
+      fetchKPIsByCategory('vitals'),
+    ])
+    console.log('Loaded data:', { programData, structureData, dataData, vitalsData })
+    
+    sheetDataByCategory.value = {
+      program: programData,
+      structure: structureData,
+      data: dataData,
+      vitals: vitalsData,
+    }
+  } catch (error) {
+    console.error('Failed to load KPI data:', error)
+    loadError.value = `Error: ${error instanceof Error ? error.message : String(error)}`
+  } finally {
+    isLoading.value = false
+  }
+}
+
+watch(() => selectedCategory.value, () => {
+  selectedWeek.value = ''
+  selectedScenario.value = ''
+})
+
+watch(() => weeks.value, (newWeeks) => {
+  if (newWeeks && newWeeks.length > 0 && !selectedWeek.value) {
+    selectedWeek.value = newWeeks[0]
+  }
+})
+
+watch(() => selectedWeek.value, () => {
+  selectedScenario.value = ''
+})
+
+watch(() => scenarios.value, (newScenarios) => {
+  if (newScenarios && newScenarios.length > 0 && !selectedScenario.value) {
+    selectedScenario.value = newScenarios[0]
+  }
+})
+
 onMounted(() => {
-  if (weeks.value.length > 0) {
-    selectedWeek.value = weeks.value[0]
-  }
-  if (scenarios.value.length > 0) {
-    selectedScenario.value = scenarios.value[0]
-  }
+  loadData()
 })
 </script>
 

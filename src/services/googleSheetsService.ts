@@ -23,6 +23,7 @@ interface DataRow {
   week: string;
   scenario: string;
   kpis: KPI[];
+  spaceName?: string;
 }
 
 interface ParsedSheetData {
@@ -53,6 +54,7 @@ async function fetchSheet(sheetName: string): Promise<string[][]> {
 }
 
 /**
+
  * Parse sheet data with Week | Scenario | KPI values format
  * Row 1: Headers (Week | Scenario | KPI_Name_1 | KPI_Name_2 | ...)
  * Row 2: Units (- | - | unit_1 | unit_2 | ...)
@@ -115,6 +117,66 @@ function parseSheetData(rows: string[][]): ParsedSheetData {
   };
 }
 
+function parseProgramSheetData(rows: string[][]): ParsedSheetData {
+  if (rows.length < 4) {
+    return { weeks: [], scenarios: [], data: [], kpiNames: [] };
+  }
+  
+  const headerRow = rows[0];
+  
+  // Extract KPI names from columns E+ (index 4+), skip column D (space_name)
+  const kpiNames = headerRow.slice(4).map(name => name || '');
+  
+  const weeks = new Set<string>();
+  const scenarios = new Set<string>(); // Will store Column C values
+  const dataRows: DataRow[] = [];
+  
+  // Parse data rows 4-25 (indices 3-24)
+  for (let i = 3; i < Math.min(25, rows.length); i++) {
+    const row = rows[i];
+    if (!row || row.length < 5) continue;
+    
+    const week = row[0]?.trim() || '';
+    const columnC = row[2]?.trim() || '';
+    const spaceName = row[3]?.trim() || '';
+    
+    // Only require columnC to be non-empty
+    if (!columnC) continue;
+    
+    weeks.add(week || 'default');
+    scenarios.add(columnC);
+    
+    // Parse KPI values from columns E+ (index 4+)
+    const kpis: KPI[] = [];
+    for (let j = 0; j < kpiNames.length; j++) {
+      const valueStr = row[4 + j]?.trim() || '';
+      const value = isNaN(Number(valueStr)) ? valueStr : Number(valueStr);
+      
+      kpis.push({
+        id: kpiNames[j].toLowerCase().replace(/\s+/g, '-'),
+        name: kpiNames[j],
+        value,
+        unit: '',
+        status: 'good',
+      });
+    }
+    
+    dataRows.push({
+      week: week || 'default',
+      scenario: columnC,
+      kpis,
+      spaceName,
+    });
+  }
+  
+  return {
+    weeks: Array.from(weeks),
+    scenarios: Array.from(scenarios),
+    data: dataRows,
+    kpiNames,
+  };
+}
+
 /**
  * Fetch and parse data for a specific category
  */
@@ -127,6 +189,12 @@ export async function fetchKPIsByCategory(category: 'data' | 'structure' | 'prog
   };
   
   const rows = await fetchSheet(sheetNameMap[category]);
+  
+  // Use specialized parsing for PROGRAM sheet
+  if (category === 'program') {
+    return parseProgramSheetData(rows);
+  }
+  
   return parseSheetData(rows);
 }
 
