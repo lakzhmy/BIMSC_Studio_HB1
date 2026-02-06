@@ -17,14 +17,23 @@ import { currentKPIs, kpiHistory, teams } from '../../data/sampleData';
 
 type TimeRange = '1w' | '1m' | '3m' | 'all';
 type KPIMetric = 'embodied_carbon' | 'floor_area' | 'energy_use' | 'facade_ratio' | 'structural_efficiency' | 'daylight_factor';
+type KPICategory = 'program' | 'structure' | 'data';
 
 export function KPIDashboard() {
   const [timeRange, setTimeRange] = useState<TimeRange>('all');
+  const [selectedCategory, setSelectedCategory] = useState<KPICategory>('program');
   const [selectedMetrics, setSelectedMetrics] = useState<KPIMetric[]>([
     'embodied_carbon',
     'energy_use',
     'daylight_factor',
   ]);
+
+  // Categorize KPIs
+  const categoryMetrics: Record<KPICategory, KPIMetric[]> = {
+    program: ['embodied_carbon', 'floor_area'],
+    structure: ['structural_efficiency', 'facade_ratio'],
+    data: ['energy_use', 'daylight_factor'],
+  };
 
   const getTeamColor = (teamId: string) => {
     const team = teams.find(t => t.id === teamId);
@@ -66,7 +75,7 @@ export function KPIDashboard() {
     <div className="p-6 bg-slate-50 min-h-screen">
       {/* Header */}
       <div className="mb-6">
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center justify-between mb-4">
           <div>
             <h1 className="text-2xl font-bold text-slate-900">KPI Dashboard</h1>
             <p className="text-slate-500">Hyperbuilding 1 Performance Metrics</p>
@@ -83,8 +92,25 @@ export function KPIDashboard() {
           </div>
         </div>
 
+        {/* Category tabs */}
+        <div className="flex bg-white border border-slate-200 rounded-lg overflow-hidden mb-4 w-fit">
+          {(['program', 'structure', 'data'] as KPICategory[]).map((category) => (
+            <button
+              key={category}
+              onClick={() => setSelectedCategory(category)}
+              className={`px-6 py-2 text-sm font-medium transition-colors ${
+                selectedCategory === category
+                  ? 'bg-blue-600 text-white'
+                  : 'text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              {category === 'program' ? 'PROGRAM KPIs' : category === 'structure' ? 'STRUCTURE KPIs' : 'DATA KPIs'}
+            </button>
+          ))}
+        </div>
+
         {/* Time range selector */}
-        <div className="flex items-center gap-2 mt-4">
+        <div className="flex items-center gap-2">
           <Calendar size={16} className="text-slate-400" />
           <div className="flex bg-white border border-slate-200 rounded-lg overflow-hidden">
             {(['1w', '1m', '3m', 'all'] as TimeRange[]).map((range) => (
@@ -104,68 +130,80 @@ export function KPIDashboard() {
         </div>
       </div>
 
-      {/* KPI Cards Grid */}
+      {/* KPI Cards Grid - Filtered by Category */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-        <KPICard
-          title={currentKPIs.embodied_carbon.description}
-          value={currentKPIs.embodied_carbon.value}
-          target={currentKPIs.embodied_carbon.target}
-          unit={currentKPIs.embodied_carbon.unit}
-          trend={currentKPIs.embodied_carbon.trend}
-          status={currentKPIs.embodied_carbon.status}
-          teamColor={getTeamColor(currentKPIs.embodied_carbon.team)}
-          sparklineData={getSparklineData('embodied_carbon')}
-        />
-        <KPICard
-          title={currentKPIs.floor_area.description}
-          value={currentKPIs.floor_area.value}
-          target={currentKPIs.floor_area.target}
-          unit={currentKPIs.floor_area.unit}
-          trend={currentKPIs.floor_area.trend}
-          status={currentKPIs.floor_area.status}
-          teamColor={getTeamColor(currentKPIs.floor_area.team)}
-          sparklineData={getSparklineData('floor_area')}
-        />
-        <KPICard
-          title={currentKPIs.energy_use.description}
-          value={currentKPIs.energy_use.value}
-          target={currentKPIs.energy_use.target}
-          unit={currentKPIs.energy_use.unit}
-          trend={currentKPIs.energy_use.trend}
-          status={currentKPIs.energy_use.status}
-          teamColor={getTeamColor(currentKPIs.energy_use.team)}
-          sparklineData={getSparklineData('energy_use')}
-        />
-        <KPICard
-          title={currentKPIs.facade_ratio.description}
-          value={currentKPIs.facade_ratio.value}
-          target={currentKPIs.facade_ratio.target}
-          unit={currentKPIs.facade_ratio.unit}
-          trend={currentKPIs.facade_ratio.trend}
-          status={currentKPIs.facade_ratio.status}
-          teamColor={getTeamColor(currentKPIs.facade_ratio.team)}
-          sparklineData={getSparklineData('facade_ratio')}
-        />
-        <KPICard
-          title={currentKPIs.structural_efficiency.description}
-          value={currentKPIs.structural_efficiency.value}
-          target={currentKPIs.structural_efficiency.target}
-          unit={currentKPIs.structural_efficiency.unit}
-          trend={currentKPIs.structural_efficiency.trend}
-          status={currentKPIs.structural_efficiency.status}
-          teamColor={getTeamColor(currentKPIs.structural_efficiency.team)}
-          sparklineData={getSparklineData('structural_efficiency')}
-        />
-        <KPICard
-          title={currentKPIs.daylight_factor.description}
-          value={currentKPIs.daylight_factor.value}
-          target={currentKPIs.daylight_factor.target}
-          unit={currentKPIs.daylight_factor.unit}
-          trend={currentKPIs.daylight_factor.trend}
-          status={currentKPIs.daylight_factor.status}
-          teamColor={getTeamColor(currentKPIs.daylight_factor.team)}
-          sparklineData={getSparklineData('daylight_factor')}
-        />
+        {categoryMetrics[selectedCategory].includes('embodied_carbon') && (
+          <KPICard
+            title={currentKPIs.embodied_carbon.description}
+            value={currentKPIs.embodied_carbon.value}
+            target={currentKPIs.embodied_carbon.target}
+            unit={currentKPIs.embodied_carbon.unit}
+            trend={currentKPIs.embodied_carbon.trend}
+            status={currentKPIs.embodied_carbon.status}
+            teamColor={getTeamColor(currentKPIs.embodied_carbon.team)}
+            sparklineData={getSparklineData('embodied_carbon')}
+          />
+        )}
+        {categoryMetrics[selectedCategory].includes('floor_area') && (
+          <KPICard
+            title={currentKPIs.floor_area.description}
+            value={currentKPIs.floor_area.value}
+            target={currentKPIs.floor_area.target}
+            unit={currentKPIs.floor_area.unit}
+            trend={currentKPIs.floor_area.trend}
+            status={currentKPIs.floor_area.status}
+            teamColor={getTeamColor(currentKPIs.floor_area.team)}
+            sparklineData={getSparklineData('floor_area')}
+          />
+        )}
+        {categoryMetrics[selectedCategory].includes('energy_use') && (
+          <KPICard
+            title={currentKPIs.energy_use.description}
+            value={currentKPIs.energy_use.value}
+            target={currentKPIs.energy_use.target}
+            unit={currentKPIs.energy_use.unit}
+            trend={currentKPIs.energy_use.trend}
+            status={currentKPIs.energy_use.status}
+            teamColor={getTeamColor(currentKPIs.energy_use.team)}
+            sparklineData={getSparklineData('energy_use')}
+          />
+        )}
+        {categoryMetrics[selectedCategory].includes('facade_ratio') && (
+          <KPICard
+            title={currentKPIs.facade_ratio.description}
+            value={currentKPIs.facade_ratio.value}
+            target={currentKPIs.facade_ratio.target}
+            unit={currentKPIs.facade_ratio.unit}
+            trend={currentKPIs.facade_ratio.trend}
+            status={currentKPIs.facade_ratio.status}
+            teamColor={getTeamColor(currentKPIs.facade_ratio.team)}
+            sparklineData={getSparklineData('facade_ratio')}
+          />
+        )}
+        {categoryMetrics[selectedCategory].includes('structural_efficiency') && (
+          <KPICard
+            title={currentKPIs.structural_efficiency.description}
+            value={currentKPIs.structural_efficiency.value}
+            target={currentKPIs.structural_efficiency.target}
+            unit={currentKPIs.structural_efficiency.unit}
+            trend={currentKPIs.structural_efficiency.trend}
+            status={currentKPIs.structural_efficiency.status}
+            teamColor={getTeamColor(currentKPIs.structural_efficiency.team)}
+            sparklineData={getSparklineData('structural_efficiency')}
+          />
+        )}
+        {categoryMetrics[selectedCategory].includes('daylight_factor') && (
+          <KPICard
+            title={currentKPIs.daylight_factor.description}
+            value={currentKPIs.daylight_factor.value}
+            target={currentKPIs.daylight_factor.target}
+            unit={currentKPIs.daylight_factor.unit}
+            trend={currentKPIs.daylight_factor.trend}
+            status={currentKPIs.daylight_factor.status}
+            teamColor={getTeamColor(currentKPIs.daylight_factor.team)}
+            sparklineData={getSparklineData('daylight_factor')}
+          />
+        )}
       </div>
 
       {/* Charts Section */}
@@ -180,9 +218,9 @@ export function KPIDashboard() {
             </div>
           </div>
 
-          {/* Metric toggles */}
+          {/* Metric toggles - Filtered by Category */}
           <div className="flex flex-wrap gap-2 mb-4">
-            {(Object.keys(metricLabels) as KPIMetric[]).map((metric) => (
+            {(categoryMetrics[selectedCategory] as KPIMetric[]).map((metric) => (
               <button
                 key={metric}
                 onClick={() => toggleMetric(metric)}
@@ -217,7 +255,7 @@ export function KPIDashboard() {
                   }}
                 />
                 <Legend />
-                {selectedMetrics.map((metric) => (
+                {selectedMetrics.filter(metric => categoryMetrics[selectedCategory].includes(metric)).map((metric) => (
                   <Line
                     key={metric}
                     type="monotone"
@@ -234,85 +272,95 @@ export function KPIDashboard() {
           </div>
         </div>
 
-        {/* Carbon Reduction Area Chart */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
-          <div className="mb-4">
-            <h2 className="text-lg font-semibold text-slate-900">Carbon Reduction Progress</h2>
-            <p className="text-sm text-slate-500">Tracking towards 350 kgCO2e/m² target</p>
-          </div>
-
-          <div className="h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={kpiHistory}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                <XAxis
-                  dataKey="date"
-                  tick={{ fontSize: 12, fill: '#64748b' }}
-                  tickFormatter={(val) => new Date(val).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                />
-                <YAxis
-                  domain={[300, 500]}
-                  tick={{ fontSize: 12, fill: '#64748b' }}
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#fff',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '8px',
-                    boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
-                  }}
-                  formatter={(value: number) => [`${value} kgCO2e/m²`, 'Embodied Carbon']}
-                />
-                <defs>
-                  <linearGradient id="carbonGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <Area
-                  type="monotone"
-                  dataKey="embodied_carbon"
-                  stroke="#ef4444"
-                  strokeWidth={2}
-                  fill="url(#carbonGradient)"
-                />
-                {/* Target line */}
-                <Line
-                  type="monotone"
-                  dataKey={() => 350}
-                  stroke="#22c55e"
-                  strokeWidth={2}
-                  strokeDasharray="5 5"
-                  dot={false}
-                  name="Target"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-
-          <div className="flex items-center gap-4 mt-4 pt-4 border-t border-slate-100">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded bg-red-500" />
-              <span className="text-sm text-slate-600">Current</span>
+        {/* Carbon Reduction Area Chart - Only show for PROGRAM KPIs */}
+        {selectedCategory === 'program' && (
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+            <div className="mb-4">
+              <h2 className="text-lg font-semibold text-slate-900">Carbon Reduction Progress</h2>
+              <p className="text-sm text-slate-500">Tracking towards 350 kgCO2e/m² target</p>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-0.5 bg-green-500" style={{ width: '12px', borderStyle: 'dashed' }} />
-              <span className="text-sm text-slate-600">Target (350)</span>
+
+            <div className="h-72">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={kpiHistory}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                  <XAxis
+                    dataKey="date"
+                    tick={{ fontSize: 12, fill: '#64748b' }}
+                    tickFormatter={(val) => new Date(val).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  />
+                  <YAxis
+                    domain={[300, 500]}
+                    tick={{ fontSize: 12, fill: '#64748b' }}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: '#fff',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '8px',
+                      boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
+                    }}
+                    formatter={(value: number) => [`${value} kgCO2e/m²`, 'Embodied Carbon']}
+                  />
+                  <defs>
+                    <linearGradient id="carbonGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <Area
+                    type="monotone"
+                    dataKey="embodied_carbon"
+                    stroke="#ef4444"
+                    strokeWidth={2}
+                    fill="url(#carbonGradient)"
+                  />
+                  {/* Target line */}
+                  <Line
+                    type="monotone"
+                    dataKey={() => 350}
+                    stroke="#22c55e"
+                    strokeWidth={2}
+                    strokeDasharray="5 5"
+                    dot={false}
+                    name="Target"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+
+            <div className="flex items-center gap-4 mt-4 pt-4 border-t border-slate-100">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded bg-red-500" />
+                <span className="text-sm text-slate-600">Current</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-0.5 bg-green-500" style={{ width: '12px', borderStyle: 'dashed' }} />
+                <span className="text-sm text-slate-600">Target (350)</span>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
+        )}
 
       {/* Team Performance Summary */}
       <div className="mt-6 bg-white rounded-xl shadow-sm border border-slate-200 p-5">
-        <h2 className="text-lg font-semibold text-slate-900 mb-4">Team Performance Summary</h2>
+        <h2 className="text-lg font-semibold text-slate-900 mb-4">
+          Team Performance Summary
+          <span className="text-sm text-slate-500 ml-2">
+            ({selectedCategory === 'program' ? 'PROGRAM' : selectedCategory === 'structure' ? 'STRUCTURE' : 'DATA'} KPIs)
+          </span>
+        </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {teams.map((team) => {
-            const teamKPIs = Object.values(currentKPIs).filter(kpi => kpi.team === team.id);
+            // Get KPIs for this team that match the selected category
+            const teamKPIs = (Object.entries(currentKPIs) as [KPIMetric, any][])
+              .filter(([metric, kpi]) => kpi.team === team.id && categoryMetrics[selectedCategory].includes(metric))
+              .map(([, kpi]) => kpi);
+            
             const onTrack = teamKPIs.filter(kpi => kpi.status === 'on-track').length;
             const total = teamKPIs.length;
 
-            return (
+            return total > 0 ? (
               <div
                 key={team.id}
                 className="p-4 rounded-lg border border-slate-200 hover:border-slate-300 transition-colors"
@@ -350,7 +398,7 @@ export function KPIDashboard() {
                   </div>
                 </div>
               </div>
-            );
+            ) : null;
           })}
         </div>
       </div>
