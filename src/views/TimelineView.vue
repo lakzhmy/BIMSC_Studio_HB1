@@ -30,12 +30,12 @@
                 <polyline :points="teamPoints.program" :class="trackStrokeClass('program')" class="fill-none stroke-[2.5]" />
                 <polyline :points="teamPoints.data" :class="trackStrokeClass('data')" class="fill-none stroke-[2.5]" />
               </svg>
-              <div class="absolute left-1/2 -translate-x-1/2 top-0 -translate-y-8 z-10 pointer-events-none">
+              <div class="absolute -translate-x-1/2 top-0 -translate-y-8 z-10 pointer-events-none" :style="currentWeekMarkerStyle">
                 <div class="text-[11px] font-semibold text-slate-700 bg-white/95 border border-slate-200 rounded-full px-3 py-1 shadow-sm">
                   We are here now
                 </div>
               </div>
-              <div class="absolute left-1/2 -translate-x-1/2 -top-[24px] z-10 flex flex-col items-center pointer-events-none">
+              <div class="absolute -translate-x-1/2 -top-[24px] z-10 flex flex-col items-center pointer-events-none" :style="currentWeekMarkerStyle">
                 <svg class="mt-1 w-3 h-36 text-slate-600" viewBox="0 0 16 144" aria-hidden="true">
                   <line x1="8" y1="2" x2="8" y2="124" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-dasharray="3 3" />
                   <polygon points="8,140 4,124 12,124" fill="currentColor" />
@@ -193,6 +193,16 @@ const teamBaseY = {
 }
 
 const currentWeekMarker = 5
+
+const currentWeekMarkerStyle = computed(() => {
+  const total = courseTimeline.length
+  if (total <= 1) {
+    return { left: '0%' }
+  }
+  const clampedWeek = Math.min(Math.max(currentWeekMarker, 1), total)
+  const left = ((clampedWeek - 1) / (total - 1)) * 100
+  return { left: `${left}%` }
+})
 
 function filteredDeliverables(items) {
   return items.filter((item) => item.team !== 'general' && filters[item.team])

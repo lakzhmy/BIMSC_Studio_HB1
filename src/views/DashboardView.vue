@@ -14,41 +14,15 @@
         <div class="grid lg:grid-cols-3 gap-8">
           <!-- Left Column -->
           <div class="lg:col-span-2 space-y-8">
-            <!-- Active Actions Section -->
-            <section class="card p-6">
-              <div class="flex items-center justify-between mb-6">
-                <h2 class="text-xl font-bold text-slate-900">Active Actions</h2>
-              </div>
-
-              <div class="space-y-3">
-                <div 
-                  v-for="action in priorityActions" 
-                  :key="action.id"
-                  class="p-4 rounded-lg border-l-4 bg-slate-50 hover:bg-slate-100 transition-colors"
-                  :style="{ borderLeftColor: getTeamColor(action.team) }"
-                >
-                  <div class="flex items-start justify-between mb-2">
-                    <div class="flex-1">
-                      <div class="flex items-center gap-2 mb-1">
-                        <span class="font-semibold text-slate-900">{{ action.title }}</span>
-                        <span class="text-xs px-2 py-1 rounded-full" :style="{ backgroundColor: getTeamColor(action.team) + '15', color: getTeamColor(action.team) }">
-                          {{ action.team }}
-                        </span>
-                      </div>
-                      <p class="text-sm text-slate-600">{{ action.description }}</p>
-                    </div>
-                    <span class="text-xs font-medium text-slate-500 whitespace-nowrap ml-2">{{ action.dueDate }}</span>
-                  </div>
-                </div>
-              </div>
-            </section>
-
             <!-- Recent Activity -->
             <section class="card p-6">
               <h2 class="text-xl font-bold text-slate-900 mb-6">Recent Activity</h2>
               <div class="space-y-4">
-                <div v-for="activity in recentActivity.slice(0, 5)" :key="activity.id" class="border-b border-slate-200 pb-4 last:border-0">
-                  <p class="text-sm text-slate-600 mb-1">{{ activity.action }}</p>
+                <div v-for="activity in recentActivity" :key="activity.id" class="border-b border-slate-200 pb-4 last:border-0">
+                  <p class="text-sm text-slate-600 mb-1">
+                    <span :class="getTeamLabelClass(activity.team)">{{ activity.user }}</span>
+                    {{ activity.action }} {{ activity.target }}
+                  </p>
                   <p class="text-xs text-slate-500">{{ activity.timestamp }}</p>
                 </div>
               </div>
@@ -95,7 +69,7 @@
 <script setup>
 import { computed } from 'vue'
 import { useUserStore } from '@/stores/userStore'
-import { projectHealth as projectHealthData, actions, teams, recentActivity } from '@/data/sampleData'
+import { projectHealth as projectHealthData, teams, recentActivity } from '@/data/sampleData'
 const userStore = useUserStore()
 
 // Quick stats
@@ -108,14 +82,6 @@ const quickStats = [
 
 // Project health data
 const projectHealth = projectHealthData
-
-// Priority actions - get first 3 from sampleData
-const priorityActions = computed(() => {
-  return actions.slice(0, 3).map(action => ({
-    ...action,
-    dueDate: 'Due in 2 days'
-  }))
-})
 
 // All members from userStore
 const allMembers = computed(() => {
@@ -162,6 +128,15 @@ function getTeamColor(team) {
     data: '#ef4444'
   }
   return colors[team] || '#6b7280'
+}
+
+function getTeamLabelClass(team) {
+  const classes = {
+    structure: 'text-green-600 font-semibold',
+    program: 'text-blue-600 font-semibold',
+    data: 'text-red-600 font-semibold'
+  }
+  return classes[team] || 'text-slate-700 font-semibold'
 }
 
 </script>

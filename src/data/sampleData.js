@@ -472,9 +472,13 @@ export const projectHealth = {
 
 // Recent activity feed
 export const recentActivity = [
-  { id: 1, type: 'update', user: 'Sarah Chen', action: 'updated', target: 'Foundation Load Analysis', timestamp: '2h ago', team: 'structure' },
-  { id: 2, type: 'comment', user: 'David Park', action: 'commented on', target: 'Core Circulation Refinement', timestamp: '3h ago', team: 'program' },
-  { id: 3, type: 'complete', user: 'Amara Okafor', action: 'completed', target: 'Space Program Validation', timestamp: '5h ago', team: 'program' },
-  { id: 4, type: 'create', user: 'Kenji Tanaka', action: 'created', target: 'Energy Model Update', timestamp: '1d ago', team: 'data' },
-  { id: 5, type: 'update', user: 'Elena Rodriguez', action: 'updated', target: 'Material Carbon Assessment', timestamp: '1d ago', team: 'structure' }
+  { id: 1, type: 'update', user: 'Structure Team', action: 'updated', target: 'Speckle model', timestamp: '2h ago', team: 'structure' },
+  { id: 2, type: 'deploy', user: 'Data Team', action: 'deployed', target: 'website', timestamp: '3h ago', team: 'data' },
+  { id: 3, type: 'revision', user: 'Program Team', action: 'revised', target: 'surface areas', timestamp: '5h ago', team: 'program' },
+  { id: 4, type: 'review', user: 'Structure Team', action: 'reviewed', target: 'core bracing options', timestamp: '1d ago', team: 'structure' },
+  { id: 5, type: 'analysis', user: 'Data Team', action: 'validated', target: 'energy model outputs', timestamp: '1d ago', team: 'data' },
+  { id: 6, type: 'update', user: 'Program Team', action: 'aligned', target: 'vertical zoning with circulation', timestamp: '2d ago', team: 'program' },
+  { id: 7, type: 'model', user: 'Structure Team', action: 'modeled', target: 'outrigger transfer levels', timestamp: '2d ago', team: 'structure' },
+  { id: 8, type: 'integration', user: 'Data Team', action: 'integrated', target: 'sensor feeds into dashboard', timestamp: '3d ago', team: 'data' },
+  { id: 9, type: 'workshop', user: 'Program Team', action: 'workshopped', target: 'lobby sequencing options', timestamp: '3d ago', team: 'program' }
 ]
