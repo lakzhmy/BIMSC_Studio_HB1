@@ -183,6 +183,26 @@ const selectedScenario = ref('')
 const isLoading = ref(false)
 const loadError = ref('')
 const hoveredStructureIndex = ref(null)
+const isRestoringSelection = ref(false)
+
+const selectionKey = (category) => `kpi-selection-${category}`
+
+const loadStoredSelection = (category) => {
+  try {
+    const stored = localStorage.getItem(selectionKey(category))
+    return stored ? JSON.parse(stored) : null
+  } catch (error) {
+    return null
+  }
+}
+
+const storeSelection = (category, week, scenario) => {
+  try {
+    localStorage.setItem(selectionKey(category), JSON.stringify({ week, scenario }))
+  } catch (error) {
+    // Ignore storage errors
+  }
+}
 
 const categories = [
   { id: 'program', label: 'Program', color: '#3b82f6' },
@@ -314,29 +334,66 @@ async function loadData() {
   }
 }
 
-watch(() => selectedCategory.value, () => {
-  selectedWeek.value = ''
-  selectedScenario.value = ''
+watch(() => selectedCategory.value, (category) => {
+  const stored = loadStoredSelection(category)
+  if (stored) {
+    isRestoringSelection.value = true
+    selectedWeek.value = stored.week || ''
+    selectedScenario.value = stored.scenario || ''
+    isRestoringSelection.value = false
+  } else {
+    selectedWeek.value = ''
+    selectedScenario.value = ''
+  }
 })
 
 watch(() => weeks.value, (newWeeks) => {
-  if (newWeeks && newWeeks.length > 0 && !selectedWeek.value) {
+  if (!newWeeks || newWeeks.length === 0) {
+    return
+  }
+  const stored = loadStoredSelection(selectedCategory.value)
+  if (stored?.week && newWeeks.includes(stored.week)) {
+    selectedWeek.value = stored.week
+    return
+  }
+  if (!selectedWeek.value || !newWeeks.includes(selectedWeek.value)) {
     selectedWeek.value = newWeeks[0]
   }
 })
 
 watch(() => selectedWeek.value, () => {
-  selectedScenario.value = ''
+  // Keep scenario if still valid; scenarios watcher will correct if needed.
 })
 
 watch(() => scenarios.value, (newScenarios) => {
-  if (newScenarios && newScenarios.length > 0 && !selectedScenario.value) {
+  if (!newScenarios || newScenarios.length === 0) {
+    return
+  }
+  const stored = loadStoredSelection(selectedCategory.value)
+  if (stored?.scenario && newScenarios.includes(stored.scenario)) {
+    selectedScenario.value = stored.scenario
+    return
+  }
+  if (!selectedScenario.value || !newScenarios.includes(selectedScenario.value)) {
     selectedScenario.value = newScenarios[0]
+  }
+})
+
+watch(() => [selectedCategory.value, selectedWeek.value, selectedScenario.value], ([category, week, scenario]) => {
+  if (category && week && scenario) {
+    storeSelection(category, week, scenario)
   }
 })
 
 onMounted(() => {
   loadData()
+  const stored = loadStoredSelection(selectedCategory.value)
+  if (stored) {
+    isRestoringSelection.value = true
+    selectedWeek.value = stored.week || ''
+    selectedScenario.value = stored.scenario || ''
+    isRestoringSelection.value = false
+  }
 })
 </script>
 

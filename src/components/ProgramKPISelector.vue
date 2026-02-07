@@ -38,7 +38,7 @@
         <div class="flex items-start justify-between mb-4">
           <div class="flex-1">
             <h3 class="text-sm font-semibold text-slate-700 mb-1">{{ kpi.name }}</h3>
-            <p class="text-xs text-slate-500">{{ kpi.unit }}</p>
+            <p class="text-xs text-slate-500">{{ getProgramUnit(index) }}</p>
           </div>
           <div :class="['w-2 h-2 rounded-full flex-shrink-0 mt-1', kpi.status === 'good' ? 'bg-green-500' : kpi.status === 'warning' ? 'bg-yellow-500' : 'bg-red-500']"></div>
         </div>
@@ -107,7 +107,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 
 const props = defineProps({
   sheetData: {
@@ -119,6 +119,25 @@ const props = defineProps({
 const selectedWeek = ref('')
 const selectedColumnC = ref('')
 const hoveredSummaryKey = ref('')
+
+const programSelectionKey = 'kpi-program-selection'
+
+const loadProgramSelection = () => {
+  try {
+    const stored = localStorage.getItem(programSelectionKey)
+    return stored ? JSON.parse(stored) : null
+  } catch (error) {
+    return null
+  }
+}
+
+const storeProgramSelection = (week, columnC) => {
+  try {
+    localStorage.setItem(programSelectionKey, JSON.stringify({ week, columnC }))
+  } catch (error) {
+    // Ignore storage errors
+  }
+}
 
 const weeks = computed(() => {
   return [3, 4, 5, 6, 7, 8, 9, 10]
@@ -303,6 +322,13 @@ const summaryCards = computed(() => {
 
 const summaryKeyByIndex = ['epa', 'ppi', 'rcir']
 
+const getProgramUnit = (index) => {
+  if (index === 0) {
+    return 'm²'
+  }
+  return 'unitless'
+}
+
 const setHoveredSummaryKey = (index) => {
   hoveredSummaryKey.value = summaryKeyByIndex[index] || ''
 }
@@ -313,15 +339,35 @@ const clearHoveredSummaryKey = () => {
 
 // Auto-set first week when data loads
 watch(() => weeks.value, (newWeeks) => {
-  if (newWeeks && newWeeks.length > 0 && !selectedWeek.value) {
+  if (!newWeeks || newWeeks.length === 0) {
+    return
+  }
+  if (!selectedWeek.value || !newWeeks.includes(Number(selectedWeek.value))) {
     selectedWeek.value = newWeeks[0]
   }
 })
 
 // Auto-set first Column C value when data loads
 watch(() => availableColumnCValues.value, (newValues) => {
-  if (newValues && newValues.length > 0 && !selectedColumnC.value) {
+  if (!newValues || newValues.length === 0) {
+    return
+  }
+  if (!selectedColumnC.value || !newValues.includes(selectedColumnC.value)) {
     selectedColumnC.value = newValues[0]
+  }
+})
+
+watch(() => [selectedWeek.value, selectedColumnC.value], ([week, columnC]) => {
+  if (week && columnC) {
+    storeProgramSelection(week, columnC)
+  }
+})
+
+onMounted(() => {
+  const stored = loadProgramSelection()
+  if (stored) {
+    selectedWeek.value = stored.week || ''
+    selectedColumnC.value = stored.columnC || ''
   }
 })
 </script>
