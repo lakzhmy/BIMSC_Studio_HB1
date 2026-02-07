@@ -210,14 +210,42 @@ const priorityActions = computed(() => {
   }))
 })
 
-// All members from teams
+// All members from userStore
 const allMembers = computed(() => {
-  return teams.flatMap(team => 
-    team.members.map(member => ({
-      ...member,
-      team: team.name.toLowerCase()
-    }))
-  )
+  const members = []
+  const teamNames = {
+    structure: 'structure',
+    program: 'program',
+    data: 'data'
+  }
+  
+  // Get members from userStore
+  for (const [teamId, teamMemberList] of Object.entries(userStore.teamMembers)) {
+    if (Array.isArray(teamMemberList)) {
+      teamMemberList.forEach(member => {
+        members.push({
+          id: member.id,
+          name: member.name,
+          role: member.role || 'Team Member',
+          team: teamId,
+          status: member.status || 'online',
+          mood: member.mood
+        })
+      })
+    }
+  }
+  
+  // If no custom members added, show sample data for display purposes
+  if (members.length === 0) {
+    return teams.flatMap(team => 
+      team.members.map(member => ({
+        ...member,
+        team: team.id
+      }))
+    )
+  }
+  
+  return members
 })
 
 // Methods
