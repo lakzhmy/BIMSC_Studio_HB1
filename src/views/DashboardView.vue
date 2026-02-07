@@ -56,18 +56,19 @@
 
       <!-- Navigation Tabs -->
       <div class="border-t px-6 flex gap-1 overflow-x-auto border-slate-200">
-        <router-link 
+        <router-link
           v-for="item in navigationItems"
           :key="item.path"
           :to="item.path"
           :class="[
-            'px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap',
+            'px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap flex items-center gap-2',
             isActiveRoute(item.path)
               ? 'border-blue-600 text-blue-600'
               : 'border-transparent text-slate-600 hover:text-slate-900'
           ]"
         >
-          {{ item.label }}
+          <component v-if="item.icon" :is="item.icon" class="w-4 h-4" />
+          <span>{{ item.label }}</span>
         </router-link>
       </div>
     </header>
@@ -92,18 +93,14 @@
             <section class="card p-6">
               <div class="flex items-center justify-between mb-6">
                 <h2 class="text-xl font-bold text-slate-900">Active Actions</h2>
-                <router-link to="/actions" class="text-sm text-blue-600 hover:text-blue-700 font-medium">
-                  View All →
-                </router-link>
               </div>
 
               <div class="space-y-3">
                 <div 
                   v-for="action in priorityActions" 
                   :key="action.id"
-                  class="p-4 rounded-lg border-l-4 bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer group"
+                  class="p-4 rounded-lg border-l-4 bg-slate-50 hover:bg-slate-100 transition-colors"
                   :style="{ borderLeftColor: getTeamColor(action.team) }"
-                  @click="$router.push('/actions')"
                 >
                   <div class="flex items-start justify-between mb-2">
                     <div class="flex-1">
@@ -175,6 +172,7 @@
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/userStore'
+import { Calendar } from 'lucide-vue-next'
 import UserAvatar from '@/components/UserAvatar.vue'
 import { projectHealth as projectHealthData, actions, teams, recentActivity } from '@/data/sampleData'
 
@@ -193,8 +191,7 @@ const quickStats = [
 const navigationItems = [
   { label: 'Dashboard', path: '/dashboard' },
   { label: 'KPI', path: '/kpi' },
-  { label: 'Meetings', path: '/meetings' },
-  { label: 'Actions', path: '/actions' },
+  { label: 'Timeline', path: '/timeline', icon: Calendar },
   { label: 'Viewer', path: '/viewer' },
   { label: 'Teams', path: '/teams' }
 ]
