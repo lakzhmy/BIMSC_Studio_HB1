@@ -71,7 +71,13 @@
 
         <!-- KPI Cards (not for PROGRAM) -->
         <div v-if="selectedCategory !== 'vitals' && selectedCategory !== 'program' && filteredKPIs.length > 0" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div v-for="kpi in filteredKPIs" :key="kpi.id" class="bg-white p-6 rounded-lg border border-slate-200 hover:shadow-lg transition-shadow cursor-pointer">
+          <div
+            v-for="(kpi, index) in filteredKPIs"
+            :key="kpi.id"
+            class="bg-white p-6 rounded-lg border border-slate-200 hover:shadow-lg transition-shadow cursor-pointer"
+            @mouseenter="hoveredStructureIndex = index"
+            @mouseleave="hoveredStructureIndex = null"
+          >
             <div class="flex items-start justify-between mb-4">
               <div class="flex-1">
                 <h3 class="text-sm font-semibold text-slate-700 mb-1">{{ kpi.name }}</h3>
@@ -85,6 +91,38 @@
               </div>
               <div class="flex items-center gap-2 text-xs text-slate-500">
                 <span class="capitalize">Status: {{ kpi.status }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Structure Summary Cards -->
+        <div v-if="selectedCategory === 'structure' && filteredKPIs.length > 0" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div
+            v-for="(card, index) in structureSummaryCards"
+            :key="card.id"
+            :class="['bg-white p-6 rounded-lg border border-slate-200 transition-shadow', hoveredStructureIndex === index ? 'shadow-lg border-slate-300' : '']"
+          >
+            <div class="text-xs text-slate-500">Target: {{ card.displayTarget }}</div>
+            <div class="flex items-center gap-2 text-xs text-slate-500 mt-1">
+              <span :class="['text-[11px] px-2 py-0.5 rounded-full border', card.delta <= 0 ? 'bg-green-100 text-green-700 border-green-200' : 'bg-red-100 text-red-700 border-red-200']">
+                {{ card.delta > 0 ? '+' : '' }}{{ card.displayDelta }}
+              </span>
+            </div>
+            <div class="mt-4 space-y-2">
+              <div class="relative h-2 rounded-full bg-slate-100 overflow-visible">
+                <div
+                  class="absolute left-0 top-0 h-full rounded-full"
+                  :style="{ width: `${card.bulletValuePct}%`, backgroundColor: card.color }"
+                ></div>
+                <div
+                  class="absolute top-0 h-full w-0.5 bg-slate-500"
+                  :style="{ left: `${card.bulletTargetPct}%` }"
+                ></div>
+                <div
+                  class="absolute top-0 h-2 w-2 bg-yellow-400 shadow-sm"
+                  :style="{ left: `calc(${card.bulletTargetPct}% - 4px)`, transform: 'rotate(45deg)' }"
+                ></div>
               </div>
             </div>
           </div>
@@ -138,6 +176,7 @@ const selectedWeek = ref('')
 const selectedScenario = ref('')
 const isLoading = ref(false)
 const loadError = ref('')
+const hoveredStructureIndex = ref(null)
 
 const categories = [
   { id: 'program', label: 'Program', color: '#3b82f6' },
@@ -178,6 +217,48 @@ const filteredKPIs = computed(() => {
   }
   const result = getKPIsForSelection(currentSheetData.value, selectedWeek.value, selectedScenario.value)
   return Array.isArray(result) ? result : []
+})
+
+const structureSummaryCards = computed(() => {
+  if (selectedCategory.value !== 'structure') {
+    return []
+  }
+  const targets = currentSheetData.value?.targetsByScenario?.[selectedScenario.value] || []
+
+  const formatValue = (value) => {
+    return Number(value).toLocaleString(undefined, { maximumFractionDigits: 2 })
+  }
+
+  const parseNumber = (value) => {
+    if (typeof value === 'number') {
+      return value
+    }
+    const sanitized = String(value || '').replace(/,/g, '')
+    const match = sanitized.match(/-?\d*\.?\d+/)
+    if (!match) {
+      return 0
+    }
+    const parsed = Number(match[0])
+    return Number.isNaN(parsed) ? 0 : parsed
+  }
+
+  return filteredKPIs.value.map((kpi, index) => {
+    const value = parseNumber(kpi.value)
+    const target = parseNumber(targets[index])
+    const max = Math.max(value, target) * 1.2 || 1
+    const delta = value - target
+    return {
+      id: `summary-${kpi.id}`,
+      title: kpi.name,
+      displayValue: formatValue(value),
+      displayTarget: formatValue(target),
+      displayDelta: formatValue(delta),
+      delta,
+      bulletValuePct: Math.min((value / max) * 100, 100),
+      bulletTargetPct: Math.min((target / max) * 100, 100),
+      color: '#10b981',
+    }
+  })
 })
 
 const navigationItems = [

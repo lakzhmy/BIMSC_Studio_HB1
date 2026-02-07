@@ -28,7 +28,13 @@
 
     <!-- KPI Cards (Columns E+) -->
     <div v-if="selectedColumnC && kpiCards.length > 0" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-      <div v-for="kpi in kpiCards" :key="kpi.id" class="bg-white p-6 rounded-lg border border-slate-200 hover:shadow-lg transition-shadow cursor-pointer">
+      <div
+        v-for="(kpi, index) in kpiCards"
+        :key="kpi.id"
+        class="bg-white p-6 rounded-lg border border-slate-200 hover:shadow-lg transition-shadow cursor-pointer"
+        @mouseenter="setHoveredSummaryKey(index)"
+        @mouseleave="clearHoveredSummaryKey"
+      >
         <div class="flex items-start justify-between mb-4">
           <div class="flex-1">
             <h3 class="text-sm font-semibold text-slate-700 mb-1">{{ kpi.name }}</h3>
@@ -48,7 +54,11 @@
     </div>
 
     <div v-if="selectedColumnC && kpiCards.length > 0" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-      <div v-for="card in summaryCards" :key="card.id" class="bg-white p-6 rounded-lg border border-slate-200">
+      <div
+        v-for="card in summaryCards"
+        :key="card.id"
+        :class="['bg-white p-6 rounded-lg border border-slate-200 transition-shadow', hoveredSummaryKey === card.key ? 'shadow-lg border-slate-300' : '']"
+      >
         <div class="flex items-center justify-between mb-3">
           <div class="flex items-center gap-2">
             <h3 class="text-sm font-semibold text-slate-700">{{ card.title }}</h3>
@@ -102,6 +112,7 @@ const props = defineProps({
 
 const selectedWeek = ref('')
 const selectedColumnC = ref('')
+const hoveredSummaryKey = ref('')
 
 const weeks = computed(() => {
   return [3, 4, 5, 6, 7, 8, 9, 10]
@@ -246,6 +257,7 @@ const summaryCards = computed(() => {
 
   return [
     {
+      key: 'epa',
       id: 'summary-epa',
       title: 'EPA',
       subtitle: 'Total',
@@ -257,6 +269,7 @@ const summaryCards = computed(() => {
       bulletTargetPct: epa.bulletTargetPct,
     },
     {
+      key: 'ppi',
       id: 'summary-ppi',
       title: 'PPI',
       subtitle: 'Average',
@@ -268,6 +281,7 @@ const summaryCards = computed(() => {
       bulletTargetPct: ppi.bulletTargetPct,
     },
     {
+      key: 'rcir',
       id: 'summary-rcir',
       title: 'RCIR',
       subtitle: 'Average',
@@ -280,6 +294,16 @@ const summaryCards = computed(() => {
     },
   ]
 })
+
+const summaryKeyByIndex = ['epa', 'ppi', 'rcir']
+
+const setHoveredSummaryKey = (index) => {
+  hoveredSummaryKey.value = summaryKeyByIndex[index] || ''
+}
+
+const clearHoveredSummaryKey = () => {
+  hoveredSummaryKey.value = ''
+}
 
 // Auto-set first week when data loads
 watch(() => weeks.value, (newWeeks) => {
