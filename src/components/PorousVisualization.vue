@@ -3,17 +3,16 @@
     <div class="flex items-center justify-between">
       <div class="flex items-center gap-2 group/info">
         <h3 class="text-sm font-semibold text-slate-700">Tower Vital Signs Matrix</h3>
-        <span class="text-slate-400 cursor-help text-xs relative">ⓘ
+        <span class="text-slate-400 cursor-help text-xs relative">i
           <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover/info:block z-20 bg-slate-900 text-white text-xs rounded py-2 px-3 whitespace-nowrap">
             Color-coded stress map: Red=Air Quality, Blue=Occupancy, Green=Structure
           </div>
         </span>
       </div>
-      <p class="text-xs text-slate-500">200 Floors × 4 Zones</p>
+      <p class="text-xs text-slate-500">200 Floors x 4 Zones</p>
     </div>
     <div class="relative rounded-lg bg-gradient-to-br from-slate-50 to-slate-100 border border-slate-200 p-4" style="height: 700px;">
       <div class="flex gap-4 h-full">
-        <!-- Y-Axis Labels (Floors) -->
         <div class="flex flex-col justify-between text-xs text-slate-500 pr-2 border-r border-slate-300">
           <div>L200</div>
           <div>L180</div>
@@ -27,19 +26,16 @@
           <div>L20</div>
           <div>L1</div>
         </div>
-        
-        <!-- Main Grid -->
+
         <div class="flex-1 flex flex-col">
-          <!-- X-Axis Labels (Zones) -->
           <div class="grid grid-cols-4 gap-2 mb-2 pb-2 border-b border-slate-300">
             <div class="text-xs text-slate-500 text-center font-medium">North</div>
             <div class="text-xs text-slate-500 text-center font-medium">Core</div>
             <div class="text-xs text-slate-500 text-center font-medium">South</div>
             <div class="text-xs text-slate-500 text-center font-medium">Atrium</div>
           </div>
-          
-          <!-- Organic Bubble Container -->
-          <div 
+
+          <div
             class="flex-1 relative"
             @mousemove="updateTooltipPos"
             @mouseleave="hideTooltip"
@@ -62,8 +58,7 @@
               @mouseenter="showTooltip(bubble, $event)"
               @mousemove="updateTooltipPos"
             ></div>
-            
-            <!-- Custom Tooltip (Cursor Following) -->
+
             <div
               v-if="hoveredBubble"
               class="fixed z-50 bg-slate-900 text-white text-xs rounded-lg p-3 shadow-xl pointer-events-none"
@@ -83,7 +78,7 @@
                   <span class="font-medium">{{ (100 - hoveredBubble.airPollution).toFixed(1) }}%</span>
                 </div>
                 <div class="flex justify-between">
-                  <span class="text-slate-400">CO₂ Level:</span>
+                  <span class="text-slate-400">CO2 Level:</span>
                   <span>{{ hoveredBubble.co2 }} ppm</span>
                 </div>
                 <div class="flex justify-between">
@@ -150,7 +145,6 @@ import { computed, ref } from 'vue'
 
 const zones = ['North', 'Core', 'South', 'Atrium']
 const floors = 200
-const displayFloors = 20 // Show 20 floors for visualization
 
 const hoveredBubble = ref(null)
 const tooltipPos = ref({ x: 0, y: 0 })
@@ -159,7 +153,7 @@ const showTooltip = (bubble, event) => {
   hoveredBubble.value = bubble
   tooltipPos.value = {
     x: event.clientX,
-    y: event.clientY
+    y: event.clientY,
   }
 }
 
@@ -167,7 +161,7 @@ const updateTooltipPos = (event) => {
   if (hoveredBubble.value) {
     tooltipPos.value = {
       x: event.clientX,
-      y: event.clientY
+      y: event.clientY,
     }
   }
 }
@@ -176,79 +170,64 @@ const hideTooltip = () => {
   hoveredBubble.value = null
 }
 
-// Generate building vital signs data
 const generateBubbles = () => {
   const bubbles = []
   const floorsToShow = [
-    1, 10, 20, 30, 40, 50, 60, 70, 80, 90, 
-    100, 110, 120, 130, 140, 150, 160, 170, 180, 190, 200
+    1, 10, 20, 30, 40, 50, 60, 70, 80, 90,
+    100, 110, 120, 130, 140, 150, 160, 170, 180, 190, 200,
   ]
-  
+
   for (let floorIdx = 0; floorIdx < floorsToShow.length; floorIdx++) {
     const floor = floorsToShow[floorIdx]
-    
+
     for (let zoneIdx = 0; zoneIdx < zones.length; zoneIdx++) {
       const zone = zones[zoneIdx]
-      
-      // Calculate base grid position
+
       const baseX = (zoneIdx / (zones.length - 1)) * 100
       const baseY = ((floorsToShow.length - 1 - floorIdx) / (floorsToShow.length - 1)) * 100
-      
-      // Add organic offset (±10% random variation)
       const xOffset = (Math.random() - 0.5) * 15
       const yOffset = (Math.random() - 0.5) * 8
-      
+
       const xPos = Math.max(5, Math.min(95, baseX + xOffset))
       const yPos = Math.max(5, Math.min(95, baseY + yOffset))
-      
-      // Generate metrics for each bubble (0-100 scale)
-      // Air Pollution/CO2 (Data Team - RED)
+
       let airPollution = Math.random() * 100
-      // Higher pollution in Core and Atrium (more people)
       if (zone === 'Core' || zone === 'Atrium') {
         airPollution = 30 + Math.random() * 70
       }
-      
-      // Occupancy (Program Team - BLUE)
+
       let occupancy = Math.random() * 100
-      // Higher occupancy in Core, moderate in Atrium
       if (zone === 'Core') {
         occupancy = 50 + Math.random() * 50
       } else if (zone === 'Atrium') {
         occupancy = 40 + Math.random() * 40
       }
-      
-      // Structural Load (Structure Team - GREEN)
-      let structuralLoad = Math.random() * 100
-      // Higher load on lower floors and Core
+
       const floorFactor = (floors - floor) / floors
-      structuralLoad = floorFactor * 60 + Math.random() * 40
+      let structuralLoad = floorFactor * 60 + Math.random() * 40
       if (zone === 'Core') {
         structuralLoad = Math.max(structuralLoad, 60 + Math.random() * 40)
       }
-      
-      // Generate dummy detailed data
-      const co2 = Math.round(400 + airPollution * 15) // 400-1900 ppm
-      const peopleCount = Math.round(occupancy * 0.5) // 0-50 people
+
+      const co2 = Math.round(400 + airPollution * 15)
+      const peopleCount = Math.round(occupancy * 0.5)
       const activityLevel = occupancy > 70 ? 'High' : occupancy > 40 ? 'Medium' : 'Low'
-      const stressLevel = (structuralLoad * 0.8).toFixed(1) // MPa
-      const deflection = (structuralLoad * 0.15).toFixed(2) // mm
-      
-      // Determine dominant color - use pure base colors
+      const stressLevel = (structuralLoad * 0.8).toFixed(1)
+      const deflection = (structuralLoad * 0.15).toFixed(2)
+
       const maxMetric = Math.max(airPollution, occupancy, structuralLoad)
-      
+
       let color
-      let bubbleSize = 35 + (maxMetric / 100) * 40 // 35-75px with more variation
-      
-      // Assign pure base colors - overlapping will create secondary colors naturally
+      const bubbleSize = 35 + (maxMetric / 100) * 40
+
       if (airPollution === maxMetric) {
-        color = 'rgb(239, 68, 68)' // Pure RED (Data Team)
+        color = 'rgb(239, 68, 68)'
       } else if (occupancy === maxMetric) {
-        color = 'rgb(59, 130, 246)' // Pure BLUE (Program Team)
+        color = 'rgb(59, 130, 246)'
       } else {
-        color = 'rgb(34, 197, 94)' // Pure GREEN (Structure Team)
+        color = 'rgb(34, 197, 94)'
       }
-      
+
       bubbles.push({
         floor,
         zone,
@@ -268,7 +247,7 @@ const generateBubbles = () => {
       })
     }
   }
-  
+
   return bubbles
 }
 

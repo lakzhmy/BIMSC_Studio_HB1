@@ -3,7 +3,7 @@
     <div class="flex items-center justify-between">
       <div class="flex items-center gap-2 group/info">
         <h3 class="text-sm font-semibold text-slate-700">Project Complexity</h3>
-        <span class="text-slate-400 cursor-help text-xs relative">ⓘ
+        <span class="text-slate-400 cursor-help text-xs relative">i
           <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover/info:block z-20 bg-slate-900 text-white text-xs rounded py-2 px-3 whitespace-nowrap">
             Project scope growth measured over 7 weeks
           </div>
@@ -13,7 +13,6 @@
     </div>
     <div class="flex-1 relative overflow-hidden rounded-lg bg-gradient-to-br from-slate-50 to-slate-100 border border-slate-200">
       <svg viewBox="0 0 600 200" class="w-full h-full" preserveAspectRatio="xMidYMid meet">
-        <!-- Background grid -->
         <defs>
           <pattern id="gridPattern" width="60" height="20" patternUnits="userSpaceOnUse">
             <line x1="0" y1="0" x2="0" y2="200" stroke="rgba(148, 163, 184, 0.1)" stroke-width="1" />
@@ -22,12 +21,10 @@
         </defs>
         <rect width="600" height="200" fill="url(#gridPattern)" />
 
-        <!-- Y-axis labels -->
         <text x="10" y="20" class="axis-label" text-anchor="start">High</text>
         <text x="10" y="100" class="axis-label" text-anchor="start">Mid</text>
         <text x="10" y="180" class="axis-label" text-anchor="start">Low</text>
 
-        <!-- Stepped line path -->
         <polyline
           :points="steppedLinePoints"
           fill="none"
@@ -38,7 +35,6 @@
           vector-effect="non-scaling-stroke"
         />
 
-        <!-- Data points (nodes) -->
         <g class="data-points">
           <circle
             v-for="(point, idx) in dataPoints"
@@ -53,7 +49,6 @@
           />
         </g>
 
-        <!-- X-axis labels -->
         <text x="30" y="195" class="axis-label" text-anchor="middle">Week 1</text>
         <text x="120" y="195" class="axis-label" text-anchor="middle">Week 2</text>
         <text x="210" y="195" class="axis-label" text-anchor="middle">Week 3</text>
@@ -72,7 +67,6 @@
 <script setup>
 import { computed } from 'vue'
 
-// Generate stepped complexity data
 const complexityData = [
   { week: 1, complexity: 25 },
   { week: 2, complexity: 32 },
@@ -83,36 +77,32 @@ const complexityData = [
   { week: 7, complexity: 85 },
 ]
 
-// Convert data to SVG coordinates
 const dataPoints = computed(() => {
   return complexityData.map((data, idx) => {
     const x = 30 + idx * 90
-    const y = 170 - (data.complexity / 100) * 150 // Scale to fit in viewBox
+    const y = 170 - (data.complexity / 100) * 150
     return { x, y, complexity: data.complexity }
   })
 })
 
-// Generate stepped line points (horizontal then vertical transitions)
 const steppedLinePoints = computed(() => {
-  let points = []
-  
+  const points = []
+
   for (let i = 0; i < dataPoints.value.length; i++) {
     const current = dataPoints.value[i]
-    
+
     if (i === 0) {
       points.push([current.x, current.y])
     } else {
       const prev = dataPoints.value[i - 1]
-      // Create step: go horizontal first, then vertical
       points.push([current.x, prev.y])
       points.push([current.x, current.y])
     }
   }
-  
+
   return points.map(p => p.join(',')).join(' ')
 })
 
-// Get latest complexity index
 const complexityIndex = computed(() => {
   return complexityData[complexityData.length - 1].complexity
 })
