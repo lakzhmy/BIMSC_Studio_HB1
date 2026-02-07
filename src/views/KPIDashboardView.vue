@@ -95,11 +95,24 @@
           <p class="text-slate-500">Select a week and scenario to view KPI data</p>
         </div>
 
-        <!-- Vitals Placeholder -->
-        <div v-if="selectedCategory === 'vitals'" class="bg-white rounded-lg border border-slate-200 p-12">
-          <div class="text-center">
+        <!-- Vitals Visualizations -->
+        <div v-if="selectedCategory === 'vitals'" class="space-y-6">
+          <div class="bg-white rounded-lg border border-slate-200 p-6">
             <h2 class="text-2xl font-bold text-slate-900 mb-2">Vitals</h2>
-            <p class="text-slate-500">Building performance visualization and real-time monitoring coming soon.</p>
+            <p class="text-slate-500">Building performance visualizations and real-time monitoring.</p>
+          </div>
+
+          <div class="grid lg:grid-cols-2 gap-6">
+            <div class="bg-white p-6 rounded-lg border border-slate-200 hover:shadow-lg transition-shadow">
+              <BreathingChart />
+            </div>
+            <div class="bg-white p-6 rounded-lg border border-slate-200 hover:shadow-lg transition-shadow">
+              <ProjectComplexity />
+            </div>
+          </div>
+
+          <div class="bg-white p-6 rounded-lg border border-slate-200 hover:shadow-lg transition-shadow">
+            <PorousVisualization />
           </div>
         </div>
       </div>
@@ -113,6 +126,9 @@ import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/userStore'
 import UserAvatar from '@/components/UserAvatar.vue'
 import ProgramKPISelector from '@/components/ProgramKPISelector.vue'
+import BreathingChart from '@/components/BreathingChart.vue'
+import PorousVisualization from '@/components/PorousVisualization.vue'
+import ProjectComplexity from '@/components/ProjectComplexity.vue'
 import { fetchKPIsByCategory, getKPIsForSelection } from '@/services/googleSheetsService'
 
 const router = useRouter()
