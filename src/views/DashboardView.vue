@@ -77,7 +77,7 @@
             <section class="card p-6">
               <h2 class="text-xl font-bold text-slate-900 mb-6">Team Members</h2>
               <div class="space-y-3">
-                <div v-for="member in allMembers.slice(0, 5)" :key="member.id" class="flex items-center gap-3">
+                <div v-for="member in allMembers" :key="member.id" class="flex items-center gap-3">
                   <div class="w-8 h-8 rounded-full" :style="{ backgroundColor: getTeamColor(member.team) }"></div>
                   <div class="flex-1 min-w-0">
                     <p class="text-sm font-medium text-slate-900 truncate">{{ member.name }}</p>

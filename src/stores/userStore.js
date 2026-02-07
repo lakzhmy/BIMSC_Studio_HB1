@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { teams as sampleTeams } from '@/data/sampleData'
 
 const STORAGE_KEY = 'bimsc_studio_data'
 
@@ -22,6 +23,31 @@ function saveToStorage(data) {
 
 export const useUserStore = defineStore('user', () => {
   const storedData = loadFromStorage()
+
+  function buildDefaultTeamMembers() {
+    const defaults = { structure: [], program: [], data: [] }
+
+    sampleTeams.forEach((team) => {
+      if (!defaults[team.id]) {
+        return
+      }
+      defaults[team.id] = (team.members || []).map((member) => ({
+        id: member.id,
+        name: member.name,
+        role: member.role,
+        mood: member.mood,
+        status: member.status || 'online',
+        avatar: member.avatar || {
+          complexity: 50,
+          speed: 2,
+          wobble: 30,
+          shade: 2
+        }
+      }))
+    })
+
+    return defaults
+  }
   
   // State
   const currentUser = ref(storedData?.currentUser || {
@@ -41,11 +67,7 @@ export const useUserStore = defineStore('user', () => {
   const isLoggedIn = ref(storedData?.isLoggedIn || false)
 
   // Team Members State - stores user-added members per team
-  const teamMembers = ref(storedData?.teamMembers || {
-    structure: [],
-    program: [],
-    data: []
-  })
+  const teamMembers = ref(storedData?.teamMembers || buildDefaultTeamMembers())
   const meetingNotes = ref(storedData?.meetingNotes || [
     { 
       id: 1, 
@@ -120,7 +142,7 @@ export const useUserStore = defineStore('user', () => {
     selectedTeam.value = ''
     avatarConfig.value = { complexity: 50, speed: 2, wobble: 30 }
     isLoggedIn.value = false
-    teamMembers.value = { structure: [], program: [], data: [] }
+    teamMembers.value = buildDefaultTeamMembers()
     teamMeetings.value = { structure: [], program: [], data: [] }
     teamActions.value = { structure: [], program: [], data: [] }
     memberHours.value = {}

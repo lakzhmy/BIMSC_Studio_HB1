@@ -93,18 +93,26 @@ const showAddMemberModal = ref(false)
 
 const allMembers = computed(() => {
   const members = []
-  
-  // Get all user-added members from each team
+
   teams.forEach(team => {
     const teamMembers = userStore.getTeamMembers(team.id)
-    teamMembers.forEach(member => {
-      members.push({
-        ...member,
-        teamId: team.id
+    if (teamMembers.length) {
+      teamMembers.forEach(member => {
+        members.push({
+          ...member,
+          teamId: team.id
+        })
       })
-    })
+    } else if (Array.isArray(team.members)) {
+      team.members.forEach(member => {
+        members.push({
+          ...member,
+          teamId: team.id
+        })
+      })
+    }
   })
-  
+
   return members
 })
 
@@ -128,7 +136,12 @@ function removeMember(teamId, memberId) {
 }
 
 function getTeamMemberCount(teamId) {
-  return userStore.getTeamMembers(teamId).length
+  const members = userStore.getTeamMembers(teamId)
+  if (members.length) {
+    return members.length
+  }
+  const team = teams.find(t => t.id === teamId)
+  return team?.members?.length || 0
 }
 
 function getTeamMeetingCount(teamId) {

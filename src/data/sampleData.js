@@ -93,9 +93,9 @@ export const teams = [
     colorDark: '#059669',
     description: 'Engineering and structural systems',
     members: [
-      { id: 1, name: 'Sarah Chen', role: 'Lead Structural Engineer', status: 'online', avatar: { complexity: 45, speed: 2.5, wobble: 25, shade: 1 } },
-      { id: 2, name: 'Marcus Wu', role: 'Structural Analyst', status: 'online', avatar: { complexity: 55, speed: 2, wobble: 30, shade: 3 } },
-      { id: 3, name: 'Elena Rodriguez', role: 'Materials Specialist', status: 'away', avatar: { complexity: 50, speed: 2.2, wobble: 28, shade: 2 } }
+      { id: 1, name: 'Charles Abi Chahine', role: 'Lead Structural Engineer', status: 'online', avatar: { complexity: 45, speed: 2.5, wobble: 25, shade: 1 } },
+      { id: 2, name: 'Ramy Ayoub', role: 'Structural Analyst', status: 'online', avatar: { complexity: 55, speed: 2, wobble: 30, shade: 3 } },
+      { id: 3, name: 'Hani Karime', role: 'Materials Specialist', status: 'away', avatar: { complexity: 50, speed: 2.2, wobble: 28, shade: 2 } }
     ],
     progress: 33,
     activeProjects: 5,
@@ -109,10 +109,9 @@ export const teams = [
     colorDark: '#2563eb',
     description: 'Spatial planning and user experience',
     members: [
-      { id: 4, name: 'David Park', role: 'Program Lead', status: 'online', avatar: { complexity: 60, speed: 1.8, wobble: 35, shade: 0 } },
-      { id: 5, name: 'Amara Okafor', role: 'Space Planner', status: 'online', avatar: { complexity: 48, speed: 2.3, wobble: 26, shade: 2 } },
-      { id: 6, name: 'Lucas Ferreira', role: 'UX Architect', status: 'online', avatar: { complexity: 52, speed: 2.1, wobble: 29, shade: 4 } },
-      { id: 7, name: 'Priya Sharma', role: 'Circulation Designer', status: 'away', avatar: { complexity: 58, speed: 1.9, wobble: 32, shade: 1 } }
+      { id: 4, name: 'Ramón García', role: 'Program Lead', status: 'online', avatar: { complexity: 60, speed: 1.8, wobble: 35, shade: 0 } },
+      { id: 5, name: 'Ahmad Baltaji', role: 'Space Planner', status: 'online', avatar: { complexity: 48, speed: 2.3, wobble: 26, shade: 2 } },
+      { id: 6, name: 'Mahmoud Mohamed', role: 'UX Architect', status: 'online', avatar: { complexity: 52, speed: 2.1, wobble: 29, shade: 4 } }
     ],
     progress: 44,
     activeProjects: 7,
@@ -126,8 +125,9 @@ export const teams = [
     colorDark: '#dc2626',
     description: 'Analytics and performance optimization',
     members: [
-      { id: 8, name: 'Kenji Tanaka', role: 'Data Lead', status: 'online', avatar: { complexity: 65, speed: 1.7, wobble: 38, shade: 3 } },
-      { id: 9, name: 'Zara Ahmed', role: 'Performance Analyst', status: 'online', avatar: { complexity: 47, speed: 2.4, wobble: 24, shade: 1 } }
+      { id: 8, name: 'Emilie El Chidiac', role: 'Data Lead', status: 'online', avatar: { complexity: 65, speed: 1.7, wobble: 38, shade: 3 } },
+      { id: 9, name: 'María Sánchez Domínguez', role: 'Performance Analyst', status: 'online', avatar: { complexity: 47, speed: 2.4, wobble: 24, shade: 1 } },
+      { id: 10, name: 'Lakzhmy Mari Zaro', role: 'Data Engineer', status: 'away', avatar: { complexity: 52, speed: 2.1, wobble: 29, shade: 2 } }
     ],
     progress: 22,
     activeProjects: 4,
