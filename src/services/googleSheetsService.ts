@@ -62,7 +62,7 @@ async function fetchSheet(sheetName: string): Promise<string[][]> {
  * Row 2: Units (- | - | unit_1 | unit_2 | ...)
  * Row 3+: Data (Week_X | Scenario_Name | value_1 | value_2 | ...)
  */
-function parseSheetData(rows: string[][]): ParsedSheetData {
+function parseSheetData(rows: string[][], targetRowIndexes: number[] = []): ParsedSheetData {
   if (rows.length < 3) return { weeks: [], scenarios: [], data: [], kpiNames: [], targets: [], targetsByScenario: {} };
   
   const headerRow = rows[0];
@@ -112,12 +112,11 @@ function parseSheetData(rows: string[][]): ParsedSheetData {
   }
   
   const targetsByScenario: Record<string, number[]> = {};
-  const targetRowIndexes = [10, 11];
   targetRowIndexes.forEach((rowIndex) => {
     const row = rows[rowIndex];
     if (!row) return;
     const scenarioLabel = row[1]?.trim() || '';
-    if (!scenarioLabel || !/peak/i.test(scenarioLabel)) return;
+    if (!scenarioLabel || !/(summer|winter|peak)/i.test(scenarioLabel)) return;
     const targets = kpiNames.map((_, index) => {
       const rawValue = String(row[2 + index] || '').replace(/,/g, '').trim();
       const parsed = Number(rawValue);
@@ -221,7 +220,15 @@ export async function fetchKPIsByCategory(category: 'data' | 'structure' | 'prog
   if (category === 'program') {
     return parseProgramSheetData(rows);
   }
-  
+
+  if (category === 'structure') {
+    return parseSheetData(rows, [10, 11]);
+  }
+
+  if (category === 'data') {
+    return parseSheetData(rows, [18, 19]);
+  }
+
   return parseSheetData(rows);
 }
 

@@ -66,7 +66,7 @@
           </div>
         </div>
         <div class="text-3xl font-bold text-slate-900">{{ card.displayValue }}</div>
-        <div v-if="card.visual?.type === 'bullet'" class="mt-4 space-y-2">
+        <div v-if="card.visual?.type === 'bullet'" class="mt-6 space-y-4">
           <div class="text-xs text-slate-500">
             <span>Target: {{ card.visual.target }}</span>
           </div>
@@ -88,6 +88,12 @@
               class="absolute top-0 h-2 w-2 bg-yellow-400 shadow-sm"
               :style="{ left: `calc(${card.bulletTargetPct}% - 4px)`, transform: 'rotate(45deg)' }"
             ></div>
+            <div
+              class="absolute -top-5 text-[10px] text-slate-600"
+              :style="{ left: `calc(${card.bulletTargetPct}% - 8px)` }"
+            >
+              {{ formatValue(card.visual.target) }}
+            </div>
           </div>
         </div>
       </div>

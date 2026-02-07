@@ -96,8 +96,8 @@
           </div>
         </div>
 
-        <!-- Structure Summary Cards -->
-        <div v-if="selectedCategory === 'structure' && filteredKPIs.length > 0" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- Structure/Data Summary Cards -->
+        <div v-if="(selectedCategory === 'structure' || selectedCategory === 'data') && filteredKPIs.length > 0" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           <div
             v-for="(card, index) in structureSummaryCards"
             :key="card.id"
@@ -109,7 +109,7 @@
                 {{ card.delta > 0 ? '+' : '' }}{{ card.displayDelta }}
               </span>
             </div>
-            <div class="mt-4 space-y-2">
+            <div class="mt-6 space-y-4">
               <div class="relative h-2 rounded-full bg-slate-100 overflow-visible">
                 <div
                   class="absolute left-0 top-0 h-full rounded-full"
@@ -123,6 +123,12 @@
                   class="absolute top-0 h-2 w-2 bg-yellow-400 shadow-sm"
                   :style="{ left: `calc(${card.bulletTargetPct}% - 4px)`, transform: 'rotate(45deg)' }"
                 ></div>
+                <div
+                  class="absolute -top-5 text-[10px] text-slate-600"
+                  :style="{ left: `calc(${card.bulletTargetPct}% - 8px)` }"
+                >
+                  {{ card.displayTarget }}
+                </div>
               </div>
             </div>
           </div>
@@ -220,7 +226,7 @@ const filteredKPIs = computed(() => {
 })
 
 const structureSummaryCards = computed(() => {
-  if (selectedCategory.value !== 'structure') {
+  if (selectedCategory.value !== 'structure' && selectedCategory.value !== 'data') {
     return []
   }
   const targets = currentSheetData.value?.targetsByScenario?.[selectedScenario.value] || []
@@ -242,6 +248,8 @@ const structureSummaryCards = computed(() => {
     return Number.isNaN(parsed) ? 0 : parsed
   }
 
+  const barColor = selectedCategory.value === 'data' ? '#ef4444' : '#10b981'
+
   return filteredKPIs.value.map((kpi, index) => {
     const value = parseNumber(kpi.value)
     const target = parseNumber(targets[index])
@@ -256,7 +264,7 @@ const structureSummaryCards = computed(() => {
       delta,
       bulletValuePct: Math.min((value / max) * 100, 100),
       bulletTargetPct: Math.min((target / max) * 100, 100),
-      color: '#10b981',
+      color: barColor,
     }
   })
 })
