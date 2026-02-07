@@ -47,6 +47,42 @@
       </div>
     </div>
 
+    <div v-if="selectedColumnC && kpiCards.length > 0" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div v-for="card in summaryCards" :key="card.id" class="bg-white p-6 rounded-lg border border-slate-200">
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center gap-2">
+            <h3 class="text-sm font-semibold text-slate-700">{{ card.title }}</h3>
+            <span class="text-xs text-slate-400">{{ card.subtitle }}</span>
+          </div>
+        </div>
+        <div class="text-3xl font-bold text-slate-900">{{ card.displayValue }}</div>
+        <div v-if="card.visual?.type === 'bullet'" class="mt-4 space-y-2">
+          <div class="text-xs text-slate-500">
+            <span>Target: {{ card.visual.target }}</span>
+          </div>
+          <div class="flex items-center gap-2 text-xs text-slate-500">
+            <span :class="['text-[11px] px-2 py-0.5 rounded-full border', card.delta <= 0 ? 'bg-green-100 text-green-700 border-green-200' : 'bg-red-100 text-red-700 border-red-200']">
+              {{ card.delta > 0 ? '+' : '' }}{{ formatDelta(card.delta) }}
+            </span>
+          </div>
+          <div class="relative h-2 rounded-full bg-slate-100 overflow-visible">
+            <div
+              class="absolute left-0 top-0 h-full rounded-full"
+              :style="{ width: `${card.bulletValuePct}%`, backgroundColor: '#3b82f6' }"
+            ></div>
+            <div
+              class="absolute top-0 h-full w-0.5 bg-slate-500"
+              :style="{ left: `${card.bulletTargetPct}%` }"
+            ></div>
+            <div
+              class="absolute top-0 h-2 w-2 bg-yellow-400 shadow-sm"
+              :style="{ left: `calc(${card.bulletTargetPct}% - 4px)`, transform: 'rotate(45deg)' }"
+            ></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- No Data State -->
     <div v-else-if="!selectedColumnC" class="bg-slate-100 rounded-lg p-12 text-center">
       <p class="text-slate-500">Select a space index to view KPI data</p>
@@ -98,6 +134,151 @@ const kpiCards = computed(() => {
   const data = props.sheetData.data || []
   const row = data.find(r => r && r.scenario === selectedColumnC.value)
   return Array.isArray(row?.kpis) ? row.kpis : []
+})
+
+
+const summaryIndexes = {
+  epa: 0,
+  ppi: 1,
+  rcir: 2,
+}
+
+const parseNumber = (value) => {
+  if (typeof value === 'number') {
+    return value
+  }
+  const sanitized = String(value || '').replace(/,/g, '')
+  const match = sanitized.match(/-?\d*\.?\d+/)
+  if (!match) {
+    return 0
+  }
+  const parsed = Number(match[0])
+  return Number.isNaN(parsed) ? 0 : parsed
+}
+
+const formatDelta = (delta) => {
+  if (Math.abs(delta) < 1) {
+    return delta.toFixed(2)
+  }
+  return delta.toLocaleString()
+}
+
+const getSummaryTarget = (key) => {
+  const targets = props.sheetData?.targets || []
+  const index = summaryIndexes[key]
+  if (index === undefined) {
+    return 0
+  }
+  return parseNumber(targets[index])
+}
+
+const sumByIndex = (index) => {
+  const data = props.sheetData?.data || []
+  let sum = 0
+  data.forEach((row) => {
+    const kpi = (row.kpis || [])[index]
+    if (kpi) {
+      sum += parseNumber(kpi.value)
+    }
+  })
+  return sum
+}
+
+const averageByIndex = (index) => {
+  const data = props.sheetData?.data || []
+  let sum = 0
+  let count = 0
+  data.forEach((row) => {
+    const kpi = (row.kpis || [])[index]
+    if (kpi) {
+      sum += parseNumber(kpi.value)
+      count += 1
+    }
+  })
+  return count > 0 ? sum / count : 0
+}
+
+const formatValue = (value) => {
+  return value.toLocaleString(undefined, { maximumFractionDigits: 2 })
+}
+
+const summaryData = computed(() => {
+  const epaValue = sumByIndex(summaryIndexes.epa)
+  const ppiValue = averageByIndex(summaryIndexes.ppi)
+  const rcirValue = averageByIndex(summaryIndexes.rcir)
+
+  const epaTarget = getSummaryTarget('epa') || 1000000
+  const ppiTarget = getSummaryTarget('ppi')
+  const rcirTarget = getSummaryTarget('rcir')
+
+  const bulletConfig = (value, target) => {
+    const max = Math.max(value, target) * 1.2 || 1
+    return {
+      delta: value - target,
+      bulletValuePct: Math.min((value / max) * 100, 100),
+      bulletTargetPct: Math.min((target / max) * 100, 100),
+    }
+  }
+
+  return {
+    epa: {
+      value: epaValue,
+      target: epaTarget,
+      ...bulletConfig(epaValue, epaTarget),
+    },
+    ppi: {
+      value: ppiValue,
+      target: ppiTarget,
+      ...bulletConfig(ppiValue, ppiTarget),
+    },
+    rcir: {
+      value: rcirValue,
+      target: rcirTarget,
+      ...bulletConfig(rcirValue, rcirTarget),
+    },
+  }
+})
+
+const summaryCards = computed(() => {
+  const epa = summaryData.value.epa
+  const ppi = summaryData.value.ppi
+  const rcir = summaryData.value.rcir
+
+  return [
+    {
+      id: 'summary-epa',
+      title: 'EPA',
+      subtitle: 'Total',
+      rawValue: epa.value,
+      displayValue: formatValue(epa.value),
+      visual: { type: 'bullet', target: epa.target || 0 },
+      delta: epa.value - epa.target,
+      bulletValuePct: epa.bulletValuePct,
+      bulletTargetPct: epa.bulletTargetPct,
+    },
+    {
+      id: 'summary-ppi',
+      title: 'PPI',
+      subtitle: 'Average',
+      rawValue: ppi.value,
+      displayValue: formatValue(ppi.value),
+      visual: { type: 'bullet', target: ppi.target || 0 },
+      delta: ppi.delta,
+      bulletValuePct: ppi.bulletValuePct,
+      bulletTargetPct: ppi.bulletTargetPct,
+    },
+    {
+      id: 'summary-rcir',
+      title: 'RCIR',
+      subtitle: 'Average',
+      rawValue: rcir.value,
+      displayValue: formatValue(rcir.value),
+      visual: { type: 'bullet', target: rcir.target || 0 },
+      delta: rcir.delta,
+      bulletValuePct: rcir.bulletValuePct,
+      bulletTargetPct: rcir.bulletTargetPct,
+    },
+  ]
 })
 
 // Auto-set first week when data loads

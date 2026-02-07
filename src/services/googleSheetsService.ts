@@ -31,6 +31,7 @@ interface ParsedSheetData {
   scenarios: string[];
   data: DataRow[];
   kpiNames: string[];
+  targets?: number[];
 }
 
 /**
@@ -61,7 +62,7 @@ async function fetchSheet(sheetName: string): Promise<string[][]> {
  * Row 3+: Data (Week_X | Scenario_Name | value_1 | value_2 | ...)
  */
 function parseSheetData(rows: string[][]): ParsedSheetData {
-  if (rows.length < 3) return { weeks: [], scenarios: [], data: [], kpiNames: [] };
+  if (rows.length < 3) return { weeks: [], scenarios: [], data: [], kpiNames: [], targets: [] };
   
   const headerRow = rows[0];
   const unitsRow = rows[1];
@@ -114,12 +115,13 @@ function parseSheetData(rows: string[][]): ParsedSheetData {
     scenarios: Array.from(scenarios),
     data: dataRows,
     kpiNames,
+    targets: [],
   };
 }
 
 function parseProgramSheetData(rows: string[][]): ParsedSheetData {
   if (rows.length < 4) {
-    return { weeks: [], scenarios: [], data: [], kpiNames: [] };
+    return { weeks: [], scenarios: [], data: [], kpiNames: [], targets: [] };
   }
   
   const headerRow = rows[0];
@@ -169,11 +171,19 @@ function parseProgramSheetData(rows: string[][]): ParsedSheetData {
     });
   }
   
+  const targetRow = rows[26] || [];
+  const targets = kpiNames.map((_, index) => {
+    const rawValue = String(targetRow[4 + index] || '').replace(/,/g, '').trim();
+    const parsed = Number(rawValue);
+    return Number.isNaN(parsed) ? 0 : parsed;
+  });
+
   return {
     weeks: Array.from(weeks),
     scenarios: Array.from(scenarios),
     data: dataRows,
     kpiNames,
+    targets,
   };
 }
 

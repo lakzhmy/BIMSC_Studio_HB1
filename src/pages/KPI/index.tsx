@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   LineChart,
   Line,
@@ -14,10 +14,33 @@ import {
 import { Calendar, Download, RefreshCw, Filter } from 'lucide-react';
 import { KPICard } from './components/KPICard';
 import { currentKPIs, kpiHistory, teams } from '../../data/sampleData';
+import { fetchKPIsByCategory } from '../../services/googleSheetsService';
 
 type TimeRange = '1w' | '1m' | '3m' | 'all';
 type KPIMetric = 'embodied_carbon' | 'floor_area' | 'energy_use' | 'facade_ratio' | 'structural_efficiency' | 'daylight_factor';
 type KPICategory = 'program' | 'structure' | 'data';
+
+type ProgramKPI = {
+  id: string;
+  name: string;
+  value: number | string;
+  unit: string;
+  status: 'good' | 'warning' | 'critical';
+};
+
+type ProgramDataRow = {
+  week: string;
+  scenario: string;
+  kpis: ProgramKPI[];
+  spaceName?: string;
+};
+
+type ProgramSheetData = {
+  weeks: string[];
+  scenarios: string[];
+  data: ProgramDataRow[];
+  kpiNames: string[];
+};
 
 export function KPIDashboard() {
   const [timeRange, setTimeRange] = useState<TimeRange>('all');
@@ -27,6 +50,11 @@ export function KPIDashboard() {
     'energy_use',
     'daylight_factor',
   ]);
+  const [programSheetData, setProgramSheetData] = useState<ProgramSheetData | null>(null);
+  const [programWeek, setProgramWeek] = useState('');
+  const [programSpaceIndex, setProgramSpaceIndex] = useState('');
+  const [programLoading, setProgramLoading] = useState(false);
+  const [programError, setProgramError] = useState('');
 
   // Categorize KPIs
   const categoryMetrics: Record<KPICategory, KPIMetric[]> = {
@@ -35,9 +63,41 @@ export function KPIDashboard() {
     data: ['energy_use', 'daylight_factor'],
   };
 
+  const programWeeks = ['3', '4', '5', '6', '7', '8', '9', '10'];
+  const programPieTotal = 3499663.52;
+
+  const programKpiSpecs = [
+    {
+      id: 'effective-programmatic-area',
+      visual: { type: 'pie' as const, total: programPieTotal },
+      showTarget: false,
+    },
+    {
+      id: 'programmatic-proximity-index',
+      target: 0.3,
+      visual: { type: 'bullet' as const, target: 0.3 },
+      showTarget: true,
+    },
+    {
+      id: 'resource-consumption-intensity-ratio',
+      target: 0.5,
+      visual: { type: 'bullet' as const, target: 0.5 },
+      showTarget: true,
+    },
+  ];
+
   const getTeamColor = (teamId: string) => {
     const team = teams.find(t => t.id === teamId);
     return team?.color || '#64748b';
+  };
+
+  const parseNumber = (value: number | string) => {
+    if (typeof value === 'number') {
+      return value;
+    }
+    const sanitized = value.replace(/,/g, '');
+    const parsed = Number(sanitized);
+    return Number.isNaN(parsed) ? 0 : parsed;
   };
 
   const metricColors: Record<KPIMetric, string> = {
@@ -70,6 +130,115 @@ export function KPIDashboard() {
   const getSparklineData = (metric: keyof typeof kpiHistory[0]) => {
     return kpiHistory.slice(-6).map(d => d[metric] as number);
   };
+
+  useEffect(() => {
+    let isMounted = true;
+    const loadProgramData = async () => {
+      setProgramLoading(true);
+      setProgramError('');
+      try {
+        const data = await fetchKPIsByCategory('program');
+        if (isMounted) {
+          setProgramSheetData(data as ProgramSheetData);
+        }
+      } catch (error) {
+        if (isMounted) {
+          setProgramError(error instanceof Error ? error.message : String(error));
+        }
+      } finally {
+        if (isMounted) {
+          setProgramLoading(false);
+        }
+      }
+    };
+
+    loadProgramData();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const programSpaceIndexes = useMemo(() => {
+    if (!programSheetData?.data) {
+      return [] as string[];
+    }
+    const values = programSheetData.data.map(row => row.scenario).filter(Boolean);
+    return Array.from(new Set(values));
+  }, [programSheetData]);
+
+  const programSpaceName = useMemo(() => {
+    if (!programSheetData?.data || !programSpaceIndex) {
+      return '';
+    }
+    const row = programSheetData.data.find(r => r.scenario === programSpaceIndex);
+    return row?.spaceName || '';
+  }, [programSheetData, programSpaceIndex]);
+
+  const selectedProgramKpis = useMemo(() => {
+    if (!programSheetData?.data || !programSpaceIndex) {
+      return [] as ProgramKPI[];
+    }
+    const row = programSheetData.data.find(r => r.scenario === programSpaceIndex);
+    return Array.isArray(row?.kpis) ? row!.kpis : [];
+  }, [programSheetData, programSpaceIndex]);
+
+  const programCards = useMemo(() => {
+    if (!selectedProgramKpis.length) {
+      return [] as Array<{
+        id: string;
+        title: string;
+        value: number;
+        unit: string;
+        target: number;
+        visual: { type: 'bullet'; target: number } | { type: 'pie'; total: number };
+        showTarget: boolean;
+      }>;
+    }
+
+    const byId = new Map(selectedProgramKpis.map(kpi => [kpi.id, kpi]));
+
+    return programKpiSpecs
+      .map(spec => {
+        const kpi = byId.get(spec.id);
+        if (!kpi) {
+          return null;
+        }
+
+        const value = parseNumber(kpi.value);
+        const target = spec.target ?? 0;
+
+        return {
+          id: spec.id,
+          title: kpi.name,
+          value,
+          unit: kpi.unit || '',
+          target,
+          visual: spec.visual,
+          showTarget: spec.showTarget,
+        };
+      })
+      .filter(Boolean) as Array<{
+        id: string;
+        title: string;
+        value: number;
+        unit: string;
+        target: number;
+        visual: { type: 'bullet'; target: number } | { type: 'pie'; total: number };
+        showTarget: boolean;
+      }>;
+  }, [selectedProgramKpis, programKpiSpecs]);
+
+  useEffect(() => {
+    if (!programWeek && programWeeks.length > 0) {
+      setProgramWeek(programWeeks[0]);
+    }
+  }, [programWeek, programWeeks]);
+
+  useEffect(() => {
+    if (!programSpaceIndex && programSpaceIndexes.length > 0) {
+      setProgramSpaceIndex(programSpaceIndexes[0]);
+    }
+  }, [programSpaceIndex, programSpaceIndexes]);
 
   return (
     <div className="p-6 bg-slate-50 min-h-screen">
@@ -130,81 +299,163 @@ export function KPIDashboard() {
         </div>
       </div>
 
+      {selectedCategory === 'program' && (
+        <div className="flex flex-wrap gap-4 p-4 bg-white rounded-lg border border-slate-200 mb-6">
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-medium text-slate-700">Week</label>
+            <select
+              value={programWeek}
+              onChange={(event) => setProgramWeek(event.target.value)}
+              className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm"
+            >
+              <option value="">Select a week</option>
+              {programWeeks.map((week) => (
+                <option key={week} value={week}>{week}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-medium text-slate-700">Space Index</label>
+            <select
+              value={programSpaceIndex}
+              onChange={(event) => setProgramSpaceIndex(event.target.value)}
+              className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm"
+            >
+              <option value="">Select a value</option>
+              {programSpaceIndexes.map((value) => (
+                <option key={value} value={value}>{value}</option>
+              ))}
+            </select>
+          </div>
+
+          {programSpaceName && (
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-medium text-slate-700">Space Name</label>
+              <div className="px-4 py-2 bg-slate-100 border border-slate-200 rounded-lg text-sm">
+                {programSpaceName}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* KPI Cards Grid - Filtered by Category */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-        {categoryMetrics[selectedCategory].includes('embodied_carbon') && (
-          <KPICard
-            title={currentKPIs.embodied_carbon.description}
-            value={currentKPIs.embodied_carbon.value}
-            target={currentKPIs.embodied_carbon.target}
-            unit={currentKPIs.embodied_carbon.unit}
-            trend={currentKPIs.embodied_carbon.trend}
-            status={currentKPIs.embodied_carbon.status}
-            teamColor={getTeamColor(currentKPIs.embodied_carbon.team)}
-            sparklineData={getSparklineData('embodied_carbon')}
-          />
-        )}
-        {categoryMetrics[selectedCategory].includes('floor_area') && (
-          <KPICard
-            title={currentKPIs.floor_area.description}
-            value={currentKPIs.floor_area.value}
-            target={currentKPIs.floor_area.target}
-            unit={currentKPIs.floor_area.unit}
-            trend={currentKPIs.floor_area.trend}
-            status={currentKPIs.floor_area.status}
-            teamColor={getTeamColor(currentKPIs.floor_area.team)}
-            sparklineData={getSparklineData('floor_area')}
-          />
-        )}
-        {categoryMetrics[selectedCategory].includes('energy_use') && (
-          <KPICard
-            title={currentKPIs.energy_use.description}
-            value={currentKPIs.energy_use.value}
-            target={currentKPIs.energy_use.target}
-            unit={currentKPIs.energy_use.unit}
-            trend={currentKPIs.energy_use.trend}
-            status={currentKPIs.energy_use.status}
-            teamColor={getTeamColor(currentKPIs.energy_use.team)}
-            sparklineData={getSparklineData('energy_use')}
-          />
-        )}
-        {categoryMetrics[selectedCategory].includes('facade_ratio') && (
-          <KPICard
-            title={currentKPIs.facade_ratio.description}
-            value={currentKPIs.facade_ratio.value}
-            target={currentKPIs.facade_ratio.target}
-            unit={currentKPIs.facade_ratio.unit}
-            trend={currentKPIs.facade_ratio.trend}
-            status={currentKPIs.facade_ratio.status}
-            teamColor={getTeamColor(currentKPIs.facade_ratio.team)}
-            sparklineData={getSparklineData('facade_ratio')}
-          />
-        )}
-        {categoryMetrics[selectedCategory].includes('structural_efficiency') && (
-          <KPICard
-            title={currentKPIs.structural_efficiency.description}
-            value={currentKPIs.structural_efficiency.value}
-            target={currentKPIs.structural_efficiency.target}
-            unit={currentKPIs.structural_efficiency.unit}
-            trend={currentKPIs.structural_efficiency.trend}
-            status={currentKPIs.structural_efficiency.status}
-            teamColor={getTeamColor(currentKPIs.structural_efficiency.team)}
-            sparklineData={getSparklineData('structural_efficiency')}
-          />
-        )}
-        {categoryMetrics[selectedCategory].includes('daylight_factor') && (
-          <KPICard
-            title={currentKPIs.daylight_factor.description}
-            value={currentKPIs.daylight_factor.value}
-            target={currentKPIs.daylight_factor.target}
-            unit={currentKPIs.daylight_factor.unit}
-            trend={currentKPIs.daylight_factor.trend}
-            status={currentKPIs.daylight_factor.status}
-            teamColor={getTeamColor(currentKPIs.daylight_factor.team)}
-            sparklineData={getSparklineData('daylight_factor')}
-          />
-        )}
-      </div>
+      {selectedCategory === 'program' ? (
+        programLoading ? (
+          <div className="bg-slate-100 rounded-lg p-12 text-center mb-8">
+            <p className="text-slate-500">Loading program KPI data...</p>
+          </div>
+        ) : programError ? (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-6 mb-8">
+            <h3 className="text-red-900 font-semibold mb-2">Error Loading Program Data</h3>
+            <p className="text-red-700 text-sm">{programError}</p>
+          </div>
+        ) : programSpaceIndex && programCards.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+            {programCards.map((card) => {
+              const status = card.visual.type === 'bullet'
+                ? (card.value <= card.target ? 'on-track' : 'over')
+                : 'on-track';
+
+              return (
+                <KPICard
+                  key={card.id}
+                  title={card.title}
+                  value={card.value}
+                  target={card.target}
+                  unit={card.unit}
+                  trend={0}
+                  status={status}
+                  teamColor={getTeamColor('program')}
+                  sparklineData={[]}
+                  visual={card.visual}
+                  showTarget={card.showTarget}
+                />
+              );
+            })}
+          </div>
+        ) : (
+          <div className="bg-slate-100 rounded-lg p-12 text-center mb-8">
+            <p className="text-slate-500">Select a space index to view program KPI data</p>
+          </div>
+        )
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+          {categoryMetrics[selectedCategory].includes('embodied_carbon') && (
+            <KPICard
+              title={currentKPIs.embodied_carbon.description}
+              value={currentKPIs.embodied_carbon.value}
+              target={currentKPIs.embodied_carbon.target}
+              unit={currentKPIs.embodied_carbon.unit}
+              trend={currentKPIs.embodied_carbon.trend}
+              status={currentKPIs.embodied_carbon.status}
+              teamColor={getTeamColor(currentKPIs.embodied_carbon.team)}
+              sparklineData={getSparklineData('embodied_carbon')}
+            />
+          )}
+          {categoryMetrics[selectedCategory].includes('floor_area') && (
+            <KPICard
+              title={currentKPIs.floor_area.description}
+              value={currentKPIs.floor_area.value}
+              target={currentKPIs.floor_area.target}
+              unit={currentKPIs.floor_area.unit}
+              trend={currentKPIs.floor_area.trend}
+              status={currentKPIs.floor_area.status}
+              teamColor={getTeamColor(currentKPIs.floor_area.team)}
+              sparklineData={getSparklineData('floor_area')}
+            />
+          )}
+          {categoryMetrics[selectedCategory].includes('energy_use') && (
+            <KPICard
+              title={currentKPIs.energy_use.description}
+              value={currentKPIs.energy_use.value}
+              target={currentKPIs.energy_use.target}
+              unit={currentKPIs.energy_use.unit}
+              trend={currentKPIs.energy_use.trend}
+              status={currentKPIs.energy_use.status}
+              teamColor={getTeamColor(currentKPIs.energy_use.team)}
+              sparklineData={getSparklineData('energy_use')}
+            />
+          )}
+          {categoryMetrics[selectedCategory].includes('facade_ratio') && (
+            <KPICard
+              title={currentKPIs.facade_ratio.description}
+              value={currentKPIs.facade_ratio.value}
+              target={currentKPIs.facade_ratio.target}
+              unit={currentKPIs.facade_ratio.unit}
+              trend={currentKPIs.facade_ratio.trend}
+              status={currentKPIs.facade_ratio.status}
+              teamColor={getTeamColor(currentKPIs.facade_ratio.team)}
+              sparklineData={getSparklineData('facade_ratio')}
+            />
+          )}
+          {categoryMetrics[selectedCategory].includes('structural_efficiency') && (
+            <KPICard
+              title={currentKPIs.structural_efficiency.description}
+              value={currentKPIs.structural_efficiency.value}
+              target={currentKPIs.structural_efficiency.target}
+              unit={currentKPIs.structural_efficiency.unit}
+              trend={currentKPIs.structural_efficiency.trend}
+              status={currentKPIs.structural_efficiency.status}
+              teamColor={getTeamColor(currentKPIs.structural_efficiency.team)}
+              sparklineData={getSparklineData('structural_efficiency')}
+            />
+          )}
+          {categoryMetrics[selectedCategory].includes('daylight_factor') && (
+            <KPICard
+              title={currentKPIs.daylight_factor.description}
+              value={currentKPIs.daylight_factor.value}
+              target={currentKPIs.daylight_factor.target}
+              unit={currentKPIs.daylight_factor.unit}
+              trend={currentKPIs.daylight_factor.trend}
+              status={currentKPIs.daylight_factor.status}
+              teamColor={getTeamColor(currentKPIs.daylight_factor.team)}
+              sparklineData={getSparklineData('daylight_factor')}
+            />
+          )}
+        </div>
+      )}
 
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
