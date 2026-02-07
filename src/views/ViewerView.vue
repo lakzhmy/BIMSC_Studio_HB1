@@ -4,6 +4,13 @@
       <div class="h-16 px-6 flex items-center justify-between">
         <div class="flex items-center gap-4">
           <h1 class="text-2xl font-bold">Lung Tower Studio</h1>
+          <div
+            v-if="projectHealth"
+            class="flex items-center gap-2 px-3 py-1 border rounded-lg bg-green-50 border-green-200"
+          >
+            <div class="w-2 h-2 rounded-full animate-pulse bg-green-500"></div>
+            <span class="text-sm font-medium text-green-700">{{ projectHealth.overall }}% Health</span>
+          </div>
         </div>
         <div class="flex items-center gap-4">
           <div class="flex items-center gap-3 px-4 py-2 rounded-lg bg-slate-100">
@@ -89,9 +96,11 @@ import { useUserStore } from '@/stores/userStore'
 import { ref, onMounted, onUnmounted } from 'vue'
 import * as THREE from 'three'
 import UserAvatar from '@/components/UserAvatar.vue'
+import { projectHealth as projectHealthData } from '@/data/sampleData'
 
 const router = useRouter()
 const userStore = useUserStore()
+const projectHealth = projectHealthData
 
 const canvas = ref(null)
 const canvasContainer = ref(null)
@@ -113,7 +122,7 @@ const versionLabels = [
 
 const navigationItems = [
   { path: '/dashboard', label: 'Dashboard' },
-  { path: '/kpi', label: 'KPI Dashboard' },
+  { path: '/kpi', label: 'KPI' },
   { path: '/meetings', label: 'Meetings' },
   { path: '/actions', label: 'Actions' },
   { path: '/viewer', label: '3D Viewer' },
