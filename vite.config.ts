@@ -6,12 +6,26 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
-      '/speckle': {
-        target: 'https://speckle.systems',
+      '/api': {
+        target: 'http://localhost:5174',
         changeOrigin: true,
-        secure: true,
-        rewrite: (path) => path.replace(/^\/speckle/, ''),
+        secure: false
       },
+      '/objects': {
+        target: 'http://localhost:5174',
+        changeOrigin: true,
+        secure: false
+      },
+      '/streams': {
+        target: 'http://localhost:5174',
+        changeOrigin: true,
+        secure: false
+      },
+      '/graphql': {
+        target: 'http://localhost:5174',
+        changeOrigin: true,
+        secure: false
+      }
     },
   },
   resolve: {

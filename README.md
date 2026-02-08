@@ -180,12 +180,14 @@ The 3D viewer uses a week-based timeline with Speckle stream object URLs.
 
 Authentication:
 
-- Set `VITE_SPECKLE_TOKEN` in [.env.local](.env.local) for private streams.
-- For public streams, the token can be empty.
+- This app uses a server-side proxy so private streams are never exposed to the browser.
+- Set `SPECKLE_TOKEN` in `.env` (or as an environment variable) for private streams.
+- Optional: override `SPECKLE_SERVER_URL` if you are not on `https://speckle.systems`.
 
 Runtime:
 
-- Restart `npm run dev` after changing `.env` values.
+- Start the proxy with `npm run dev:server` and the frontend with `npm run dev`.
+- For production, run `npm run build` then `npm run start` to serve `dist/` and proxy Speckle.
 
 ## Google Sheets KPI Data
 

@@ -73,9 +73,9 @@
             </p>
           </div>
           <div class="bg-white p-4 rounded-lg border border-slate-200">
-            <h4 class="font-semibold text-slate-900 mb-2">Auth</h4>
+            <h4 class="font-semibold text-slate-900 mb-2">Access</h4>
             <p class="text-sm text-slate-600">
-              Token: <span class="font-semibold text-slate-900">{{ hasToken ? 'Configured' : 'Missing' }}</span>
+              Proxy: <span class="font-semibold text-slate-900">Enabled</span>
             </p>
           </div>
         </div>
@@ -95,10 +95,7 @@ const currentWeek = ref(5)
 const minWeek = 1
 const maxWeek = 10
 
-// Optional: required for private streams; leave empty for public models.
-const authToken = import.meta.env.VITE_SPECKLE_TOKEN || ''
-
-const hasToken = computed(() => Boolean(authToken))
+// Requests are routed through the server proxy, which injects the Speckle token.
 const statusLabel = computed(() => {
   if (errorMessage.value) return 'Error'
   if (infoMessage.value) return 'No model found'
@@ -174,11 +171,12 @@ async function loadWeekModel(weekIndex) {
       await viewer.unloadAll()
     }
 
-    const urls = await UrlHelper.getResourceUrls(streamObjectUrl)
+    const proxyStreamObjectUrl = toProxyStreamObjectUrl(streamObjectUrl)
+    const urls = await UrlHelper.getResourceUrls(proxyStreamObjectUrl)
     let shouldZoom = true
 
     for (const url of urls) {
-      const loader = new SpeckleLoader(viewer.getWorldTree(), url, authToken)
+      const loader = new SpeckleLoader(viewer.getWorldTree(), url)
       await viewer.loadObject(loader, shouldZoom)
       shouldZoom = false
     }
@@ -202,6 +200,32 @@ onUnmounted(() => {
     viewer.dispose()
   }
 })
+
+function toProxyStreamObjectUrl(streamObjectUrl) {
+  try {
+    const parsed = new URL(streamObjectUrl)
+    const segments = parsed.pathname.split('/').filter(Boolean)
+    const streamsIndex = segments.indexOf('streams')
+    const objectsIndex = segments.indexOf('objects')
+
+    if (streamsIndex === -1 || objectsIndex === -1) {
+      return streamObjectUrl
+    }
+
+    const streamId = segments[streamsIndex + 1]
+    const objectId = segments[objectsIndex + 1]
+
+    if (!streamId || !objectId) {
+      return streamObjectUrl
+    }
+
+    const proxyUrl = new URL(`/streams/${streamId}/objects/${objectId}`, window.location.origin)
+    proxyUrl.search = parsed.search
+    return proxyUrl.toString()
+  } catch (error) {
+    return streamObjectUrl
+  }
+}
 </script>
 
 <style scoped>
