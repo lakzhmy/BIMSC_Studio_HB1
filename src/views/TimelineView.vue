@@ -1,10 +1,10 @@
 <template>
-  <main class="py-8 px-6">
-      <div class="max-w-none mx-auto space-y-6">
+  <main class="py-10 px-8">
+      <div class="max-w-none mx-auto space-y-8">
         <div class="flex items-start justify-between gap-6 flex-wrap">
           <div>
-            <h1 class="text-3xl font-bold text-slate-900">Timeline</h1>
-            <p class="text-slate-600 mt-1">Weekly milestones and team deliverables</p>
+            <h1 class="text-4xl font-bold text-slate-900">Timeline</h1>
+            <p class="text-base text-slate-600 mt-2">Weekly milestones and team deliverables</p>
           </div>
           <div class="flex items-center gap-2">
             <label :class="chipClass(filters.structure, 'green')">
@@ -23,20 +23,20 @@
         </div>
 
         <div class="relative overflow-x-hidden overflow-visible">
-          <div class="w-full mt-6 pt-10">
-            <div class="relative h-24 overflow-visible isolate">
+          <div class="w-full mt-8 pt-12">
+            <div class="relative h-28 overflow-visible isolate">
               <svg class="absolute inset-0 w-full h-full z-0 pointer-events-none" viewBox="0 0 100 96" preserveAspectRatio="none">
-                <polyline :points="teamPoints.structure" :class="trackStrokeClass('structure')" class="fill-none stroke-[2.5]" />
-                <polyline :points="teamPoints.program" :class="trackStrokeClass('program')" class="fill-none stroke-[2.5]" />
-                <polyline :points="teamPoints.data" :class="trackStrokeClass('data')" class="fill-none stroke-[2.5]" />
+                <polyline :points="teamPoints.structure" :class="trackStrokeClass('structure')" class="fill-none stroke-[3]" />
+                <polyline :points="teamPoints.program" :class="trackStrokeClass('program')" class="fill-none stroke-[3]" />
+                <polyline :points="teamPoints.data" :class="trackStrokeClass('data')" class="fill-none stroke-[3]" />
               </svg>
               <div class="absolute -translate-x-1/2 top-0 -translate-y-8 z-10 pointer-events-none" :style="currentWeekMarkerStyle">
-                <div class="text-[11px] font-semibold text-slate-700 bg-white/95 border border-slate-200 rounded-full px-3 py-1 shadow-sm">
+                <div class="text-xs font-semibold text-slate-700 bg-white/95 border border-slate-200 rounded-full px-3.5 py-1.5 shadow-sm">
                   We are here now
                 </div>
               </div>
               <div class="absolute -translate-x-1/2 -top-[24px] z-10 flex flex-col items-center pointer-events-none" :style="currentWeekMarkerStyle">
-                <svg class="mt-1 w-3 h-36 text-slate-600" viewBox="0 0 16 144" aria-hidden="true">
+                <svg class="mt-1 w-3.5 h-40 text-slate-600" viewBox="0 0 16 144" aria-hidden="true">
                   <line x1="8" y1="2" x2="8" y2="124" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-dasharray="3 3" />
                   <polygon points="8,140 4,124 12,124" fill="currentColor" />
                 </svg>
@@ -51,7 +51,7 @@
                   >
                     <div
                       :class="[
-                        'w-3.5 h-3.5 flex items-center justify-center',
+                        'w-4 h-4 flex items-center justify-center',
                         isSelected(week.week, 'structure') ? 'ring-2 ring-green-300 ring-offset-1 ring-offset-white' : ''
                       ]"
                     >
@@ -60,15 +60,15 @@
                           <path d="M3.5 8.5l2.5 2.5 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white" />
                         </svg>
                       </div>
-                      <div v-else class="w-3.5 h-3.5 rounded-full bg-green-500 border-2 border-white shadow"></div>
+                      <div v-else class="w-4 h-4 rounded-full bg-green-500 border-2 border-white shadow"></div>
                     </div>
                     <div
                       :class="[
-                        'absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-44 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[10px] shadow-lg opacity-0 pointer-events-none transition-opacity transition-transform origin-bottom scale-95 group-hover:opacity-100 group-hover:scale-100 group-hover:pointer-events-auto z-[100]',
+                        'absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-48 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs shadow-lg opacity-0 pointer-events-none transition-opacity transition-transform origin-bottom scale-95 group-hover:opacity-100 group-hover:scale-100 group-hover:pointer-events-auto z-[100]',
                         tooltipTextClass('structure')
                       ]"
                     >
-                      <p class="text-[10px]">{{ teamMilestoneTitle(week, 'structure') }}</p>
+                      <p class="text-xs">{{ teamMilestoneTitle(week, 'structure') }}</p>
                     </div>
                   </div>
                   <div
@@ -79,7 +79,7 @@
                   >
                     <div
                       :class="[
-                        'w-3.5 h-3.5 flex items-center justify-center',
+                        'w-4 h-4 flex items-center justify-center',
                         isSelected(week.week, 'program') ? 'ring-2 ring-blue-300 ring-offset-1 ring-offset-white' : ''
                       ]"
                     >
@@ -88,15 +88,15 @@
                           <path d="M3.5 8.5l2.5 2.5 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white" />
                         </svg>
                       </div>
-                      <div v-else class="w-3.5 h-3.5 rounded-full bg-blue-500 border-2 border-white shadow"></div>
+                      <div v-else class="w-4 h-4 rounded-full bg-blue-500 border-2 border-white shadow"></div>
                     </div>
                     <div
                       :class="[
-                        'absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-44 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[10px] shadow-lg opacity-0 pointer-events-none transition-opacity transition-transform origin-bottom scale-95 group-hover:opacity-100 group-hover:scale-100 group-hover:pointer-events-auto z-[100]',
+                        'absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-48 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs shadow-lg opacity-0 pointer-events-none transition-opacity transition-transform origin-bottom scale-95 group-hover:opacity-100 group-hover:scale-100 group-hover:pointer-events-auto z-[100]',
                         tooltipTextClass('program')
                       ]"
                     >
-                      <p class="text-[10px]">{{ teamMilestoneTitle(week, 'program') }}</p>
+                      <p class="text-xs">{{ teamMilestoneTitle(week, 'program') }}</p>
                     </div>
                   </div>
                   <div
@@ -107,7 +107,7 @@
                   >
                     <div
                       :class="[
-                        'w-3.5 h-3.5 flex items-center justify-center',
+                        'w-4 h-4 flex items-center justify-center',
                         isSelected(week.week, 'data') ? 'ring-2 ring-red-300 ring-offset-1 ring-offset-white' : ''
                       ]"
                     >
@@ -116,26 +116,26 @@
                           <path d="M3.5 8.5l2.5 2.5 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white" />
                         </svg>
                       </div>
-                      <div v-else class="w-3.5 h-3.5 rounded-full bg-red-500 border-2 border-white shadow"></div>
+                      <div v-else class="w-4 h-4 rounded-full bg-red-500 border-2 border-white shadow"></div>
                     </div>
                     <div
                       :class="[
-                        'absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-44 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[10px] shadow-lg opacity-0 pointer-events-none transition-opacity transition-transform origin-bottom scale-95 group-hover:opacity-100 group-hover:scale-100 group-hover:pointer-events-auto z-[100]',
+                        'absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-48 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs shadow-lg opacity-0 pointer-events-none transition-opacity transition-transform origin-bottom scale-95 group-hover:opacity-100 group-hover:scale-100 group-hover:pointer-events-auto z-[100]',
                         tooltipTextClass('data')
                       ]"
                     >
-                      <p class="text-[10px]">{{ teamMilestoneTitle(week, 'data') }}</p>
+                      <p class="text-xs">{{ teamMilestoneTitle(week, 'data') }}</p>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div class="grid grid-cols-10 gap-2 mt-3 items-start">
-              <div v-for="week in courseTimeline" :key="week.week" class="bg-white rounded-xl border border-slate-200 p-2 self-start">
+            <div class="grid grid-cols-10 gap-3 mt-4 items-start">
+              <div v-for="week in courseTimeline" :key="week.week" class="bg-white rounded-xl border border-slate-200 p-3 self-start">
                 <div class="space-y-1">
-                  <h3 class="text-[11px] font-semibold text-slate-900">Week {{ week.week }}: {{ week.title }}</h3>
-                  <p class="text-[10px] text-slate-600">{{ week.description }}</p>
+                  <h3 class="text-xs font-semibold text-slate-900">Week {{ week.week }}: {{ week.title }}</h3>
+                  <p class="text-[11px] text-slate-600">{{ week.description }}</p>
                 </div>
                 <div v-if="isWeekSelected(week.week)" class="mt-2">
                   <div
@@ -143,7 +143,7 @@
                     :key="deliverable.id"
                     :class="['mb-2 last:mb-0 rounded-lg border p-2', summaryCardClass(deliverable.team)]"
                   >
-                    <div class="text-[10px] font-semibold text-slate-700 flex items-center gap-1.5 mb-1">
+                    <div class="text-[11px] font-semibold text-slate-700 flex items-center gap-1.5 mb-1">
                       <span :class="teamDotClass(deliverable.team)"></span>
                       {{ deliverable.text }}
                     </div>
@@ -151,14 +151,14 @@
                       <li
                         v-for="(item, index) in milestoneSummary(deliverable)"
                         :key="index"
-                        class="text-[10px] text-slate-600"
+                        class="text-[11px] text-slate-600"
                       >
                         {{ item }}
                       </li>
                     </ul>
                   </div>
                 </div>
-                <p v-else class="mt-2 text-[10px] text-slate-500">Click the dots to toggle team deliverables.</p>
+                <p v-else class="mt-2 text-[11px] text-slate-500">Click the dots to toggle team deliverables.</p>
               </div>
             </div>
           </div>
@@ -287,7 +287,7 @@ function weekOffset(week, team) {
 
 function nodeStyle(week, team) {
   return {
-    top: `${teamBaseY[team] + weekOffset(week, team) - 7}px`
+    top: `${teamBaseY[team] + weekOffset(week, team) - 8}px`
   }
 }
 
@@ -325,7 +325,7 @@ function teamDotClass(team) {
 }
 
 function chipClass(active, color) {
-  const base = 'px-3 py-1 rounded-full text-xs font-semibold border cursor-pointer select-none transition-colors'
+  const base = 'px-4 py-1.5 rounded-full text-sm font-semibold border cursor-pointer select-none transition-colors'
   const on = {
     green: 'bg-green-100 text-green-700 border-green-200',
     blue: 'bg-blue-100 text-blue-700 border-blue-200',
@@ -346,11 +346,11 @@ function tooltipTextClass(team) {
 
 function tickContainerClass(team) {
   const colorMap = {
-    structure: 'w-3.5 h-3.5 rounded-full bg-green-500 border-2 border-white shadow flex items-center justify-center',
-    program: 'w-3.5 h-3.5 rounded-full bg-blue-500 border-2 border-white shadow flex items-center justify-center',
-    data: 'w-3.5 h-3.5 rounded-full bg-red-500 border-2 border-white shadow flex items-center justify-center'
+    structure: 'w-4 h-4 rounded-full bg-green-500 border-2 border-white shadow flex items-center justify-center',
+    program: 'w-4 h-4 rounded-full bg-blue-500 border-2 border-white shadow flex items-center justify-center',
+    data: 'w-4 h-4 rounded-full bg-red-500 border-2 border-white shadow flex items-center justify-center'
   }
-  return colorMap[team] || 'w-3.5 h-3.5 rounded-full bg-slate-400 border-2 border-white shadow flex items-center justify-center'
+  return colorMap[team] || 'w-4 h-4 rounded-full bg-slate-400 border-2 border-white shadow flex items-center justify-center'
 }
 
 function summaryCardClass(team) {

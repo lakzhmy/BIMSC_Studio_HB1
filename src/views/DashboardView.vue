@@ -5,17 +5,30 @@
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
           <div v-for="stat in quickStats" :key="stat.label" class="card p-6">
             <p class="text-slate-600 text-sm font-medium mb-2">{{ stat.label }}</p>
-            <p class="text-3xl font-bold text-slate-900">{{ stat.value }}</p>
-            <p class="text-slate-500 text-xs mt-2">{{ stat.change }}</p>
+            <div v-if="stat.items" class="space-y-2">
+              <div v-for="item in stat.items" :key="item.text" class="flex items-center gap-2 text-sm font-medium text-slate-800">
+                <span :class="['w-2.5 h-2.5 rounded-full', item.colorClass]"></span>
+                <span class="truncate">{{ item.text }}</span>
+              </div>
+            </div>
+            <template v-else>
+              <component :is="stat.link ? 'router-link' : 'div'" :to="stat.link" class="block">
+                <p class="text-3xl font-bold text-slate-900">{{ stat.value }}</p>
+                <p class="text-xs mt-2 text-slate-500 flex items-center gap-2">
+                  <span v-if="stat.attention" class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-100 text-amber-700 text-sm font-semibold animate-pulse">!</span>
+                  <span>{{ stat.change }}</span>
+                </p>
+              </component>
+            </template>
           </div>
         </div>
 
         <!-- Main Content Grid -->
-        <div class="grid lg:grid-cols-3 gap-8">
+        <div class="grid lg:grid-cols-3 gap-8 items-stretch">
           <!-- Left Column -->
-          <div class="lg:col-span-2 space-y-8">
+          <div class="lg:col-span-2 h-full">
             <!-- Recent Activity -->
-            <section class="card p-6">
+            <section class="card p-6 h-full flex flex-col">
               <h2 class="text-xl font-bold text-slate-900 mb-6">Recent Activity</h2>
               <div class="space-y-4">
                 <div v-for="activity in recentActivity" :key="activity.id" class="border-b border-slate-200 pb-4 last:border-0">
@@ -30,7 +43,7 @@
           </div>
 
           <!-- Right Column -->
-          <div class="space-y-8">
+          <div class="space-y-8 h-full">
             <!-- Project Health -->
             <section class="card p-6">
               <h2 class="text-xl font-bold text-slate-900 mb-6">Project Health</h2>
@@ -52,10 +65,12 @@
               <h2 class="text-xl font-bold text-slate-900 mb-6">Team Members</h2>
               <div class="space-y-3">
                 <div v-for="member in allMembers" :key="member.id" class="flex items-center gap-3">
-                  <div class="w-8 h-8 rounded-full" :style="{ backgroundColor: getTeamColor(member.team) }"></div>
+                  <div class="w-9 h-9 flex-shrink-0">
+                    <MemberBlob :member="member" size="36px" />
+                  </div>
                   <div class="flex-1 min-w-0">
                     <p class="text-sm font-medium text-slate-900 truncate">{{ member.name }}</p>
-                    <p class="text-xs text-slate-500 capitalize">{{ member.team }}</p>
+                    <p class="text-xs text-slate-500">{{ member.role || 'Team Member' }}</p>
                   </div>
                 </div>
               </div>
@@ -69,16 +84,84 @@
 <script setup>
 import { computed } from 'vue'
 import { useUserStore } from '@/stores/userStore'
-import { projectHealth as projectHealthData, teams, recentActivity } from '@/data/sampleData'
+import { projectHealth as projectHealthData, teams, recentActivity, courseTimeline } from '@/data/sampleData'
+import MemberBlob from '@/components/MemberBlob.vue'
 const userStore = useUserStore()
 
-// Quick stats
-const quickStats = [
-  { label: 'Total Tasks', value: '24', change: '+3 from last week' },
-  { label: 'Completed', value: '18', change: '75% completion' },
-  { label: 'In Progress', value: '4', change: '2 blocked' },
-  { label: 'Team Health', value: '92%', change: 'Excellent' }
-]
+const kpiHealth = computed(() => {
+  const total = 9
+  const onTarget = 7
+  const needsAttention = 2
+  return { total, onTarget, needsAttention }
+})
+
+const timelineSummary = computed(() => {
+  const totalWeeks = courseTimeline.length
+  const currentWeek = 5
+  const clampedWeek = Math.min(Math.max(currentWeek, 1), totalWeeks)
+  return {
+    totalWeeks,
+    currentWeek: clampedWeek
+  }
+})
+
+const currentTimelineMilestone = computed(() => {
+  const currentWeek = timelineSummary.value.currentWeek
+  return courseTimeline.find((week) => week.week === currentWeek) || null
+})
+
+const teamMilestones = computed(() => {
+  const milestone = currentTimelineMilestone.value
+  if (!milestone) return []
+  const colorMap = {
+    structure: 'bg-green-500',
+    program: 'bg-blue-500',
+    data: 'bg-red-500'
+  }
+  return ['structure', 'program', 'data']
+    .map((team) => {
+      const deliverable = milestone.deliverables.find((item) => item.team === team)
+      if (!deliverable) return null
+      return {
+        text: deliverable.text,
+        colorClass: colorMap[team] || 'bg-slate-400'
+      }
+    })
+    .filter(Boolean)
+})
+
+const quickStats = computed(() => {
+  const health = kpiHealth.value
+  const timeline = timelineSummary.value
+  const milestone = currentTimelineMilestone.value
+  const teamMilestoneItems = teamMilestones.value
+
+  return [
+    {
+      label: 'KPI Health',
+      value: health.total ? `${health.onTarget}/${health.total} On Target` : '—',
+      change: health.total ? `${health.needsAttention} clashes` : 'No KPI data',
+      link: '/kpi',
+      attention: true
+    },
+    {
+      label: 'Next Milestone',
+      items: teamMilestoneItems.length
+        ? teamMilestoneItems
+        : [{ text: 'No team milestones', colorClass: 'bg-slate-300' }]
+    },
+    {
+      label: 'Timeline Progress',
+      value: milestone ? `Week ${milestone.week}: ${milestone.title}` : '—',
+      change: timeline.totalWeeks ? `${timeline.currentWeek} out of ${timeline.totalWeeks} weeks` : 'Timeline not set'
+    },
+    {
+      label: 'Team Health',
+      value: `${projectHealth.breakdown.team}%`,
+      change: `Project overall ${projectHealth.overall}%`
+    }
+  ]
+})
 
 // Project health data
 const projectHealth = projectHealthData
@@ -86,12 +169,12 @@ const projectHealth = projectHealthData
 // All members from userStore
 const allMembers = computed(() => {
   const members = []
-  const teamNames = {
-    structure: 'structure',
-    program: 'program',
-    data: 'data'
+  const defaultAvatar = {
+    complexity: userStore.avatarConfig?.complexity ?? 50,
+    speed: userStore.avatarConfig?.speed ?? 2,
+    wobble: userStore.avatarConfig?.wobble ?? 30,
+    shade: userStore.avatarConfig?.shade ?? 2
   }
-  
   // Get members from userStore
   for (const [teamId, teamMemberList] of Object.entries(userStore.teamMembers)) {
     if (Array.isArray(teamMemberList)) {
@@ -101,8 +184,10 @@ const allMembers = computed(() => {
           name: member.name,
           role: member.role || 'Team Member',
           team: teamId,
+          teamId,
           status: member.status || 'online',
-          mood: member.mood
+          mood: member.mood,
+          avatar: member.avatar || defaultAvatar
         })
       })
     }
@@ -110,10 +195,11 @@ const allMembers = computed(() => {
   
   // If no custom members added, show sample data for display purposes
   if (members.length === 0) {
-    return teams.flatMap(team => 
+    return teams.flatMap(team =>
       team.members.map(member => ({
         ...member,
-        team: team.id
+        team: team.id,
+        teamId: team.id
       }))
     )
   }
@@ -121,13 +207,9 @@ const allMembers = computed(() => {
   return members
 })
 
-function getTeamColor(team) {
-  const colors = {
-    structure: '#10b981',
-    program: '#3b82f6',
-    data: '#ef4444'
-  }
-  return colors[team] || '#6b7280'
+function getTeamDisplayName(teamId) {
+  const team = teams.find((item) => item.id === teamId)
+  return team ? team.name : teamId
 }
 
 function getTeamLabelClass(team) {

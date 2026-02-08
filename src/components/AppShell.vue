@@ -82,7 +82,7 @@
 <script setup>
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/userStore'
-import { Calendar } from 'lucide-vue-next'
+import { BarChart3, Calendar, LayoutDashboard, Monitor, Users } from 'lucide-vue-next'
 import UserAvatar from '@/components/UserAvatar.vue'
 import { projectHealth as projectHealthData } from '@/data/sampleData'
 
@@ -90,11 +90,11 @@ const router = useRouter()
 const userStore = useUserStore()
 
 const navigationItems = [
-  { label: 'Dashboard', path: '/dashboard' },
-  { label: 'KPI', path: '/kpi' },
+  { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
+  { label: 'KPI', path: '/kpi', icon: BarChart3 },
   { label: 'Timeline', path: '/timeline', icon: Calendar },
-  { label: 'Viewer', path: '/viewer' },
-  { label: 'Teams', path: '/teams' }
+  { label: 'Viewer', path: '/viewer', icon: Monitor },
+  { label: 'Teams', path: '/teams', icon: Users }
 ]
 
 function isActiveRoute(path) {
