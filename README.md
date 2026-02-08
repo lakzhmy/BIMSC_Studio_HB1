@@ -170,6 +170,20 @@ The application will open in your browser at `http://localhost:5173`. Any change
 - The app is optimized for modern browsers supporting ES modules
 - All styling is light-mode only
 
+## Google Sheets KPI Data
+
+The KPI dashboard pulls published CSV data from Google Sheets, so no API key is required for read access. The published sheet ID is configured in `src/services/googleSheetsService.ts` and can be overridden with a `VITE_GOOGLE_SHEETS_PUBLISHED_ID` environment variable.
+
+Current tab gids:
+
+| Tab | gid |
+| --- | --- |
+| DATA | 846484099 |
+| STRUCTURE | 1045283988 |
+| PROGRAM | 631520491 |
+
+If the sheet is republished or tabs are recreated, update the published ID or gids accordingly.
+
 ## Support
 
 For detailed information about specific features and implementation details, refer to the [APP_SPECIFICATION.md](APP_SPECIFICATION.md) file included in the project.

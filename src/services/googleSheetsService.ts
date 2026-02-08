@@ -3,9 +3,16 @@
  * Fetches KPI data from the published Google Sheet
  */
 
-const API_KEY = import.meta.env.VITE_GOOGLE_SHEETS_API_KEY;
-const SPREADSHEET_ID = import.meta.env.VITE_GOOGLE_SHEETS_ID;
-const API_URL = 'https://sheets.googleapis.com/v4/spreadsheets';
+const PUBLISHED_SHEET_ID =
+  import.meta.env.VITE_GOOGLE_SHEETS_PUBLISHED_ID ||
+  '2PACX-1vQJyHJ_3Aj9l9YbfZlDatXoptBXyXJOplk2Jfna84XI4PWYslXOqftPkuN5QT_ygffxYZMPj4gE012c';
+const PUBLISHED_BASE_URL = 'https://docs.google.com/spreadsheets/d/e';
+
+const SHEET_GIDS: Record<'data' | 'structure' | 'program', string> = {
+  data: '846484099',
+  structure: '1045283988',
+  program: '631520491',
+};
 
 interface SheetData {
   values: string[][];
@@ -38,19 +45,60 @@ interface ParsedSheetData {
 /**
  * Fetch a specific sheet from Google Sheets
  */
-async function fetchSheet(sheetName: string): Promise<string[][]> {
+function parseCsvRow(row: string): string[] {
+  const values: string[] = [];
+  let current = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < row.length; i++) {
+    const char = row[i];
+    const nextChar = row[i + 1];
+
+    if (char === '"') {
+      if (inQuotes && nextChar === '"') {
+        current += '"';
+        i += 1;
+      } else {
+        inQuotes = !inQuotes;
+      }
+      continue;
+    }
+
+    if (char === ',' && !inQuotes) {
+      values.push(current);
+      current = '';
+      continue;
+    }
+
+    current += char;
+  }
+
+  values.push(current);
+  return values;
+}
+
+function parseCsv(text: string): string[][] {
+  if (!text.trim()) return [];
+  return text
+    .split(/\r?\n/)
+    .filter(line => line.length > 0)
+    .map(line => parseCsvRow(line));
+}
+
+async function fetchSheet(sheetCategory: 'data' | 'structure' | 'program'): Promise<string[][]> {
   try {
-    const url = `${API_URL}/${SPREADSHEET_ID}/values/${sheetName}?key=${API_KEY}`;
-    const response = await fetch(url);
+    const gid = SHEET_GIDS[sheetCategory];
+    const url = `${PUBLISHED_BASE_URL}/${PUBLISHED_SHEET_ID}/pub?gid=${gid}&single=true&output=csv`;
+    const response = await fetch(url, { cache: 'no-store' });
     
     if (!response.ok) {
       throw new Error(`Failed to fetch sheet: ${response.statusText}`);
     }
     
-    const data: SheetData = await response.json();
-    return data.values || [];
+    const csvText = await response.text();
+    return parseCsv(csvText);
   } catch (error) {
-    console.error(`Error fetching ${sheetName} sheet:`, error);
+    console.error(`Error fetching ${sheetCategory} sheet:`, error);
     return [];
   }
 }
@@ -207,14 +255,11 @@ function parseProgramSheetData(rows: string[][]): ParsedSheetData {
  * Fetch and parse data for a specific category
  */
 export async function fetchKPIsByCategory(category: 'data' | 'structure' | 'program' | 'vitals'): Promise<ParsedSheetData> {
-  const sheetNameMap = {
-    data: 'DATA',
-    structure: 'STRUCTURE',
-    program: 'PROGRAM',
-    vitals: 'VITALS',
-  };
-  
-  const rows = await fetchSheet(sheetNameMap[category]);
+  if (category === 'vitals') {
+    return { weeks: [], scenarios: [], data: [], kpiNames: [], targets: [] };
+  }
+
+  const rows = await fetchSheet(category);
   
   // Use specialized parsing for PROGRAM sheet
   if (category === 'program') {
