@@ -3,14 +3,22 @@
       <div class="max-w-7xl mx-auto">
         <div class="mb-6">
           <h1 class="text-3xl font-bold text-slate-900">3D Building Viewer</h1>
-          <p class="text-slate-600 mt-1">Explore building versions with the timeline slider</p>
+          <p class="text-slate-600 mt-1">Live Speckle model loaded from stream object links</p>
         </div>
 
         <!-- Main Viewer Area -->
         <div class="bg-white rounded-lg border border-slate-200 overflow-hidden flex flex-col" style="height: 700px;">
-          <!-- 3D Canvas -->
-          <div ref="canvasContainer" class="flex-1 relative">
-            <canvas ref="canvas" class="w-full h-full"></canvas>
+          <div ref="viewerContainer" class="flex-1 relative">
+            <div v-if="isLoading" class="absolute inset-0 flex items-center justify-center text-slate-600 text-sm">
+              Loading Speckle model...
+            </div>
+            <div v-else-if="errorMessage" class="absolute inset-0 flex items-center justify-center text-red-600 text-sm px-6 text-center">
+              {{ errorMessage }}
+            </div>
+            <div v-else-if="infoMessage" class="absolute inset-0 flex items-center justify-center gap-2 text-red-600 text-sm px-6 text-center">
+              <span class="spinner" aria-hidden="true"></span>
+              <span>{{ infoMessage }}</span>
+            </div>
           </div>
         </div>
 
@@ -19,21 +27,39 @@
           <div class="flex flex-col gap-4">
             <div class="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
               <span class="text-sm font-medium text-slate-700 whitespace-nowrap">Project Timeline:</span>
-              <input
-                v-model.number="currentVersion"
-                type="range"
-                min="1"
-                max="10"
-                class="flex-1 h-2 bg-slate-300 rounded-lg appearance-none cursor-pointer"
-                @input="updateModelVersion"
-              />
+              <div class="flex-1 relative">
+                <input
+                  v-model.number="currentWeek"
+                  type="range"
+                  min="1"
+                  max="10"
+                  class="w-full h-2 bg-slate-300 rounded-lg appearance-none cursor-pointer"
+                />
+                <div class="range-thumb" :style="{ left: `${thumbPosition}%` }">
+                  {{ currentWeek }}
+                </div>
+              </div>
               <div class="text-sm font-semibold text-slate-900 bg-slate-100 px-4 py-2 rounded-lg min-w-fit text-center">
-                Version {{ currentVersion }} / 10
+                Week {{ currentWeek }} / 10
               </div>
             </div>
             <div class="text-sm text-slate-700">
               <span class="font-medium block mb-1">Current Phase:</span>
-              <span class="font-semibold text-slate-900 text-base">{{ versionLabels[currentVersion - 1] }}</span>
+              <span class="font-semibold text-slate-900 text-base">{{ weekLabels[currentWeek - 1] }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Model Info -->
+        <div class="bg-white rounded-lg border border-slate-200 p-6 mt-6">
+          <div class="flex flex-col gap-2 text-sm text-slate-700">
+            <div>
+              <span class="font-medium">Week:</span>
+              <span class="font-semibold text-slate-900">{{ currentWeek }}</span>
+            </div>
+            <div>
+              <span class="font-medium">Model:</span>
+              <span class="font-semibold text-slate-900">{{ activeModelLabel }}</span>
             </div>
           </div>
         </div>
@@ -41,18 +67,15 @@
         <!-- Info Panel -->
         <div class="grid grid-cols-2 gap-4 mt-6">
           <div class="bg-white p-4 rounded-lg border border-slate-200">
-            <h4 class="font-semibold text-slate-900 mb-2">Current View</h4>
+            <h4 class="font-semibold text-slate-900 mb-2">Status</h4>
             <p class="text-sm text-slate-600">
-              Rotation: {{ modelRotation.x.toFixed(2) }} rad, {{ modelRotation.y.toFixed(2) }} rad
+              Viewer: <span class="font-semibold" :class="statusClass">{{ statusLabel }}</span>
             </p>
           </div>
           <div class="bg-white p-4 rounded-lg border border-slate-200">
-            <h4 class="font-semibold text-slate-900 mb-2">Model Info</h4>
+            <h4 class="font-semibold text-slate-900 mb-2">Auth</h4>
             <p class="text-sm text-slate-600">
-              Status: <span class="font-semibold text-green-600">Active</span>
-            </p>
-            <p class="text-sm text-slate-600 mt-1">
-              Geometry: 200-Level Tower
+              Token: <span class="font-semibold text-slate-900">{{ hasToken ? 'Configured' : 'Missing' }}</span>
             </p>
           </div>
         </div>
@@ -61,299 +84,131 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
-import * as THREE from 'three'
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
+import { Viewer, DefaultViewerParams, SpeckleLoader, UrlHelper, CameraController } from '@speckle/viewer'
 
-const canvas = ref(null)
-const canvasContainer = ref(null)
-const currentVersion = ref(1)
-const modelRotation = ref({ x: 0, y: 0 })
+const viewerContainer = ref(null)
+const isLoading = ref(true)
+const errorMessage = ref('')
+const infoMessage = ref('')
+const currentWeek = ref(5)
+const minWeek = 1
+const maxWeek = 10
 
-const versionLabels = [
-  'Foundation Phase',
-  'Structural Core',
-  'Lower Levels (1-50)',
-  'Mid Levels (51-100)',
-  'Upper Levels (101-150)',
-  'Top Levels (151-200)',
-  'MEP Installation',
-  'Interior Finishes',
-  'Systems Testing',
-  'Final Review'
+// Optional: required for private streams; leave empty for public models.
+const authToken = import.meta.env.VITE_SPECKLE_TOKEN || ''
+
+const hasToken = computed(() => Boolean(authToken))
+const statusLabel = computed(() => {
+  if (errorMessage.value) return 'Error'
+  if (infoMessage.value) return 'No model found'
+  return 'Ready'
+})
+const statusClass = computed(() => {
+  if (errorMessage.value) return 'text-red-600'
+  if (infoMessage.value) return 'text-amber-600'
+  return 'text-green-600'
+})
+const thumbPosition = computed(() => {
+  const ratio = (currentWeek.value - minWeek) / (maxWeek - minWeek)
+  return Math.min(100, Math.max(0, ratio * 100))
+})
+
+const weekLabels = [
+  'Week 1',
+  'Week 2',
+  'Week 3',
+  'Week 4',
+  'Week 5',
+  'Week 6',
+  'Week 7',
+  'Week 8',
+  'Week 9',
+  'Week 10'
 ]
 
+// Update these URLs per week; leave empty strings to show "In progress".
+const weekModelUrls = [
+  'https://app.speckle.systems/streams/3d70848e9c/objects/5593e21947',
+  'https://app.speckle.systems/streams/3d70848e9c/objects/36a4e51e7cae20342d94f875861779cf',
+  'https://app.speckle.systems/streams/3d70848e9c/objects/cce6171d59e3e80e5cfc3eec9c212e5a',
+  'https://app.speckle.systems/streams/3d70848e9c/objects/e03549b39607cb8052cf9a67170900a5',
+  'https://app.speckle.systems/streams/3d70848e9c/objects/d159e83c2b2c550b930437d2e5707993',
+  '',
+  '',
+  '',
+  '',
+  ''
+]
 
-let scene, camera, renderer, tower, towerMesh
-let isDragging = false
-let previousMousePosition = { x: 0, y: 0 }
+const activeModelLabel = computed(() => {
+  const url = weekModelUrls[currentWeek.value - 1]
+  return url ? `Speckle Object ${currentWeek.value}` : 'In progress'
+})
 
-function initThreeJS() {
-  console.log('initThreeJS called')
-  console.log('canvasContainer.value:', canvasContainer.value)
-  console.log('canvas.value:', canvas.value)
+let viewer = null
 
-  // Scene setup
-  scene = new THREE.Scene()
-  scene.background = new THREE.Color(0xd1d5db)
+// Loads the selected week and clears any previously loaded model.
+async function loadWeekModel(weekIndex) {
+  if (!viewerContainer.value) return
 
-  // Perspective Camera setup
-  const width = canvasContainer.value.clientWidth || window.innerWidth
-  const height = canvasContainer.value.clientHeight || 700
-  console.log('Canvas dimensions:', width, 'x', height)
-  
-  if (width === 0 || height === 0) {
-    console.warn('Canvas has invalid dimensions, retrying...')
-    setTimeout(initThreeJS, 100)
-    return
-  }
-  
-  camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 2000)
-  camera.position.set(50, 60, 50)
-  camera.lookAt(0, 50, 0)
+  try {
+    isLoading.value = true
+    errorMessage.value = ''
+    infoMessage.value = ''
 
-  // Renderer setup
-  canvas.value.width = width
-  canvas.value.height = height
-  renderer = new THREE.WebGLRenderer({ canvas: canvas.value, antialias: true })
-  renderer.setSize(width, height)
-  renderer.setPixelRatio(window.devicePixelRatio)
-  renderer.shadowMap.enabled = true
-  console.log('Renderer created and sized:', width, 'x', height)
+    const streamObjectUrl = weekModelUrls[weekIndex]
+    if (!streamObjectUrl) {
+      infoMessage.value = 'In progress'
+      if (viewer) {
+        await viewer.unloadAll()
+      }
+      return
+    }
 
-  // Lighting
-  const ambientLight = new THREE.AmbientLight(0xffffff, 0.7)
-  scene.add(ambientLight)
+    if (!viewer) {
+      viewer = new Viewer(viewerContainer.value, DefaultViewerParams)
+      await viewer.init()
+      viewer.createExtension(CameraController)
+    } else {
+      await viewer.unloadAll()
+    }
 
-  const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8)
-  directionalLight.position.set(100, 200, 100)
-  directionalLight.castShadow = true
-  directionalLight.shadow.mapSize.width = 2048
-  directionalLight.shadow.mapSize.height = 2048
-  scene.add(directionalLight)
+    const urls = await UrlHelper.getResourceUrls(streamObjectUrl)
+    let shouldZoom = true
 
-  // Create tower
-  createTower()
-
-  // Add axes helper for debugging
-  const axesHelper = new THREE.AxesHelper(50)
-  scene.add(axesHelper)
-
-  // Create ground plane
-  const groundGeometry = new THREE.PlaneGeometry(300, 300)
-  const groundMaterial = new THREE.MeshStandardMaterial({
-    color: 0xe2e8f0,
-    metalness: 0.1,
-    roughness: 0.8
-  })
-  const ground = new THREE.Mesh(groundGeometry, groundMaterial)
-  ground.rotation.x = -Math.PI / 2
-  ground.position.y = -2
-  ground.receiveShadow = true
-  scene.add(ground)
-
-  // Event listeners
-  canvas.value.addEventListener('mousedown', onMouseDown)
-  canvas.value.addEventListener('mousemove', onMouseMove)
-  canvas.value.addEventListener('mouseup', onMouseUp)
-  canvas.value.addEventListener('wheel', onMouseWheel, { passive: false })
-  window.addEventListener('resize', onWindowResize)
-
-  // Start animation loop
-  animate()
-}
-
-function createTower() {
-  console.log('createTower called')
-  tower = new THREE.Group()
-  
-  // Create a single tower that sits on the ground
-  const towerWidth = 12
-  const towerDepth = 12
-  const towerHeight = 100
-
-  
-  // Create a rectangular prism (box geometry)
-  const geometry = new THREE.BoxGeometry(towerWidth, towerHeight, towerDepth)
-  
-  // Create a canvas texture with vertical gradient
-  const textureCanvas = document.createElement('canvas')
-  textureCanvas.width = 64
-  textureCanvas.height = 512
-  const ctx = textureCanvas.getContext('2d')
-  
-  // Draw gradient from green (bottom) to blue (top)
-  const gradient = ctx.createLinearGradient(0, 0, 0, textureCanvas.height)
-  gradient.addColorStop(0, '#22c55e') // Green at bottom
-  gradient.addColorStop(1, '#3b82f6') // Blue at top
-  ctx.fillStyle = gradient
-  ctx.fillRect(0, 0, textureCanvas.width, textureCanvas.height)
-  
-  const texture = new THREE.CanvasTexture(textureCanvas)
-  texture.magFilter = THREE.NearestFilter
-  
-  const material = new THREE.MeshStandardMaterial({
-    map: texture,
-    metalness: 0.3,
-    roughness: 0.7
-  })
-  
-  const mesh = new THREE.Mesh(geometry, material)
-  mesh.castShadow = true
-  mesh.receiveShadow = true
-  
-  // Store mesh globally for color updates
-  towerMesh = mesh
-  
-  // Position tower so its bottom sits on the ground (y = 0)
-  mesh.position.set(0, towerHeight / 2, 0)
-  
-  // Store metadata for raycasting
-  mesh.userData = {
-    type: 'tower',
-    towerHeight: towerHeight,
-    material: material
-  }
-  
-  tower.add(mesh)
-  tower.position.y = 0
-  scene.add(tower)
-  console.log('Tower added to scene:', tower)
-}
-
-function onMouseDown(event) {
-  isDragging = true
-  previousMousePosition = { x: event.clientX, y: event.clientY }
-}
-
-function onMouseMove(event) {
-  // Handle camera dragging
-  if (isDragging && tower) {
-    const deltaX = event.clientX - previousMousePosition.x
-    const deltaY = event.clientY - previousMousePosition.y
-    
-    // Update rotation angles (slower for smoothness)
-    modelRotation.value.y += deltaX * 0.005
-    modelRotation.value.x += deltaY * 0.005
-    
-    // Clamp vertical rotation to avoid flipping
-    modelRotation.value.x = Math.max(-Math.PI / 2.5, Math.min(Math.PI / 2.5, modelRotation.value.x))
-    
-    // Orbit camera around tower center
-    const towerCenter = new THREE.Vector3(0, 50, 0)
-    
-    // Get current distance to maintain zoom level
-    const currentDistance = camera.position.distanceTo(towerCenter)
-    
-    camera.position.x = Math.sin(modelRotation.value.y) * Math.cos(modelRotation.value.x) * currentDistance
-    camera.position.y = 50 + Math.sin(modelRotation.value.x) * currentDistance
-    camera.position.z = Math.cos(modelRotation.value.y) * Math.cos(modelRotation.value.x) * currentDistance
-    
-    camera.lookAt(towerCenter)
-    
-    previousMousePosition = { x: event.clientX, y: event.clientY }
+    for (const url of urls) {
+      const loader = new SpeckleLoader(viewer.getWorldTree(), url, authToken)
+      await viewer.loadObject(loader, shouldZoom)
+      shouldZoom = false
+    }
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : 'Failed to load Speckle model.'
+  } finally {
+    isLoading.value = false
   }
 }
-
-function onMouseUp() {
-  isDragging = false
-}
-
-function updateModelVersion() {
-  // Color transition based on version
-  if (towerMesh && towerMesh.material) {
-    const versionFraction = (currentVersion.value - 1) / 9
-    
-    // Create new gradient based on version
-    const textureCanvas = document.createElement('canvas')
-    textureCanvas.width = 64
-    textureCanvas.height = 512
-    const ctx = textureCanvas.getContext('2d')
-    
-    // Shift hue based on version
-    const hueShift = versionFraction * 0.3
-    
-    // Create gradient that shifts colors
-    const gradient = ctx.createLinearGradient(0, 0, 0, textureCanvas.height)
-    
-    // Base colors that shift with version
-    const bottomHue = (0.33 + hueShift) % 1
-    const topHue = (0.66 + hueShift) % 1
-    
-    const bottomColor = new THREE.Color().setHSL(bottomHue, 0.7, 0.5)
-    const topColor = new THREE.Color().setHSL(topHue, 0.7, 0.5)
-    
-    gradient.addColorStop(0, '#' + bottomColor.getHexString())
-    gradient.addColorStop(1, '#' + topColor.getHexString())
-    
-    ctx.fillStyle = gradient
-    ctx.fillRect(0, 0, textureCanvas.width, textureCanvas.height)
-    
-    const texture = new THREE.CanvasTexture(textureCanvas)
-    texture.magFilter = THREE.NearestFilter
-    towerMesh.material.map = texture
-    towerMesh.material.map.needsUpdate = true
-  }
-}
-
-function onMouseWheel(event) {
-  event.preventDefault()
-  
-  const zoomSpeed = 3
-  const direction = event.deltaY > 0 ? 1 : -1
-  
-  // Zoom by moving camera along the orbit direction
-  const towerCenter = new THREE.Vector3(0, 50, 0)
-  const currentDir = camera.position.clone().sub(towerCenter).normalize()
-  let currentDistance = camera.position.distanceTo(towerCenter)
-  
-  currentDistance = Math.max(20, Math.min(200, currentDistance + direction * zoomSpeed))
-  
-  camera.position.copy(currentDir.multiplyScalar(currentDistance).add(towerCenter))
-  camera.lookAt(towerCenter)
-}
-
-function onWindowResize() {
-  if (!canvasContainer.value) return
-  
-  const width = canvasContainer.value.clientWidth
-  const height = canvasContainer.value.clientHeight
-  
-  camera.aspect = width / height
-  camera.updateProjectionMatrix()
-  
-  renderer.setSize(width, height)
-}
-
-function animate() {
-  requestAnimationFrame(animate)
-  if (renderer && scene && camera) {
-    renderer.render(scene, camera)
-  }
-}
-
 
 onMounted(() => {
-  initThreeJS()
+  loadWeekModel(currentWeek.value - 1)
+})
+
+watch(currentWeek, (newWeek) => {
+  loadWeekModel(newWeek - 1)
 })
 
 onUnmounted(() => {
-  if (canvas.value) {
-    canvas.value.removeEventListener('mousedown', onMouseDown)
-    canvas.value.removeEventListener('mousemove', onMouseMove)
-    canvas.value.removeEventListener('mouseup', onMouseUp)
-    canvas.value.removeEventListener('wheel', onMouseWheel)
-  }
-  window.removeEventListener('resize', onWindowResize)
-  
-  if (renderer) {
-    renderer.dispose()
+  if (viewer && typeof viewer.dispose === 'function') {
+    viewer.dispose()
   }
 })
 </script>
 
 <style scoped>
-canvas {
+:deep(canvas) {
   display: block;
+  width: 100%;
+  height: 100%;
 }
 
 input[type='range'] {
@@ -367,18 +222,52 @@ input[type='range']::-webkit-slider-thumb {
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: #3b82f6;
+  background: transparent;
   cursor: pointer;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  box-shadow: none;
 }
 
 input[type='range']::-moz-range-thumb {
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: #3b82f6;
+  background: transparent;
   cursor: pointer;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  box-shadow: none;
   border: none;
+}
+
+.range-thumb {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 24px;
+  height: 24px;
+  border-radius: 9999px;
+  background: #3b82f6;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.2);
+  pointer-events: none;
+}
+
+.spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(220, 38, 38, 0.2);
+  border-top-color: rgba(220, 38, 38, 0.9);
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 </style>

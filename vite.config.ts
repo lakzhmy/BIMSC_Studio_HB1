@@ -4,4 +4,17 @@ import react from '@vitejs/plugin-react'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
+  server: {
+    proxy: {
+      '/speckle': {
+        target: 'https://speckle.systems',
+        changeOrigin: true,
+        secure: true,
+        rewrite: (path) => path.replace(/^\/speckle/, ''),
+      },
+    },
+  },
+  resolve: {
+    dedupe: ['three'],
+  },
 })

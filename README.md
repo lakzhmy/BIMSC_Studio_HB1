@@ -170,6 +170,23 @@ The application will open in your browser at `http://localhost:5173`. Any change
 - The app is optimized for modern browsers supporting ES modules
 - All styling is light-mode only
 
+## Speckle 3D Viewer Setup
+
+The 3D viewer uses a week-based timeline with Speckle stream object URLs.
+
+- Update week-to-model links in [src/views/ViewerView.vue](src/views/ViewerView.vue).
+- The `weekModelUrls` array maps Week 1-10 to Speckle object URLs.
+- Leave an entry empty to show an "In progress" state for that week.
+
+Authentication:
+
+- Set `VITE_SPECKLE_TOKEN` in [.env.local](.env.local) for private streams.
+- For public streams, the token can be empty.
+
+Runtime:
+
+- Restart `npm run dev` after changing `.env` values.
+
 ## Google Sheets KPI Data
 
 The KPI dashboard pulls published CSV data from Google Sheets, so no API key is required for read access. The published sheet ID is configured in `src/services/googleSheetsService.ts` and can be overridden with a `VITE_GOOGLE_SHEETS_PUBLISHED_ID` environment variable.
