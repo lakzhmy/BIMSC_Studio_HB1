@@ -1,19 +1,28 @@
-import 'dotenv/config'
+import dotenv from 'dotenv'
 import express from 'express'
 import { createProxyMiddleware } from 'http-proxy-middleware'
 import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
 
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+
+dotenv.config({ path: path.resolve(__dirname, '../.env') })
+dotenv.config({ path: path.resolve(__dirname, '../.env.local') })
+
 const app = express()
 const port = Number(process.env.PORT || 5174)
-const speckleServerUrl = process.env.SPECKLE_SERVER_URL || 'https://speckle.systems'
+const speckleServerUrl = process.env.SPECKLE_SERVER_URL || 'https://app.speckle.systems'
 const speckleToken = process.env.SPECKLE_TOKEN || ''
+const hasSpeckleToken = Boolean(speckleToken)
 
 const proxyPaths = ['/api', '/objects', '/streams', '/graphql']
 
-if (!speckleToken) {
+if (!hasSpeckleToken) {
   console.warn('Warning: SPECKLE_TOKEN is not set. Private streams will fail to load.')
+} else {
+  console.log('Speckle proxy auth enabled.')
 }
 
 proxyPaths.forEach((proxyPath) => {
@@ -24,16 +33,17 @@ proxyPaths.forEach((proxyPath) => {
       changeOrigin: true,
       secure: true,
       onProxyReq: (proxyReq) => {
-        if (speckleToken) {
+        if (hasSpeckleToken) {
           proxyReq.setHeader('Authorization', `Bearer ${speckleToken}`)
         }
+      },
+      onProxyRes: (proxyRes, req) => {
+        console.log(`[speckle] ${req.method} ${req.url} -> ${proxyRes.statusCode}`)
       }
     })
   )
 })
 
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
 const distPath = path.resolve(__dirname, '../dist')
 
 if (fs.existsSync(distPath)) {
