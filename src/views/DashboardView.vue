@@ -3,7 +3,13 @@
     <div class="max-w-7xl mx-auto">
         <!-- Quick Stats -->
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          <div v-for="stat in quickStats" :key="stat.label" class="card p-6">
+          <component
+            :is="stat.link ? 'router-link' : 'div'"
+            :to="stat.link"
+            class="card p-6 block"
+            v-for="stat in quickStats"
+            :key="stat.label"
+          >
             <p class="text-slate-600 text-sm font-medium mb-2">{{ stat.label }}</p>
             <div v-if="stat.items" class="space-y-2">
               <div v-for="item in stat.items" :key="item.text" class="flex items-center gap-2 text-sm font-medium text-slate-800">
@@ -12,15 +18,13 @@
               </div>
             </div>
             <template v-else>
-              <component :is="stat.link ? 'router-link' : 'div'" :to="stat.link" class="block">
-                <p class="text-3xl font-bold text-slate-900">{{ stat.value }}</p>
-                <p class="text-xs mt-2 text-slate-500 flex items-center gap-2">
-                  <span v-if="stat.attention" class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-100 text-amber-700 text-sm font-semibold animate-pulse">!</span>
-                  <span>{{ stat.change }}</span>
-                </p>
-              </component>
+              <p class="text-3xl font-bold text-slate-900">{{ stat.value }}</p>
+              <p class="text-xs mt-2 text-slate-500 flex items-center gap-2">
+                <span v-if="stat.attention" class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-100 text-amber-700 text-sm font-semibold animate-pulse">!</span>
+                <span>{{ stat.change }}</span>
+              </p>
             </template>
-          </div>
+          </component>
         </div>
 
         <!-- Main Content Grid -->
@@ -64,7 +68,12 @@
             <section class="card p-6">
               <h2 class="text-xl font-bold text-slate-900 mb-6">Team Members</h2>
               <div class="space-y-3">
-                <div v-for="member in allMembers" :key="member.id" class="flex items-center gap-3">
+                <router-link
+                  v-for="member in allMembers"
+                  :key="member.id"
+                  to="/teams"
+                  class="flex items-center gap-3"
+                >
                   <div class="w-9 h-9 flex-shrink-0">
                     <MemberBlob :member="member" size="36px" />
                   </div>
@@ -72,7 +81,7 @@
                     <p class="text-sm font-medium text-slate-900 truncate">{{ member.name }}</p>
                     <p class="text-xs text-slate-500">{{ member.role || 'Team Member' }}</p>
                   </div>
-                </div>
+                </router-link>
               </div>
             </section>
           </div>
@@ -148,12 +157,14 @@ const quickStats = computed(() => {
       label: 'Next Milestone',
       items: teamMilestoneItems.length
         ? teamMilestoneItems
-        : [{ text: 'No team milestones', colorClass: 'bg-slate-300' }]
+        : [{ text: 'No team milestones', colorClass: 'bg-slate-300' }],
+      link: '/timeline'
     },
     {
       label: 'Timeline Progress',
       value: milestone ? `Week ${milestone.week}: ${milestone.title}` : '—',
-      change: timeline.totalWeeks ? `${timeline.currentWeek} out of ${timeline.totalWeeks} weeks` : 'Timeline not set'
+      change: timeline.totalWeeks ? `${timeline.currentWeek} out of ${timeline.totalWeeks} weeks` : 'Timeline not set',
+      link: '/timeline'
     },
     {
       label: 'Team Health',
