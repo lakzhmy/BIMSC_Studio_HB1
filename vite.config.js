@@ -38,6 +38,10 @@ export default defineConfig(({ mode }) => {
         '/objects': speckleProxy,
         '/streams': speckleProxy,
         '/graphql': speckleProxy,
+        '/auth': {
+          target: 'http://localhost:5174',
+          changeOrigin: true,
+        },
       },
     },
     resolve: {

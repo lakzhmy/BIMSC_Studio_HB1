@@ -53,6 +53,7 @@ export const useUserStore = defineStore('user', () => {
   const currentUser = ref(storedData?.currentUser || {
     name: '',
     email: '',
+    photoURL: '',
   })
 
   const selectedTeam = ref(storedData?.selectedTeam || '')
@@ -112,9 +113,10 @@ export const useUserStore = defineStore('user', () => {
   // Member Hours - tracks hours worked per member
   const memberHours = ref(storedData?.memberHours || {})
   // Actions
-  function login(email, name = '') {
+  function login(email, name = '', photoURL = '') {
     currentUser.value.email = email
     currentUser.value.name = name || email.split('@')[0]
+    currentUser.value.photoURL = photoURL
     isLoggedIn.value = true
     persistData()
   }
@@ -138,7 +140,7 @@ export const useUserStore = defineStore('user', () => {
   }
 
   function logout() {
-    currentUser.value = { name: '', email: '' }
+    currentUser.value = { name: '', email: '', photoURL: '' }
     selectedTeam.value = ''
     avatarConfig.value = { complexity: 50, speed: 2, wobble: 30 }
     isLoggedIn.value = false

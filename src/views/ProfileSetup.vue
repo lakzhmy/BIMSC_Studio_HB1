@@ -3,6 +3,13 @@
     <div class="max-w-6xl mx-auto">
       <!-- Header -->
       <div class="text-center mb-12 animate-fade-in">
+        <img
+          v-if="userStore.currentUser.photoURL"
+          :src="userStore.currentUser.photoURL"
+          :alt="userStore.currentUser.name"
+          class="w-20 h-20 rounded-full object-cover mx-auto mb-4 shadow-lg"
+          referrerpolicy="no-referrer"
+        />
         <h1 class="text-4xl font-bold text-slate-900 mb-2">Welcome, {{ userStore.currentUser.name }}</h1>
         <p class="text-slate-600">Let's set up your profile and avatar</p>
       </div>

@@ -32,7 +32,14 @@
 
         <div class="flex items-center gap-4">
           <div class="flex items-center gap-3 px-4 py-2 rounded-lg bg-slate-100">
-            <UserAvatar size="32px" />
+            <img
+              v-if="userStore.currentUser.photoURL"
+              :src="userStore.currentUser.photoURL"
+              :alt="userStore.currentUser.name"
+              class="w-8 h-8 rounded-full object-cover"
+              referrerpolicy="no-referrer"
+            />
+            <UserAvatar v-else size="32px" />
             <div class="text-sm">
               <p class="font-semibold">{{ userStore.currentUser.name }}</p>
               <p class="text-slate-600 text-xs capitalize">{{ userStore.selectedTeam }} Team</p>

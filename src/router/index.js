@@ -10,6 +10,11 @@ const router = createRouter({
       component: () => import('@/views/LoginView.vue'),
     },
     {
+      path: '/auth/success',
+      name: 'auth-success',
+      component: () => import('@/views/AuthCallback.vue'),
+    },
+    {
       path: '/profile',
       name: 'profile',
       component: () => import('@/views/ProfileSetup.vue'),
@@ -58,9 +63,13 @@ const router = createRouter({
 router.beforeEach((to, from, next) => {
   const userStore = useUserStore()
   
-  // If trying to access login page, allow it (don't redirect even if logged in)
+  // If trying to access login page, redirect logged-in users to dashboard/profile
   if (to.name === 'login') {
-    next()
+    if (userStore.isLoggedIn) {
+      next({ name: userStore.selectedTeam ? 'dashboard' : 'profile' })
+    } else {
+      next()
+    }
   }
   // If trying to access protected route without being logged in
   else if (to.meta.requiresAuth && !userStore.isLoggedIn) {
