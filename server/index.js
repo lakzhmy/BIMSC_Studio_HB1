@@ -32,6 +32,10 @@ proxyPaths.forEach((proxyPath) => {
       target: speckleServerUrl,
       changeOrigin: true,
       secure: true,
+      pathRewrite: (reqPath, req) => {
+        // Express strips the mount path, so we must prepend it back
+        return proxyPath + reqPath
+      },
       onProxyReq: (proxyReq) => {
         if (hasSpeckleToken) {
           proxyReq.setHeader('Authorization', `Bearer ${speckleToken}`)
