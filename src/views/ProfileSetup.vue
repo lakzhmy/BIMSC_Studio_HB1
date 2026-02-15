@@ -300,6 +300,22 @@ function enterStudio() {
   if (userStore.selectedTeam) {
     userStore.updateAvatar(localAvatar)
     router.push('/dashboard')
+
+    // Persist team + avatar to the database (fire-and-forget)
+    fetch('/api/users/profile', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        google_id: userStore.currentUser.googleId,
+        team: userStore.selectedTeam,
+        avatar: {
+          speed: localAvatar.speed,
+          wobble: localAvatar.wobble,
+          complexity: localAvatar.complexity,
+          shade: localAvatar.shade,
+        },
+      }),
+    }).catch((err) => console.error('[profile] save failed:', err))
   }
 }
 

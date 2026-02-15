@@ -20,8 +20,6 @@ const errorMessage = ref('')
 
 onMounted(() => {
   const email = route.query.email
-  const name = route.query.name
-  const picture = route.query.picture
 
   if (!email) {
     errorMessage.value = 'Sign-in failed: no email received.'
@@ -29,7 +27,16 @@ onMounted(() => {
     return
   }
 
-  userStore.login(email, name || '', picture || '')
+  userStore.login({
+    googleId: route.query.google_id || '',
+    email,
+    verifiedEmail: route.query.verified_email || 'false',
+    name: route.query.name || '',
+    givenName: route.query.given_name || '',
+    familyName: route.query.family_name || '',
+    photoURL: route.query.picture || '',
+    locale: route.query.locale || '',
+  })
   router.replace('/profile')
 })
 </script>

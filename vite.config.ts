@@ -24,6 +24,10 @@ export default defineConfig(({ mode }) => {
     plugins: [react()],
     server: {
       proxy: {
+        '/api/users': {
+          target: 'http://localhost:5174',
+          changeOrigin: true,
+        },
         '/api': speckleProxy,
         '/objects': speckleProxy,
         '/streams': speckleProxy,

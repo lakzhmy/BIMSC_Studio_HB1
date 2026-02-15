@@ -4,6 +4,7 @@ import { createProxyMiddleware } from 'http-proxy-middleware'
 import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
+import { initDb, query } from './db.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -12,12 +13,48 @@ dotenv.config({ path: path.resolve(__dirname, '../.env') })
 dotenv.config({ path: path.resolve(__dirname, '../.env.local') })
 
 const app = express()
+app.use(express.json())
 const port = Number(process.env.PORT || 5174)
 const speckleServerUrl = process.env.SPECKLE_SERVER_URL || 'https://app.speckle.systems'
 const speckleToken = process.env.SPECKLE_TOKEN || ''
 const hasSpeckleToken = Boolean(speckleToken)
 
 const proxyPaths = ['/api', '/objects', '/streams', '/graphql']
+
+// --- User Profile Update (registered before Speckle proxy) ---
+
+app.post('/api/users/profile', async (req, res) => {
+  const { google_id, team, avatar } = req.body
+
+  if (!google_id) {
+    return res.status(400).json({ error: 'google_id is required' })
+  }
+
+  try {
+    await query(
+      `UPDATE users SET
+        team = $1,
+        avatar_speed = $2,
+        avatar_wobble = $3,
+        avatar_complexity = $4,
+        avatar_shade = $5,
+        updated_at = NOW()
+       WHERE google_id = $6`,
+      [
+        team || null,
+        avatar?.speed ?? 2,
+        avatar?.wobble ?? 30,
+        avatar?.complexity ?? 50,
+        avatar?.shade ?? 2,
+        google_id,
+      ]
+    )
+    res.json({ ok: true })
+  } catch (err) {
+    console.error('[db] profile update failed:', err.message)
+    res.status(500).json({ error: 'Failed to update profile' })
+  }
+})
 
 if (!hasSpeckleToken) {
   console.warn('Warning: SPECKLE_TOKEN is not set. Private streams will fail to load.')
@@ -131,11 +168,46 @@ app.get('/auth/callback', async (req, res) => {
 
     const userData = await userResponse.json()
 
+    // Upsert user into database
+    try {
+      await query(
+        `INSERT INTO users (google_id, email, verified_email, name, given_name, family_name, picture, locale)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+         ON CONFLICT (google_id) DO UPDATE SET
+           email = EXCLUDED.email,
+           verified_email = EXCLUDED.verified_email,
+           name = EXCLUDED.name,
+           given_name = EXCLUDED.given_name,
+           family_name = EXCLUDED.family_name,
+           picture = EXCLUDED.picture,
+           locale = EXCLUDED.locale,
+           updated_at = NOW()`,
+        [
+          userData.id,
+          userData.email,
+          userData.verified_email ?? false,
+          userData.name,
+          userData.given_name,
+          userData.family_name,
+          userData.picture,
+          userData.locale,
+        ]
+      )
+      console.log('[db] upserted user:', userData.email)
+    } catch (dbErr) {
+      console.error('[db] upsert failed:', dbErr.message)
+    }
+
     // Redirect to frontend with profile data
     const frontendParams = new URLSearchParams({
+      google_id: userData.id || '',
       email: userData.email || '',
+      verified_email: String(userData.verified_email ?? false),
       name: userData.name || '',
+      given_name: userData.given_name || '',
+      family_name: userData.family_name || '',
       picture: userData.picture || '',
+      locale: userData.locale || '',
     })
 
     res.redirect(`/auth/success?${frontendParams.toString()}`)
@@ -160,6 +232,13 @@ if (fs.existsSync(distPath)) {
   })
 }
 
-app.listen(port, () => {
-  console.log(`Speckle proxy server listening on http://localhost:${port}`)
-})
+initDb()
+  .then(() => {
+    app.listen(port, () => {
+      console.log(`Speckle proxy server listening on http://localhost:${port}`)
+    })
+  })
+  .catch((err) => {
+    console.error('[db] Failed to initialize database:', err.message)
+    process.exit(1)
+  })

@@ -51,9 +51,14 @@ export const useUserStore = defineStore('user', () => {
   
   // State
   const currentUser = ref(storedData?.currentUser || {
+    googleId: '',
     name: '',
     email: '',
+    verifiedEmail: false,
+    givenName: '',
+    familyName: '',
     photoURL: '',
+    locale: '',
   })
 
   const selectedTeam = ref(storedData?.selectedTeam || '')
@@ -113,10 +118,15 @@ export const useUserStore = defineStore('user', () => {
   // Member Hours - tracks hours worked per member
   const memberHours = ref(storedData?.memberHours || {})
   // Actions
-  function login(email, name = '', photoURL = '') {
-    currentUser.value.email = email
-    currentUser.value.name = name || email.split('@')[0]
-    currentUser.value.photoURL = photoURL
+  function login({ email, name, photoURL, googleId, verifiedEmail, givenName, familyName, locale } = {}) {
+    currentUser.value.googleId = googleId || ''
+    currentUser.value.email = email || ''
+    currentUser.value.name = name || email?.split('@')[0] || ''
+    currentUser.value.verifiedEmail = verifiedEmail === 'true' || verifiedEmail === true
+    currentUser.value.givenName = givenName || ''
+    currentUser.value.familyName = familyName || ''
+    currentUser.value.photoURL = photoURL || ''
+    currentUser.value.locale = locale || ''
     isLoggedIn.value = true
     persistData()
   }
@@ -140,7 +150,7 @@ export const useUserStore = defineStore('user', () => {
   }
 
   function logout() {
-    currentUser.value = { name: '', email: '', photoURL: '' }
+    currentUser.value = { googleId: '', name: '', email: '', verifiedEmail: false, givenName: '', familyName: '', photoURL: '', locale: '' }
     selectedTeam.value = ''
     avatarConfig.value = { complexity: 50, speed: 2, wobble: 30 }
     isLoggedIn.value = false
