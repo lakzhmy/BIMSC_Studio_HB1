@@ -37,6 +37,20 @@ onMounted(() => {
     photoURL: route.query.picture || '',
     locale: route.query.locale || '',
   })
-  router.replace('/profile')
+
+  // Returning user with saved team — restore settings and skip profile setup
+  const savedTeam = route.query.team
+  if (savedTeam) {
+    userStore.selectTeam(savedTeam)
+    userStore.updateAvatar({
+      speed: parseFloat(route.query.avatar_speed) || 2,
+      wobble: parseInt(route.query.avatar_wobble) || 30,
+      complexity: parseInt(route.query.avatar_complexity) || 50,
+      shade: parseInt(route.query.avatar_shade) || 2,
+    })
+    router.replace('/dashboard')
+  } else {
+    router.replace('/profile')
+  }
 })
 </script>

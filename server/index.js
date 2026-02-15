@@ -168,9 +168,10 @@ app.get('/auth/callback', async (req, res) => {
 
     const userData = await userResponse.json()
 
-    // Upsert user into database
+    // Upsert user into database and retrieve saved team/avatar
+    let dbUser = null
     try {
-      await query(
+      const result = await query(
         `INSERT INTO users (google_id, email, verified_email, name, given_name, family_name, picture, locale)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
          ON CONFLICT (google_id) DO UPDATE SET
@@ -181,7 +182,8 @@ app.get('/auth/callback', async (req, res) => {
            family_name = EXCLUDED.family_name,
            picture = EXCLUDED.picture,
            locale = EXCLUDED.locale,
-           updated_at = NOW()`,
+           updated_at = NOW()
+         RETURNING team, avatar_speed, avatar_wobble, avatar_complexity, avatar_shade`,
         [
           userData.id,
           userData.email,
@@ -193,6 +195,7 @@ app.get('/auth/callback', async (req, res) => {
           userData.locale,
         ]
       )
+      dbUser = result.rows[0]
       console.log('[db] upserted user:', userData.email)
     } catch (dbErr) {
       console.error('[db] upsert failed:', dbErr.message)
@@ -209,6 +212,15 @@ app.get('/auth/callback', async (req, res) => {
       picture: userData.picture || '',
       locale: userData.locale || '',
     })
+
+    // Include saved team/avatar so the frontend can skip profile setup
+    if (dbUser?.team) {
+      frontendParams.set('team', dbUser.team)
+      frontendParams.set('avatar_speed', String(dbUser.avatar_speed ?? 2))
+      frontendParams.set('avatar_wobble', String(dbUser.avatar_wobble ?? 30))
+      frontendParams.set('avatar_complexity', String(dbUser.avatar_complexity ?? 50))
+      frontendParams.set('avatar_shade', String(dbUser.avatar_shade ?? 2))
+    }
 
     res.redirect(`/auth/success?${frontendParams.toString()}`)
   } catch (err) {
