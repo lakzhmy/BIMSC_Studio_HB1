@@ -149,9 +149,31 @@
           </div>
         </div>
 
-        <!-- Sidebar: Calmness Ranking + Top Poppers -->
+        <!-- Sidebar: Team Health + Calmness Ranking + Top Poppers -->
         <div class="flex flex-col gap-4">
-          <!-- Calmness Ranking (aligned with game area at top) -->
+          <!-- Team Health Summary -->
+          <div class="card p-5">
+            <h2 class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-4">Team Health</h2>
+            <div class="space-y-4">
+              <div v-for="team in teamHealthSummary" :key="team.id">
+                <div class="flex items-center justify-between mb-1">
+                  <span class="text-sm font-medium" :class="team.textClass">{{ team.name }}</span>
+                  <span class="text-sm font-bold text-slate-900">
+                    {{ team.health > 0 ? team.health + '%' : '—' }}
+                  </span>
+                </div>
+                <div class="h-2 bg-slate-200 rounded-full">
+                  <div
+                    class="h-2 rounded-full transition-all duration-700"
+                    :class="healthBarColorClass(team.health)"
+                    :style="{ width: team.health + '%' }"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Calmness Ranking -->
           <div class="card p-5">
             <h2 class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-4">Calmness Ranking</h2>
             <div class="space-y-3">
@@ -519,6 +541,15 @@ const sortedLeaderboard = computed(() => {
   return [...allMembers.value]
     .map((m) => ({ ...m, health: userStore.getMemberHealth(m.id) }))
     .sort((a, b) => b.health - a.health)
+})
+
+// ── Team Health Summary ──────────────────────────────────────────────────────
+const teamHealthSummary = computed(() => {
+  return [
+    { id: 'structure', name: 'Green Structure', textClass: 'text-green-700' },
+    { id: 'program', name: 'Blue Program', textClass: 'text-blue-700' },
+    { id: 'data', name: 'Red Data', textClass: 'text-red-700' },
+  ].map((t) => ({ ...t, health: userStore.getTeamHealth(t.id) }))
 })
 
 // ── Top Poppers (engagement — highest raw pop count per member) ──────────────
