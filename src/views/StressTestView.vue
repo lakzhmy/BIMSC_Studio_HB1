@@ -474,8 +474,8 @@ function endGame() {
   activeBlobs.value = []
   gameState.value = 'done'
 
-  // Inverted formula: fewer pops = less stressed = higher health
-  const health = Math.max(0, Math.min(100, Math.round(100 - (score.value / 60) * 100)))
+  // Inverted formula: fewer pops = less stressed = higher health (min 1%)
+  const health = Math.max(1, Math.min(100, Math.round(100 - (score.value / 60) * 100)))
   lastHealth.value = health
 
   const tier = getTierByHealth(health)

@@ -310,7 +310,9 @@ export const useUserStore = defineStore('user', () => {
   // Inverted: fewer pops = less stressed = higher health
   // health = max(0, round(100 - (pops / 60) * 100))
   function computeStressHealth(score) {
-    return Math.max(0, Math.min(100, Math.round(100 - (score / 60) * 100)))
+    const raw = Math.max(0, Math.min(100, Math.round(100 - (score / 60) * 100)))
+    // Minimum 1% so a played game always shows as recorded
+    return Math.max(1, raw)
   }
 
   function saveStressTestScore(memberId, score) {
