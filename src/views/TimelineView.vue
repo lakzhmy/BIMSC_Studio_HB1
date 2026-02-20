@@ -417,6 +417,53 @@ const teamPoints = computed(() => {
   }
 })
 
+// Calculate pairwise connection strength between two teams for a given week
+function pairConnectionStrength(week, teamA, teamB) {
+  let strength = 0
+  for (const d of week.deliverables) {
+    if (d.team === teamA && d.connections) {
+      strength += (d.connections[teamB] || 0)
+    }
+    if (d.team === teamB && d.connections) {
+      strength += (d.connections[teamA] || 0)
+    }
+  }
+  return strength
+}
+
+// Compute the Y position for each team in a given week based on connection strengths.
+// When teams have strong connections, their lines converge toward each other.
+// When there are no connections or no milestones, lines stay at their base Y positions.
+function weekTeamY(week, team) {
+  const teams = ['structure', 'program', 'data']
+  const others = teams.filter((t) => t !== team)
+
+  let totalStrength = 0
+  let weightedY = 0
+
+  for (const other of others) {
+    const s = pairConnectionStrength(week, team, other)
+    totalStrength += s
+    weightedY += s * teamBaseY[other]
+  }
+
+  if (totalStrength === 0) {
+    return teamBaseY[team]
+  }
+
+  // Weighted average Y of connected teams
+  const targetY = weightedY / totalStrength
+  // Pull factor: max possible strength per pair per direction is 3,
+  // so max bidirectional for 2 pairs ≈ 12. We normalize against 8
+  // for a smooth visual range (cap at 70% pull).
+  const pullFactor = Math.min(totalStrength / 8, 1) * 0.7
+
+  const newY = teamBaseY[team] + (targetY - teamBaseY[team]) * pullFactor
+
+  // Clamp within the SVG viewBox margins
+  return Math.max(6, Math.min(90, newY))
+}
+
 function teamDeliverables(week, team) {
   return filteredDeliverables(week.deliverables).filter((item) => item.team === team)
 }
@@ -435,30 +482,15 @@ function buildTeamPoints(team) {
   return timeline
     .map((week, index) => {
       const x = total === 1 ? 0 : (index / (total - 1)) * 100
-      const y = teamBaseY[team] + weekOffset(week, team)
+      const y = weekTeamY(week, team)
       return `${x},${y}`
     })
     .join(' ')
 }
 
-function weekOffset(week, team) {
-  const activeTeams = ['structure', 'program', 'data'].filter((t) => weekHasTeam(week, t))
-  if (!activeTeams.includes(team)) {
-    return 0
-  }
-  const flip = week.week % 2 === 0 ? 1 : -1
-  if (activeTeams.length === 3) {
-    return (team === 'structure' ? -8 : team === 'data' ? 0 : 8) * flip
-  }
-  if (activeTeams.length === 2) {
-    return (activeTeams[0] === team ? -6 : 6) * flip
-  }
-  return 4 * flip
-}
-
 function nodeStyle(week, team) {
   return {
-    top: `${teamBaseY[team] + weekOffset(week, team) - 8}px`
+    top: `${weekTeamY(week, team) - 8}px`
   }
 }
 
