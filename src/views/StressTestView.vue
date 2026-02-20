@@ -22,11 +22,11 @@
         </div>
       </div>
 
-      <!-- Main Grid: 5 columns — game takes 3, sidebar takes 2 -->
-      <div class="grid grid-cols-5 gap-5 items-start">
+      <!-- Main Grid: game takes 3/5, sidebar takes 2/5 -->
+      <div class="grid grid-cols-1 lg:grid-cols-5 gap-6 items-start">
 
         <!-- ── Game Area (left 3/5) ─────────────────────────────────────── -->
-        <div class="col-span-3">
+        <div class="lg:col-span-3">
           <div class="card p-5 flex flex-col gap-4">
 
             <!-- Status Bar -->
@@ -138,7 +138,7 @@
         </div>
 
         <!-- ── Sidebar (right 2/5) ──────────────────────────────────────── -->
-        <div class="col-span-2 flex flex-col gap-4">
+        <div class="lg:col-span-2 flex flex-col gap-5">
 
           <!-- Team Health -->
           <div class="card p-4">
@@ -158,29 +158,33 @@
             </div>
           </div>
 
-          <!-- Calmness Ranking — compact 3-column avatar grid -->
+          <!-- Calmness Ranking — vertical list -->
           <div class="card p-4">
             <h2 class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Calmness Ranking</h2>
-            <div class="grid grid-cols-3 gap-2">
+            <div class="space-y-1.5">
               <div
                 v-for="(member, idx) in sortedLeaderboard"
                 :key="member.id"
-                class="flex flex-col items-center text-center p-2 rounded-lg bg-slate-50 relative"
+                class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg"
+                :class="idx < 3 ? 'bg-slate-50' : ''"
               >
-                <!-- Rank badge -->
-                <span class="absolute top-1 left-1.5 text-xs font-bold"
+                <!-- Rank -->
+                <span class="w-5 text-xs font-bold text-center flex-shrink-0"
                   :class="idx === 0 ? 'text-amber-500' : idx === 1 ? 'text-slate-400' : idx === 2 ? 'text-amber-700' : 'text-slate-300'"
                 >{{ idx + 1 }}</span>
-                <div class="mt-2 mb-1">
-                  <MemberBlob :member="member" size="36px" />
+                <!-- Avatar -->
+                <div class="w-7 h-7 flex-shrink-0">
+                  <MemberBlob :member="member" size="28px" />
                 </div>
-                <p class="text-xs font-medium text-slate-900 leading-tight truncate w-full">{{ member.name.split(' ')[0] }}</p>
-                <p class="text-xs font-bold mt-0.5"
+                <!-- Name -->
+                <p class="text-xs font-medium text-slate-900 truncate flex-1">{{ member.name }}</p>
+                <!-- Health -->
+                <span class="text-xs font-bold flex-shrink-0"
                   :class="member.health > 0 ? healthColorClass2(member.health) : 'text-slate-300'"
                 >
                   {{ member.health > 0 ? member.health + '%' : '—' }}
                   <span v-if="member.health > 0">{{ stressEmoji(member.health) }}</span>
-                </p>
+                </span>
               </div>
             </div>
           </div>
