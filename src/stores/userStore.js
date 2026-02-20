@@ -316,21 +316,27 @@ export const useUserStore = defineStore('user', () => {
   function saveStressTestScore(memberId, score) {
     const health = computeStressHealth(score)
     const existing = stressTestScores.value[memberId]
-    // Keep the attempt with the BEST health (lowest stress), not highest pop count
-    if (!existing || health > existing.bestHealth) {
-      stressTestScores.value[memberId] = { bestScore: score, bestHealth: health, timestamp: new Date().toISOString() }
-      persistData()
-      return true // new personal best health
+    const isNewBest = !existing || health > (existing.bestHealth ?? 0)
+    stressTestScores.value[memberId] = {
+      lastScore: score,
+      lastHealth: health,
+      bestScore: isNewBest ? score : (existing?.bestScore ?? score),
+      bestHealth: isNewBest ? health : (existing?.bestHealth ?? health),
+      highestPops: Math.max(score, existing?.highestPops ?? 0),
+      totalGames: (existing?.totalGames ?? 0) + 1,
+      timestamp: new Date().toISOString()
     }
-    return false
+    persistData()
+    return isNewBest
   }
 
   function getMemberHealth(memberId) {
     const entry = stressTestScores.value[memberId]
     if (!entry) return 0
-    // Support both old format (bestScore only) and new format (bestHealth)
+    // Use latest health so the UI always reflects the most recent game
+    if (entry.lastHealth !== undefined) return entry.lastHealth
     if (entry.bestHealth !== undefined) return entry.bestHealth
-    return computeStressHealth(entry.bestScore)
+    return computeStressHealth(entry.bestScore ?? entry.lastScore ?? 0)
   }
 
   function getTeamHealth(teamId) {

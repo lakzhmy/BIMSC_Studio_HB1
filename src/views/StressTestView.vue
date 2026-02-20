@@ -541,7 +541,7 @@ const topPoppers = computed(() => {
   return [...allMembers.value]
     .map((m) => {
       const entry = userStore.stressTestScores[m.id]
-      return { ...m, bestScore: entry?.bestScore ?? 0 }
+      return { ...m, bestScore: entry?.highestPops ?? entry?.lastScore ?? entry?.bestScore ?? 0 }
     })
     .filter((m) => m.bestScore > 0)
     .sort((a, b) => b.bestScore - a.bestScore)
