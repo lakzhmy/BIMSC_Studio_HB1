@@ -23,7 +23,7 @@
       </div>
 
       <!-- Main Grid: Game Area + Sidebar -->
-      <div class="grid lg:grid-cols-3 gap-6">
+      <div class="grid lg:grid-cols-3 gap-6 items-start">
         <!-- Game Area (left 2/3) -->
         <div class="lg:col-span-2 flex flex-col gap-4">
           <div class="card p-6 flex flex-col gap-4">
@@ -80,10 +80,9 @@
             <!-- Blob Playground -->
             <div
               ref="gameArea"
-              class="relative rounded-xl overflow-hidden select-none"
+              class="relative rounded-xl overflow-hidden select-none bg-slate-50"
               :class="gameState === 'playing' ? 'cursor-crosshair' : 'cursor-default'"
               style="height: 420px;"
-              :style="gameAreaStyle"
             >
               <!-- Idle / Done overlay -->
               <transition name="fade">
@@ -151,7 +150,7 @@
         </div>
 
         <!-- Sidebar: Leaderboard + Team Health -->
-        <div class="space-y-4">
+        <div class="flex flex-col gap-4">
           <!-- Team Health Summary -->
           <div class="card p-5">
             <h2 class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-4">Team Health</h2>
@@ -378,17 +377,6 @@ const liveStressClass = computed(() => {
     'Overwhelmed': 'bg-red-100 text-red-700',
   }
   return map[t.label] || 'bg-slate-100 text-slate-700'
-})
-
-// ── Game area background shifts with stress ─────────────────────────────────
-const gameAreaStyle = computed(() => {
-  if (gameState.value !== 'playing') return 'background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);'
-  const pops = score.value
-  if (pops <= 9)  return 'background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);'
-  if (pops <= 20) return 'background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);'
-  if (pops <= 33) return 'background: linear-gradient(135deg, #fef9c3 0%, #fde68a 100%);'
-  if (pops <= 49) return 'background: linear-gradient(135deg, #ffedd5 0%, #fed7aa 100%);'
-  return 'background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);'
 })
 
 // ── Blob Management ──────────────────────────────────────────────────────────
