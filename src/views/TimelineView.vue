@@ -54,90 +54,35 @@
               </div>
               <div class="absolute inset-0 grid grid-cols-10 gap-2 z-20">
                 <div v-for="week in courseTimeline" :key="week.week" class="relative">
-                  <div
-                    v-if="weekHasTeam(week, 'structure')"
-                    class="group absolute left-1/2 -translate-x-1/2 z-30 hover:z-[90] cursor-pointer"
-                    :style="nodeStyle(week, 'structure')"
-                    @click="toggleSelection(week, 'structure')"
-                  >
+                  <template v-for="(deliverable, dIdx) in weekVisibleDeliverables(week)" :key="deliverable.id">
                     <div
-                      :class="[
-                        'w-4 h-4 flex items-center justify-center',
-                        isSelected(week.week, 'structure') ? 'ring-2 ring-green-300 ring-offset-1 ring-offset-white' : ''
-                      ]"
+                      class="group absolute z-30 hover:z-[90] cursor-pointer"
+                      :style="milestoneNodeStyle(week, deliverable, dIdx, weekVisibleDeliverables(week).length)"
+                      @click="toggleSelection(week, deliverable.team)"
                     >
-                      <div v-if="isPastWeek(week.week)" :class="tickContainerClass('structure')">
-                        <svg class="w-2.5 h-2.5" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                          <path d="M3.5 8.5l2.5 2.5 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white" />
-                        </svg>
+                      <div
+                        :class="[
+                          'w-4 h-4 flex items-center justify-center',
+                          isSelected(week.week, deliverable.team) ? `ring-2 ${teamRingClass(deliverable.team)} ring-offset-1 ring-offset-white` : ''
+                        ]"
+                      >
+                        <div v-if="isPastWeek(week.week)" :class="tickContainerClass(deliverable.team)">
+                          <svg class="w-2.5 h-2.5" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                            <path d="M3.5 8.5l2.5 2.5 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white" />
+                          </svg>
+                        </div>
+                        <div v-else :class="teamDotNodeClass(deliverable.team)"></div>
                       </div>
-                      <div v-else class="w-4 h-4 rounded-full bg-green-500 border-2 border-white shadow"></div>
-                    </div>
-                    <div
-                      :class="[
-                        'absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-48 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs shadow-lg opacity-0 pointer-events-none transition-opacity transition-transform origin-bottom scale-95 group-hover:opacity-100 group-hover:scale-100 group-hover:pointer-events-auto z-[100]',
-                        tooltipTextClass('structure')
-                      ]"
-                    >
-                      <p class="text-xs">{{ teamMilestoneTitle(week, 'structure') }}</p>
-                    </div>
-                  </div>
-                  <div
-                    v-if="weekHasTeam(week, 'program')"
-                    class="group absolute left-1/2 -translate-x-1/2 z-30 hover:z-[90] cursor-pointer"
-                    :style="nodeStyle(week, 'program')"
-                    @click="toggleSelection(week, 'program')"
-                  >
-                    <div
-                      :class="[
-                        'w-4 h-4 flex items-center justify-center',
-                        isSelected(week.week, 'program') ? 'ring-2 ring-blue-300 ring-offset-1 ring-offset-white' : ''
-                      ]"
-                    >
-                      <div v-if="isPastWeek(week.week)" :class="tickContainerClass('program')">
-                        <svg class="w-2.5 h-2.5" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                          <path d="M3.5 8.5l2.5 2.5 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white" />
-                        </svg>
+                      <div
+                        :class="[
+                          'absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-48 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs shadow-lg opacity-0 pointer-events-none transition-opacity transition-transform origin-bottom scale-95 group-hover:opacity-100 group-hover:scale-100 group-hover:pointer-events-auto z-[100]',
+                          tooltipTextClass(deliverable.team)
+                        ]"
+                      >
+                        <p class="text-xs">{{ deliverable.text }}</p>
                       </div>
-                      <div v-else class="w-4 h-4 rounded-full bg-blue-500 border-2 border-white shadow"></div>
                     </div>
-                    <div
-                      :class="[
-                        'absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-48 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs shadow-lg opacity-0 pointer-events-none transition-opacity transition-transform origin-bottom scale-95 group-hover:opacity-100 group-hover:scale-100 group-hover:pointer-events-auto z-[100]',
-                        tooltipTextClass('program')
-                      ]"
-                    >
-                      <p class="text-xs">{{ teamMilestoneTitle(week, 'program') }}</p>
-                    </div>
-                  </div>
-                  <div
-                    v-if="weekHasTeam(week, 'data')"
-                    class="group absolute left-1/2 -translate-x-1/2 z-30 hover:z-[90] cursor-pointer"
-                    :style="nodeStyle(week, 'data')"
-                    @click="toggleSelection(week, 'data')"
-                  >
-                    <div
-                      :class="[
-                        'w-4 h-4 flex items-center justify-center',
-                        isSelected(week.week, 'data') ? 'ring-2 ring-red-300 ring-offset-1 ring-offset-white' : ''
-                      ]"
-                    >
-                      <div v-if="isPastWeek(week.week)" :class="tickContainerClass('data')">
-                        <svg class="w-2.5 h-2.5" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                          <path d="M3.5 8.5l2.5 2.5 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white" />
-                        </svg>
-                      </div>
-                      <div v-else class="w-4 h-4 rounded-full bg-red-500 border-2 border-white shadow"></div>
-                    </div>
-                    <div
-                      :class="[
-                        'absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-48 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs shadow-lg opacity-0 pointer-events-none transition-opacity transition-transform origin-bottom scale-95 group-hover:opacity-100 group-hover:scale-100 group-hover:pointer-events-auto z-[100]',
-                        tooltipTextClass('data')
-                      ]"
-                    >
-                      <p class="text-xs">{{ teamMilestoneTitle(week, 'data') }}</p>
-                    </div>
-                  </div>
+                  </template>
                 </div>
               </div>
             </div>
@@ -519,6 +464,49 @@ function nodeStyle(week, team) {
   return {
     top: `calc(${pct}% - 8px)`
   }
+}
+
+// Return all visible (filtered) deliverables for a week, sorted by creation order
+function weekVisibleDeliverables(week) {
+  return week.deliverables.filter((d) => d.team !== 'general' && filters[d.team])
+}
+
+// Position each milestone dot: vertically on its team's line, horizontally spread by creation order
+function milestoneNodeStyle(week, deliverable, index, total) {
+  const svgY = weekTeamYSeparated(week, deliverable.team)
+  const pct = (svgY / 96) * 100
+  // Spread dots horizontally within the column: evenly from 15% to 85%
+  let leftPct = 50
+  if (total === 1) {
+    leftPct = 50
+  } else {
+    leftPct = 15 + (index / (total - 1)) * 70
+  }
+  return {
+    top: `calc(${pct}% - 8px)`,
+    left: `${leftPct}%`,
+    transform: 'translateX(-50%)',
+  }
+}
+
+// Ring class per team for selected state
+function teamRingClass(team) {
+  const map = {
+    structure: 'ring-green-300',
+    program: 'ring-blue-300',
+    data: 'ring-red-300',
+  }
+  return map[team] || 'ring-slate-300'
+}
+
+// Dot node class per team (the colored circle)
+function teamDotNodeClass(team) {
+  const map = {
+    structure: 'w-4 h-4 rounded-full bg-green-500 border-2 border-white shadow',
+    program: 'w-4 h-4 rounded-full bg-blue-500 border-2 border-white shadow',
+    data: 'w-4 h-4 rounded-full bg-red-500 border-2 border-white shadow',
+  }
+  return map[team] || 'w-4 h-4 rounded-full bg-slate-400 border-2 border-white shadow'
 }
 
 function teamMilestoneTitle(week, team) {
