@@ -434,6 +434,7 @@ function pairConnectionStrength(week, teamA, teamB) {
 // Compute the Y position for each team in a given week based on connection strengths.
 // When teams have strong connections, their lines converge toward each other.
 // When there are no connections or no milestones, lines stay at their base Y positions.
+// A minimum gap is enforced so lines never overlap.
 function weekTeamY(week, team) {
   const teams = ['structure', 'program', 'data']
   const others = teams.filter((t) => t !== team)
@@ -453,15 +454,36 @@ function weekTeamY(week, team) {
 
   // Weighted average Y of connected teams
   const targetY = weightedY / totalStrength
-  // Pull factor: max possible strength per pair per direction is 3,
-  // so max bidirectional for 2 pairs ≈ 12. We normalize against 8
-  // for a smooth visual range (cap at 70% pull).
-  const pullFactor = Math.min(totalStrength / 8, 1) * 0.7
+  // Gentle pull: max 35% convergence so lines approach but never overlap
+  const pullFactor = Math.min(totalStrength / 12, 1) * 0.35
 
-  const newY = teamBaseY[team] + (targetY - teamBaseY[team]) * pullFactor
+  return teamBaseY[team] + (targetY - teamBaseY[team]) * pullFactor
+}
 
-  // Clamp within the SVG viewBox margins
-  return Math.max(6, Math.min(90, newY))
+// After computing raw Y for all three teams in a week, enforce minimum spacing
+// so dots remain visible and lines don't overlap.
+const MIN_GAP = 8
+
+function weekTeamYSeparated(week, team) {
+  // Compute raw positions for all three teams
+  const rawPositions = {
+    structure: weekTeamY(week, 'structure'),
+    program: weekTeamY(week, 'program'),
+    data: weekTeamY(week, 'data'),
+  }
+
+  // Sort teams by their raw Y position
+  const sorted = Object.entries(rawPositions).sort((a, b) => a[1] - b[1])
+
+  // Enforce minimum gap between consecutive lines
+  const adjusted = {}
+  adjusted[sorted[0][0]] = sorted[0][1]
+  for (let i = 1; i < sorted.length; i++) {
+    const prevY = adjusted[sorted[i - 1][0]]
+    adjusted[sorted[i][0]] = Math.max(sorted[i][1], prevY + MIN_GAP)
+  }
+
+  return adjusted[team]
 }
 
 function teamDeliverables(week, team) {
@@ -482,7 +504,7 @@ function buildTeamPoints(team) {
   return timeline
     .map((week, index) => {
       const x = total === 1 ? 0 : (index / (total - 1)) * 100
-      const y = weekTeamY(week, team)
+      const y = weekTeamYSeparated(week, team)
       return `${x},${y}`
     })
     .join(' ')
@@ -490,7 +512,7 @@ function buildTeamPoints(team) {
 
 function nodeStyle(week, team) {
   return {
-    top: `${weekTeamY(week, team) - 8}px`
+    top: `${weekTeamYSeparated(week, team) - 8}px`
   }
 }
 
