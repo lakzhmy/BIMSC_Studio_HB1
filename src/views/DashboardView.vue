@@ -91,11 +91,45 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useUserStore } from '@/stores/userStore'
-import { projectHealth as projectHealthData, teams, recentActivity, courseTimeline } from '@/data/sampleData'
+import { projectHealth as projectHealthData, teams, recentActivity, courseTimeline as baseTimeline } from '@/data/sampleData'
 import MemberBlob from '@/components/MemberBlob.vue'
 const userStore = useUserStore()
+
+// ── Live milestones from DB ──
+const dbMilestones = ref([])
+async function fetchMilestones() {
+  try {
+    const res = await fetch('/api/milestones')
+    if (res.ok) dbMilestones.value = await res.json()
+  } catch (err) {
+    console.error('Failed to fetch milestones:', err)
+  }
+}
+onMounted(fetchMilestones)
+
+// ── Calendar-based current week (same logic as TimelineView) ──
+const WEEK_START_DATES = Array.from({ length: 10 }, (_, i) => new Date(2026, 0, 12 + i * 7))
+
+const currentWeekFraction = computed(() => {
+  const now = new Date()
+  const week1Start = WEEK_START_DATES[0].getTime()
+  const msPerWeek = 7 * 24 * 60 * 60 * 1000
+  const fraction = (now.getTime() - week1Start) / msPerWeek + 1
+  return Math.max(1, Math.min(10.99, fraction))
+})
+
+const currentWeekNumber = computed(() => Math.floor(currentWeekFraction.value))
+
+const todayString = computed(() => {
+  return new Date().toLocaleDateString('en-GB', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  })
+})
 
 const kpiHealth = computed(() => {
   const total = 9
@@ -105,44 +139,50 @@ const kpiHealth = computed(() => {
 })
 
 const timelineSummary = computed(() => {
-  const totalWeeks = courseTimeline.length
-  const currentWeek = 5
-  const clampedWeek = Math.min(Math.max(currentWeek, 1), totalWeeks)
+  const totalWeeks = baseTimeline.length
   return {
     totalWeeks,
-    currentWeek: clampedWeek
+    currentWeek: currentWeekNumber.value
   }
 })
 
-const currentTimelineMilestone = computed(() => {
-  const currentWeek = timelineSummary.value.currentWeek
-  return courseTimeline.find((week) => week.week === currentWeek) || null
+// Find the base week info (title, description) for the current week
+const currentWeekInfo = computed(() => {
+  return baseTimeline.find((w) => w.week === currentWeekNumber.value) || null
 })
 
+// Get DB milestones for the current week, grouped per team
 const teamMilestones = computed(() => {
-  const milestone = currentTimelineMilestone.value
-  if (!milestone) return []
+  const week = currentWeekNumber.value
   const colorMap = {
     structure: 'bg-green-500',
     program: 'bg-blue-500',
     data: 'bg-red-500'
   }
-  return ['structure', 'program', 'data']
-    .map((team) => {
-      const deliverable = milestone.deliverables.find((item) => item.team === team)
-      if (!deliverable) return null
+  const labelMap = {
+    structure: 'Structure',
+    program: 'Program',
+    data: 'Data'
+  }
+  return ['structure', 'program', 'data'].map((team) => {
+    const milestones = dbMilestones.value.filter((m) => m.week === week && m.team === team)
+    if (milestones.length > 0) {
       return {
-        text: deliverable.text,
-        colorClass: colorMap[team] || 'bg-slate-400'
+        text: milestones.map((m) => m.title).join(', '),
+        colorClass: colorMap[team]
       }
-    })
-    .filter(Boolean)
+    }
+    return {
+      text: `No milestone set for ${labelMap[team]}`,
+      colorClass: 'bg-slate-300'
+    }
+  })
 })
 
 const quickStats = computed(() => {
   const health = kpiHealth.value
   const timeline = timelineSummary.value
-  const milestone = currentTimelineMilestone.value
+  const weekInfo = currentWeekInfo.value
   const teamMilestoneItems = teamMilestones.value
 
   return [
@@ -154,16 +194,14 @@ const quickStats = computed(() => {
       attention: true
     },
     {
-      label: 'Next Milestone',
-      items: teamMilestoneItems.length
-        ? teamMilestoneItems
-        : [{ text: 'No team milestones', colorClass: 'bg-slate-300' }],
+      label: 'Current Milestone',
+      items: teamMilestoneItems,
       link: '/timeline'
     },
     {
       label: 'Timeline Progress',
-      value: milestone ? `Week ${milestone.week}: ${milestone.title}` : '—',
-      change: timeline.totalWeeks ? `${timeline.currentWeek} out of ${timeline.totalWeeks} weeks` : 'Timeline not set',
+      value: weekInfo ? `Week ${weekInfo.week}: ${weekInfo.title}` : '—',
+      change: timeline.totalWeeks ? `${todayString.value} · Week ${timeline.currentWeek} of ${timeline.totalWeeks}` : 'Timeline not set',
       link: '/timeline'
     },
     {
