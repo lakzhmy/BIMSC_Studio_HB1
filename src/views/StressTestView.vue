@@ -22,56 +22,48 @@
         </div>
       </div>
 
-      <!-- Main Grid: Game Area + Sidebar -->
-      <div class="grid lg:grid-cols-3 gap-6 items-start">
-        <!-- Game Area (left 2/3) -->
-        <div class="lg:col-span-2 flex flex-col gap-4">
-          <div class="card p-6 flex flex-col gap-4">
+      <!-- Main Grid: 5 columns — game takes 3, sidebar takes 2 -->
+      <div class="grid grid-cols-5 gap-5 items-start">
+
+        <!-- ── Game Area (left 3/5) ─────────────────────────────────────── -->
+        <div class="col-span-3">
+          <div class="card p-5 flex flex-col gap-4">
+
             <!-- Status Bar -->
             <div class="flex items-center justify-between">
-              <div class="flex items-center gap-6">
+              <div class="flex items-center gap-5">
                 <div class="text-center">
                   <p class="text-xs text-slate-500 font-medium uppercase tracking-wide">Pops</p>
-                  <p class="text-4xl font-bold text-slate-900 tabular-nums">{{ score }}</p>
+                  <p class="text-3xl font-bold text-slate-900 tabular-nums">{{ score }}</p>
                 </div>
                 <div class="text-center">
                   <p class="text-xs text-slate-500 font-medium uppercase tracking-wide">Time Left</p>
-                  <p
-                    class="text-4xl font-bold tabular-nums"
+                  <p class="text-3xl font-bold tabular-nums"
                     :class="timeLeft <= 5 ? 'text-red-600 animate-pulse' : 'text-slate-900'"
                   >{{ timeLeft }}s</p>
                 </div>
-                <!-- Live stress indicator during play -->
                 <div v-if="gameState === 'playing'" class="text-center">
                   <p class="text-xs text-slate-500 font-medium uppercase tracking-wide">Stress</p>
                   <p class="text-2xl">{{ liveStressEmoji }}</p>
                 </div>
               </div>
 
-              <!-- Result / Start button -->
               <div class="text-right">
                 <template v-if="gameState === 'idle'">
-                  <button @click="startGame" class="btn-primary">
-                    Start Test
-                  </button>
+                  <button @click="startGame" class="btn-primary">Start Test</button>
                 </template>
                 <template v-else-if="gameState === 'playing'">
-                  <div
-                    class="px-4 py-2 rounded-lg text-sm font-semibold"
-                    :class="liveStressClass"
-                  >
+                  <div class="px-3 py-1.5 rounded-lg text-sm font-semibold" :class="liveStressClass">
                     {{ liveStressLabel }}
                   </div>
                 </template>
                 <template v-else>
-                  <div class="space-y-2">
-                    <p class="text-2xl font-bold">{{ lastStress.emoji }}</p>
-                    <p class="text-base font-bold text-slate-900">{{ lastStress.label }}</p>
-                    <p class="text-sm font-medium" :class="healthColorClass">{{ lastHealth }}% health</p>
-                    <p v-if="isNewBest" class="text-xs text-amber-600 font-semibold">✦ Personal best health!</p>
-                    <button @click="startGame" class="btn-primary text-sm mt-1">
-                      Try Again
-                    </button>
+                  <div class="space-y-1">
+                    <p class="text-xl font-bold">{{ lastStress.emoji }}</p>
+                    <p class="text-sm font-bold text-slate-900">{{ lastStress.label }}</p>
+                    <p class="text-sm font-semibold" :class="healthColorClass">{{ lastHealth }}% health</p>
+                    <p v-if="isNewBest" class="text-xs text-amber-600 font-semibold">✦ Personal best!</p>
+                    <button @click="startGame" class="btn-primary text-sm mt-1">Try Again</button>
                   </div>
                 </template>
               </div>
@@ -82,28 +74,26 @@
               ref="gameArea"
               class="relative rounded-xl overflow-hidden select-none bg-slate-50"
               :class="gameState === 'playing' ? 'cursor-crosshair' : 'cursor-default'"
-              style="height: 420px;"
+              style="height: 320px;"
             >
-              <!-- Idle / Done overlay -->
               <transition name="fade">
                 <div
                   v-if="gameState !== 'playing'"
-                  class="absolute inset-0 flex flex-col items-center justify-center z-10 bg-white/70 backdrop-blur-sm rounded-xl gap-2"
+                  class="absolute inset-0 flex flex-col items-center justify-center z-10 bg-white/70 backdrop-blur-sm rounded-xl gap-1"
                 >
                   <template v-if="gameState === 'idle'">
-                    <p class="text-2xl font-bold text-slate-700">Ready?</p>
+                    <p class="text-xl font-bold text-slate-700">Ready?</p>
                     <p class="text-slate-400 text-sm">Click "Start Test" to begin</p>
                   </template>
                   <template v-else>
-                    <p class="text-5xl mb-1">{{ lastStress.emoji }}</p>
-                    <p class="text-2xl font-bold text-slate-800">{{ lastStress.label }}</p>
-                    <p class="text-4xl font-black mt-1" :class="healthColorClass">{{ lastHealth }}%</p>
+                    <p class="text-4xl mb-1">{{ lastStress.emoji }}</p>
+                    <p class="text-xl font-bold text-slate-800">{{ lastStress.label }}</p>
+                    <p class="text-3xl font-black mt-1" :class="healthColorClass">{{ lastHealth }}%</p>
                     <p class="text-slate-500 text-sm">{{ score }} pops · {{ lastStress.description }}</p>
                   </template>
                 </div>
               </transition>
 
-              <!-- Blobs -->
               <transition-group name="blob-pop" tag="div">
                 <div
                   v-for="blob in activeBlobs"
@@ -111,10 +101,8 @@
                   class="absolute blob-morphing"
                   :class="blob.morphClass"
                   :style="{
-                    left: blob.x + 'px',
-                    top: blob.y + 'px',
-                    width: blob.size + 'px',
-                    height: blob.size + 'px',
+                    left: blob.x + 'px', top: blob.y + 'px',
+                    width: blob.size + 'px', height: blob.size + 'px',
                     background: blob.gradient,
                     animationDuration: blob.speed + 's',
                     cursor: gameState === 'playing' ? 'pointer' : 'default',
@@ -127,129 +115,103 @@
                 />
               </transition-group>
             </div>
-          </div>
 
-          <!-- Benchmark Scale -->
-          <div class="card p-5">
-            <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">How it's calculated</h3>
-            <div class="grid grid-cols-5 gap-2">
-              <div
-                v-for="tier in STRESS_TIERS"
-                :key="tier.label"
-                class="text-center p-2 rounded-lg border"
-                :class="tier.bgClass"
-              >
-                <p class="text-xl mb-1">{{ tier.emoji }}</p>
-                <p class="text-xs font-bold" :class="tier.textClass">{{ tier.label }}</p>
-                <p class="text-xs text-slate-500 mt-0.5">{{ tier.popsLabel }}</p>
-                <p class="text-xs font-semibold mt-0.5" :class="tier.textClass">{{ tier.healthLabel }}</p>
+            <!-- Benchmark strip (inline, no separate card) -->
+            <div class="border-t border-slate-100 pt-3">
+              <div class="flex gap-2">
+                <div
+                  v-for="tier in STRESS_TIERS"
+                  :key="tier.label"
+                  class="flex-1 text-center py-1.5 px-1 rounded-lg border text-xs"
+                  :class="tier.bgClass"
+                >
+                  <span class="text-base">{{ tier.emoji }}</span>
+                  <p class="font-semibold leading-tight mt-0.5" :class="tier.textClass">{{ tier.label }}</p>
+                  <p class="text-slate-500 leading-tight">{{ tier.popsLabel }}</p>
+                  <p class="font-bold leading-tight" :class="tier.textClass">{{ tier.healthLabel }}</p>
+                </div>
               </div>
+              <p class="text-xs text-slate-400 mt-2">Fewer pops = calmer = higher health. Resist the urge.</p>
             </div>
-            <p class="text-xs text-slate-400 mt-3">Fewer pops = calmer = higher health. The blobs want to be popped — do you resist?</p>
+
           </div>
         </div>
 
-        <!-- Sidebar: Team Health + Calmness Ranking + Top Poppers -->
-        <div class="flex flex-col gap-4">
-          <!-- Team Health Summary -->
-          <div class="card p-5">
-            <h2 class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-4">Team Health</h2>
-            <div class="space-y-4">
+        <!-- ── Sidebar (right 2/5) ──────────────────────────────────────── -->
+        <div class="col-span-2 flex flex-col gap-4">
+
+          <!-- Team Health -->
+          <div class="card p-4">
+            <h2 class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Team Health</h2>
+            <div class="space-y-3">
               <div v-for="team in teamHealthSummary" :key="team.id">
                 <div class="flex items-center justify-between mb-1">
-                  <span class="text-sm font-medium" :class="team.textClass">{{ team.name }}</span>
-                  <span class="text-sm font-bold text-slate-900">
-                    {{ team.health > 0 ? team.health + '%' : '—' }}
-                  </span>
+                  <span class="text-xs font-medium" :class="team.textClass">{{ team.name }}</span>
+                  <span class="text-xs font-bold text-slate-900">{{ team.health > 0 ? team.health + '%' : '—' }}</span>
                 </div>
-                <div class="h-2 bg-slate-200 rounded-full">
-                  <div
-                    class="h-2 rounded-full transition-all duration-700"
+                <div class="h-1.5 bg-slate-200 rounded-full">
+                  <div class="h-1.5 rounded-full transition-all duration-700"
                     :class="healthBarColorClass(team.health)"
-                    :style="{ width: team.health + '%' }"
-                  />
+                    :style="{ width: team.health + '%' }" />
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- Calmness Ranking -->
-          <div class="card p-5">
-            <h2 class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-4">Calmness Ranking</h2>
-            <div class="space-y-3">
+          <!-- Calmness Ranking — compact 3-column avatar grid -->
+          <div class="card p-4">
+            <h2 class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Calmness Ranking</h2>
+            <div class="grid grid-cols-3 gap-2">
               <div
                 v-for="(member, idx) in sortedLeaderboard"
                 :key="member.id"
-                class="flex items-center gap-3"
+                class="flex flex-col items-center text-center p-2 rounded-lg bg-slate-50 relative"
               >
-                <div class="w-6 text-center flex-shrink-0">
-                  <span v-if="idx === 0" class="text-amber-500 font-bold text-sm">1</span>
-                  <span v-else-if="idx === 1" class="text-slate-400 font-bold text-sm">2</span>
-                  <span v-else-if="idx === 2" class="text-amber-700 font-bold text-sm">3</span>
-                  <span v-else class="text-slate-400 text-xs">{{ idx + 1 }}</span>
+                <!-- Rank badge -->
+                <span class="absolute top-1 left-1.5 text-xs font-bold"
+                  :class="idx === 0 ? 'text-amber-500' : idx === 1 ? 'text-slate-400' : idx === 2 ? 'text-amber-700' : 'text-slate-300'"
+                >{{ idx + 1 }}</span>
+                <div class="mt-2 mb-1">
+                  <MemberBlob :member="member" size="36px" />
                 </div>
-                <div class="w-8 h-8 flex-shrink-0">
-                  <MemberBlob :member="member" size="32px" />
-                </div>
-                <div class="flex-1 min-w-0">
-                  <div class="flex items-center gap-1">
-                    <p class="text-xs font-medium text-slate-900 truncate">{{ member.name }}</p>
-                    <span v-if="member.health > 0" class="text-xs">{{ stressEmoji(member.health) }}</span>
-                  </div>
-                  <div class="h-1 bg-slate-200 rounded-full mt-1">
-                    <div
-                      class="h-1 rounded-full transition-all duration-700"
-                      :class="healthBarColorClass(member.health)"
-                      :style="{ width: member.health + '%' }"
-                    />
-                  </div>
-                </div>
-                <span
-                  class="text-xs font-bold w-10 text-right flex-shrink-0"
-                  :class="member.health > 0 ? 'text-slate-800' : 'text-slate-400'"
+                <p class="text-xs font-medium text-slate-900 leading-tight truncate w-full">{{ member.name.split(' ')[0] }}</p>
+                <p class="text-xs font-bold mt-0.5"
+                  :class="member.health > 0 ? healthColorClass2(member.health) : 'text-slate-300'"
                 >
                   {{ member.health > 0 ? member.health + '%' : '—' }}
-                </span>
+                  <span v-if="member.health > 0">{{ stressEmoji(member.health) }}</span>
+                </p>
               </div>
             </div>
           </div>
 
-          <!-- Top Poppers — engagement tracker -->
-          <div class="card p-5">
-            <div class="flex items-center justify-between mb-4">
+          <!-- Top Poppers -->
+          <div class="card p-4">
+            <div class="flex items-center justify-between mb-3">
               <h2 class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Top Poppers</h2>
-              <span class="text-xs text-slate-400">{{ totalPlayers }} player{{ totalPlayers !== 1 ? 's' : '' }} so far</span>
+              <span class="text-xs text-slate-400">{{ totalPlayers }} player{{ totalPlayers !== 1 ? 's' : '' }}</span>
             </div>
-
-            <div v-if="topPoppers.length" class="space-y-3 mb-4">
-              <div
-                v-for="(entry, idx) in topPoppers"
-                :key="entry.id"
-                class="flex items-center gap-3"
-              >
-                <span class="text-lg flex-shrink-0 w-6 text-center">
+            <div v-if="topPoppers.length" class="space-y-2 mb-3">
+              <div v-for="(entry, idx) in topPoppers" :key="entry.id" class="flex items-center gap-2">
+                <span class="text-base flex-shrink-0 w-5 text-center">
                   {{ idx === 0 ? '🥇' : idx === 1 ? '🥈' : '🥉' }}
                 </span>
-                <div class="w-8 h-8 flex-shrink-0">
-                  <MemberBlob :member="entry" size="32px" />
+                <div class="w-7 h-7 flex-shrink-0">
+                  <MemberBlob :member="entry" size="28px" />
                 </div>
-                <div class="flex-1 min-w-0">
-                  <p class="text-xs font-medium text-slate-900 truncate">{{ entry.name }}</p>
-                  <p class="text-xs text-slate-400">best game</p>
-                </div>
-                <span class="text-sm font-bold text-slate-800 flex-shrink-0">
-                  {{ entry.bestScore }} <span class="text-xs font-normal text-slate-400">pops</span>
+                <p class="text-xs font-medium text-slate-900 truncate flex-1">{{ entry.name.split(' ')[0] }}</p>
+                <span class="text-xs font-bold text-slate-800 flex-shrink-0">
+                  {{ entry.bestScore }} <span class="font-normal text-slate-400">pops</span>
                 </span>
               </div>
             </div>
-            <p v-else class="text-xs text-slate-400 italic mb-4">No games played yet.</p>
-
-            <!-- Total engagement -->
-            <div class="border-t border-slate-100 pt-3 flex items-center justify-between">
+            <p v-else class="text-xs text-slate-400 italic mb-3">No games played yet.</p>
+            <div class="border-t border-slate-100 pt-2 flex items-center justify-between">
               <span class="text-xs text-slate-500">Total pops logged</span>
               <span class="text-sm font-bold text-slate-900">{{ totalPops }}</span>
             </div>
           </div>
+
         </div>
       </div>
     </div>
@@ -524,6 +486,13 @@ const healthColorClass = computed(() => {
   if (lastHealth.value >= 18) return 'text-orange-600'
   return 'text-red-600'
 })
+
+function healthColorClass2(health) {
+  if (health >= 67) return 'text-green-600'
+  if (health >= 45) return 'text-yellow-600'
+  if (health >= 18) return 'text-orange-600'
+  return 'text-red-600'
+}
 
 function healthBarColorClass(health) {
   if (health >= 67) return 'bg-green-500'
