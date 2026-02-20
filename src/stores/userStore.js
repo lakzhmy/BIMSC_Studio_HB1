@@ -307,13 +307,20 @@ export const useUserStore = defineStore('user', () => {
   }
 
   // Stress Test Score Management
-  // score → health: 60 pops in 30s = 100%
+  // Inverted: fewer pops = less stressed = higher health
+  // health = max(0, round(100 - (pops / 60) * 100))
+  function computeStressHealth(score) {
+    return Math.max(0, Math.min(100, Math.round(100 - (score / 60) * 100)))
+  }
+
   function saveStressTestScore(memberId, score) {
+    const health = computeStressHealth(score)
     const existing = stressTestScores.value[memberId]
-    if (!existing || score > existing.bestScore) {
-      stressTestScores.value[memberId] = { bestScore: score, timestamp: new Date().toISOString() }
+    // Keep the attempt with the BEST health (lowest stress), not highest pop count
+    if (!existing || health > existing.bestHealth) {
+      stressTestScores.value[memberId] = { bestScore: score, bestHealth: health, timestamp: new Date().toISOString() }
       persistData()
-      return true // new personal best
+      return true // new personal best health
     }
     return false
   }
@@ -321,7 +328,9 @@ export const useUserStore = defineStore('user', () => {
   function getMemberHealth(memberId) {
     const entry = stressTestScores.value[memberId]
     if (!entry) return 0
-    return Math.min(100, Math.round((entry.bestScore / 60) * 100))
+    // Support both old format (bestScore only) and new format (bestHealth)
+    if (entry.bestHealth !== undefined) return entry.bestHealth
+    return computeStressHealth(entry.bestScore)
   }
 
   function getTeamHealth(teamId) {
