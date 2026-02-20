@@ -45,15 +45,9 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
-      path: '/teams',
-      name: 'teams',
-      component: () => import('@/views/TeamsView.vue'),
-      meta: { requiresAuth: true },
-    },
-    {
-      path: '/teams/:id',
-      name: 'team-detail',
-      component: () => import('@/views/TeamDetailView.vue'),
+      path: '/stress-test',
+      name: 'stress-test',
+      component: () => import('@/views/StressTestView.vue'),
       meta: { requiresAuth: true },
     },
   ],

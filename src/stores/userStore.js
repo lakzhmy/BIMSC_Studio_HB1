@@ -117,6 +117,9 @@ export const useUserStore = defineStore('user', () => {
 
   // Member Hours - tracks hours worked per member
   const memberHours = ref(storedData?.memberHours || {})
+
+  // Stress Test Scores - best score per member (used for team health)
+  const stressTestScores = ref(storedData?.stressTestScores || {})
   // Actions
   function login({ email, name, photoURL, googleId, verifiedEmail, givenName, familyName, locale } = {}) {
     currentUser.value.googleId = googleId || ''
@@ -158,6 +161,7 @@ export const useUserStore = defineStore('user', () => {
     teamMeetings.value = { structure: [], program: [], data: [] }
     teamActions.value = { structure: [], program: [], data: [] }
     memberHours.value = {}
+    stressTestScores.value = {}
     persistData()
   }
 
@@ -171,7 +175,8 @@ export const useUserStore = defineStore('user', () => {
       meetingNotes: meetingNotes.value,
       teamMeetings: teamMeetings.value,
       teamActions: teamActions.value,
-      memberHours: memberHours.value
+      memberHours: memberHours.value,
+      stressTestScores: stressTestScores.value
     }
     saveToStorage(dataToSave)
   }
@@ -301,6 +306,31 @@ export const useUserStore = defineStore('user', () => {
     return (memberHours.value[memberId] || []).reduce((total, entry) => total + entry.hours, 0)
   }
 
+  // Stress Test Score Management
+  // score → health: 60 pops in 30s = 100%
+  function saveStressTestScore(memberId, score) {
+    const existing = stressTestScores.value[memberId]
+    if (!existing || score > existing.bestScore) {
+      stressTestScores.value[memberId] = { bestScore: score, timestamp: new Date().toISOString() }
+      persistData()
+      return true // new personal best
+    }
+    return false
+  }
+
+  function getMemberHealth(memberId) {
+    const entry = stressTestScores.value[memberId]
+    if (!entry) return 0
+    return Math.min(100, Math.round((entry.bestScore / 60) * 100))
+  }
+
+  function getTeamHealth(teamId) {
+    const members = teamMembers.value[teamId] || []
+    if (!members.length) return 0
+    const total = members.reduce((sum, m) => sum + getMemberHealth(m.id), 0)
+    return Math.round(total / members.length)
+  }
+
   // Getters
   const teamColor = computed(() => {
     const colors = {
@@ -339,7 +369,8 @@ export const useUserStore = defineStore('user', () => {
     teamMeetings,
     teamActions,
     memberHours,
-    
+    stressTestScores,
+
     // Actions
     login,
     selectTeam,
@@ -359,7 +390,10 @@ export const useUserStore = defineStore('user', () => {
     updateActionStatus,
     addMemberHours,
     getTotalMemberHours,
-    
+    saveStressTestScore,
+    getMemberHealth,
+    getTeamHealth,
+
     // Getters
     teamColor,
     teamName,
