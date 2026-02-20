@@ -56,6 +56,107 @@ app.post('/api/users/profile', async (req, res) => {
   }
 })
 
+// --- Milestone CRUD ---
+
+// GET all milestones
+app.get('/api/milestones', async (req, res) => {
+  try {
+    const result = await query(
+      `SELECT m.*, u.name AS author_name
+       FROM milestones m
+       LEFT JOIN users u ON m.created_by = u.google_id
+       ORDER BY m.week, m.team, m.created_at`
+    )
+    res.json(result.rows)
+  } catch (err) {
+    console.error('[db] milestones fetch failed:', err.message)
+    res.status(500).json({ error: 'Failed to fetch milestones' })
+  }
+})
+
+// POST create a milestone
+app.post('/api/milestones', async (req, res) => {
+  const { week, team, title, summary, connections, created_by } = req.body
+
+  if (!week || !team || !title) {
+    return res.status(400).json({ error: 'week, team, and title are required' })
+  }
+
+  try {
+    const result = await query(
+      `INSERT INTO milestones (week, team, title, summary, connections, created_by)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING *`,
+      [
+        week,
+        team,
+        title,
+        summary || [],
+        JSON.stringify(connections || {}),
+        created_by || null,
+      ]
+    )
+    res.status(201).json(result.rows[0])
+  } catch (err) {
+    console.error('[db] milestone create failed:', err.message)
+    res.status(500).json({ error: 'Failed to create milestone' })
+  }
+})
+
+// PUT update a milestone
+app.put('/api/milestones/:id', async (req, res) => {
+  const { id } = req.params
+  const { week, team, title, summary, connections } = req.body
+
+  try {
+    const result = await query(
+      `UPDATE milestones SET
+        week = COALESCE($1, week),
+        team = COALESCE($2, team),
+        title = COALESCE($3, title),
+        summary = COALESCE($4, summary),
+        connections = COALESCE($5, connections),
+        updated_at = NOW()
+       WHERE id = $6
+       RETURNING *`,
+      [
+        week || null,
+        team || null,
+        title || null,
+        summary || null,
+        connections ? JSON.stringify(connections) : null,
+        id,
+      ]
+    )
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Milestone not found' })
+    }
+    res.json(result.rows[0])
+  } catch (err) {
+    console.error('[db] milestone update failed:', err.message)
+    res.status(500).json({ error: 'Failed to update milestone' })
+  }
+})
+
+// DELETE a milestone
+app.delete('/api/milestones/:id', async (req, res) => {
+  const { id } = req.params
+
+  try {
+    const result = await query(
+      `DELETE FROM milestones WHERE id = $1 RETURNING id`,
+      [id]
+    )
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Milestone not found' })
+    }
+    res.json({ ok: true, deleted: result.rows[0].id })
+  } catch (err) {
+    console.error('[db] milestone delete failed:', err.message)
+    res.status(500).json({ error: 'Failed to delete milestone' })
+  }
+})
+
 if (!hasSpeckleToken) {
   console.warn('Warning: SPECKLE_TOKEN is not set. Private streams will fail to load.')
 } else {

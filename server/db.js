@@ -33,4 +33,19 @@ export async function initDb() {
     )
   `)
   console.log('[db] users table ready')
+
+  await query(`
+    CREATE TABLE IF NOT EXISTS milestones (
+      id              SERIAL PRIMARY KEY,
+      week            INTEGER NOT NULL CHECK (week >= 1 AND week <= 10),
+      team            TEXT NOT NULL CHECK (team IN ('structure', 'program', 'data')),
+      title           TEXT NOT NULL,
+      summary         TEXT[] DEFAULT '{}',
+      connections     JSONB DEFAULT '{}',
+      created_by      TEXT REFERENCES users(google_id),
+      created_at      TIMESTAMPTZ DEFAULT NOW(),
+      updated_at      TIMESTAMPTZ DEFAULT NOW()
+    )
+  `)
+  console.log('[db] milestones table ready')
 }

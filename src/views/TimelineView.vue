@@ -6,19 +6,30 @@
             <h1 class="text-4xl font-bold text-slate-900">Timeline</h1>
             <p class="text-base text-slate-600 mt-2">Weekly milestones and team deliverables</p>
           </div>
-          <div class="flex items-center gap-2">
-            <label :class="chipClass(filters.structure, 'green')">
-              <input v-model="filters.structure" type="checkbox" class="sr-only" />
-              Structure
-            </label>
-            <label :class="chipClass(filters.program, 'blue')">
-              <input v-model="filters.program" type="checkbox" class="sr-only" />
-              Program
-            </label>
-            <label :class="chipClass(filters.data, 'red')">
-              <input v-model="filters.data" type="checkbox" class="sr-only" />
-              Data
-            </label>
+          <div class="flex items-center gap-3">
+            <div class="flex items-center gap-2">
+              <label :class="chipClass(filters.structure, 'green')">
+                <input v-model="filters.structure" type="checkbox" class="sr-only" />
+                Structure
+              </label>
+              <label :class="chipClass(filters.program, 'blue')">
+                <input v-model="filters.program" type="checkbox" class="sr-only" />
+                Program
+              </label>
+              <label :class="chipClass(filters.data, 'red')">
+                <input v-model="filters.data" type="checkbox" class="sr-only" />
+                Data
+              </label>
+            </div>
+            <button
+              @click="showAddModal = true"
+              class="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-semibold bg-slate-900 text-white hover:bg-slate-800 transition-colors shadow-sm"
+            >
+              <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
+              </svg>
+              Add Milestone
+            </button>
           </div>
         </div>
 
@@ -146,6 +157,16 @@
                     <div class="text-[11px] font-semibold text-slate-700 flex items-center gap-1.5 mb-1">
                       <span :class="teamDotClass(deliverable.team)"></span>
                       {{ deliverable.text }}
+                      <button
+                        v-if="deliverable.dbId"
+                        @click.stop="deleteMilestone(deliverable.dbId)"
+                        class="ml-auto text-slate-400 hover:text-red-500 transition-colors"
+                        title="Delete milestone"
+                      >
+                        <svg class="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor">
+                          <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
+                        </svg>
+                      </button>
                     </div>
                     <ul class="space-y-1 list-disc pl-4">
                       <li
@@ -156,6 +177,17 @@
                         {{ item }}
                       </li>
                     </ul>
+                    <!-- Connection indicators for DB milestones -->
+                    <div v-if="deliverable.connections && hasConnections(deliverable.connections)" class="mt-1.5 flex items-center gap-1.5">
+                      <span class="text-[10px] text-slate-400">Links:</span>
+                      <template v-for="(level, t) in deliverable.connections" :key="t">
+                        <span
+                          v-if="level > 0"
+                          :class="connectionDotClass(t, level)"
+                          :title="`${t}: ${['None','Low','Medium','High'][level]}`"
+                        ></span>
+                      </template>
+                    </div>
                   </div>
                 </div>
                 <p v-else class="mt-2 text-[11px] text-slate-500">Click the dots to toggle team deliverables.</p>
@@ -164,12 +196,24 @@
           </div>
         </div>
       </div>
+
+      <!-- Add Milestone Modal -->
+      <AddMilestoneModal
+        :isOpen="showAddModal"
+        :weeks="courseTimeline"
+        @close="showAddModal = false"
+        @save="handleSaveMilestone"
+      />
     </main>
 </template>
 
 <script setup>
-import { computed, reactive, ref } from 'vue'
-import { courseTimeline } from '@/data/sampleData'
+import { computed, reactive, ref, onMounted } from 'vue'
+import { courseTimeline as baseTimeline } from '@/data/sampleData'
+import { useUserStore } from '@/stores/userStore'
+import AddMilestoneModal from '@/components/AddMilestoneModal.vue'
+
+const userStore = useUserStore()
 
 const filters = reactive({
   structure: true,
@@ -178,6 +222,80 @@ const filters = reactive({
 })
 
 const selectedKeys = ref(new Set())
+const showAddModal = ref(false)
+const dbMilestones = ref([])
+
+// Load milestones from the database on mount
+async function fetchMilestones() {
+  try {
+    const res = await fetch('/api/milestones')
+    if (res.ok) {
+      dbMilestones.value = await res.json()
+    }
+  } catch (err) {
+    console.error('Failed to fetch milestones:', err)
+  }
+}
+
+onMounted(fetchMilestones)
+
+// Merge base timeline with DB milestones
+const courseTimeline = computed(() => {
+  return baseTimeline.map((week) => {
+    const extras = dbMilestones.value
+      .filter((m) => m.week === week.week)
+      .map((m) => ({
+        id: `db-${m.id}`,
+        dbId: m.id,
+        team: m.team,
+        text: m.title,
+        summary: m.summary || [],
+        connections: m.connections || {},
+        authorName: m.author_name,
+      }))
+    return {
+      ...week,
+      deliverables: [...week.deliverables, ...extras],
+    }
+  })
+})
+
+async function handleSaveMilestone(milestone) {
+  try {
+    const res = await fetch('/api/milestones', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        week: milestone.week,
+        team: milestone.team,
+        title: milestone.title,
+        summary: milestone.summary,
+        connections: milestone.connections,
+        created_by: userStore.currentUser?.googleId || null,
+      }),
+    })
+    if (res.ok) {
+      await fetchMilestones()
+    } else {
+      console.error('Failed to save milestone:', await res.text())
+    }
+  } catch (err) {
+    console.error('Error saving milestone:', err)
+  }
+  showAddModal.value = false
+}
+
+async function deleteMilestone(id) {
+  if (!confirm('Delete this milestone?')) return
+  try {
+    const res = await fetch(`/api/milestones/${id}`, { method: 'DELETE' })
+    if (res.ok) {
+      await fetchMilestones()
+    }
+  } catch (err) {
+    console.error('Error deleting milestone:', err)
+  }
+}
 
 const teamClasses = {
   general: 'bg-slate-100 text-slate-700 border-slate-200',
@@ -195,7 +313,7 @@ const teamBaseY = {
 const currentWeekMarker = 5
 
 const currentWeekMarkerStyle = computed(() => {
-  const total = courseTimeline.length
+  const total = courseTimeline.value.length
   if (total <= 1) {
     return { left: '0%' }
   }
@@ -260,8 +378,9 @@ function selectedDeliverables(week) {
 }
 
 function buildTeamPoints(team) {
-  const total = courseTimeline.length
-  return courseTimeline
+  const timeline = courseTimeline.value
+  const total = timeline.length
+  return timeline
     .map((week, index) => {
       const x = total === 1 ? 0 : (index / (total - 1)) * 100
       const y = teamBaseY[team] + weekOffset(week, team)
@@ -297,6 +416,11 @@ function teamMilestoneTitle(week, team) {
 }
 
 function milestoneSummary(deliverable) {
+  // If this is a DB milestone with real summary points, use them
+  if (deliverable.summary && deliverable.summary.length > 0) {
+    return deliverable.summary
+  }
+  // Fallback for hardcoded milestones
   const base = deliverable.text
   return [
     `Define scope for ${base.toLowerCase()}.`,
@@ -360,6 +484,20 @@ function summaryCardClass(team) {
     data: 'bg-red-50 border-red-200'
   }
   return colorMap[team] || 'bg-slate-50 border-slate-200'
+}
+
+function hasConnections(connections) {
+  return connections && Object.values(connections).some((v) => v > 0)
+}
+
+function connectionDotClass(team, level) {
+  const sizeMap = { 1: 'w-1.5 h-1.5', 2: 'w-2 h-2', 3: 'w-2.5 h-2.5' }
+  const colorMap = {
+    structure: 'bg-green-500',
+    program: 'bg-blue-500',
+    data: 'bg-red-500',
+  }
+  return `inline-block rounded-full ${colorMap[team] || 'bg-slate-400'} ${sizeMap[level] || 'w-1.5 h-1.5'}`
 }
 
 </script>
