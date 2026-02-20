@@ -157,16 +157,26 @@
                     <div class="text-[11px] font-semibold text-slate-700 flex items-center gap-1.5 mb-1">
                       <span :class="teamDotClass(deliverable.team)"></span>
                       {{ deliverable.text }}
-                      <button
-                        v-if="deliverable.dbId"
-                        @click.stop="deleteMilestone(deliverable.dbId)"
-                        class="ml-auto text-slate-400 hover:text-red-500 transition-colors"
-                        title="Delete milestone"
-                      >
-                        <svg class="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor">
-                          <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
-                        </svg>
-                      </button>
+                      <div v-if="deliverable.dbId" class="ml-auto flex items-center gap-1">
+                        <button
+                          @click.stop="editMilestone(deliverable)"
+                          class="text-slate-400 hover:text-blue-500 transition-colors"
+                          title="Edit milestone"
+                        >
+                          <svg class="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                          </svg>
+                        </button>
+                        <button
+                          @click.stop="deleteMilestone(deliverable.dbId)"
+                          class="text-slate-400 hover:text-red-500 transition-colors"
+                          title="Delete milestone"
+                        >
+                          <svg class="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
+                          </svg>
+                        </button>
+                      </div>
                     </div>
                     <ul class="space-y-1 list-disc pl-4">
                       <li
@@ -197,12 +207,13 @@
         </div>
       </div>
 
-      <!-- Add Milestone Modal -->
+      <!-- Add / Edit Milestone Modal -->
       <AddMilestoneModal
         :isOpen="showAddModal"
         :weeks="courseTimeline"
-        @close="showAddModal = false"
-        @save="handleSaveMilestone"
+        :editing="editingMilestone"
+        @close="showAddModal = false; editingMilestone = null"
+        @save="editingMilestone ? handleUpdateMilestone($event) : handleSaveMilestone($event)"
       />
     </main>
 </template>
@@ -223,6 +234,7 @@ const filters = reactive({
 
 const selectedKeys = ref(new Set())
 const showAddModal = ref(false)
+const editingMilestone = ref(null)
 const dbMilestones = ref([])
 
 // Load milestones from the database on mount
@@ -239,14 +251,15 @@ async function fetchMilestones() {
 
 onMounted(fetchMilestones)
 
-// Merge base timeline with DB milestones
+// Build timeline from base week structure + DB milestones only (no hardcoded deliverables)
 const courseTimeline = computed(() => {
   return baseTimeline.map((week) => {
-    const extras = dbMilestones.value
+    const dbItems = dbMilestones.value
       .filter((m) => m.week === week.week)
       .map((m) => ({
         id: `db-${m.id}`,
         dbId: m.id,
+        week: m.week,
         team: m.team,
         text: m.title,
         summary: m.summary || [],
@@ -255,7 +268,7 @@ const courseTimeline = computed(() => {
       }))
     return {
       ...week,
-      deliverables: [...week.deliverables, ...extras],
+      deliverables: dbItems,
     }
   })
 })
@@ -282,6 +295,45 @@ async function handleSaveMilestone(milestone) {
   } catch (err) {
     console.error('Error saving milestone:', err)
   }
+  showAddModal.value = false
+}
+
+function editMilestone(deliverable) {
+  editingMilestone.value = {
+    id: deliverable.dbId,
+    week: deliverable.week || 0,
+    team: deliverable.team,
+    title: deliverable.text,
+    summary: deliverable.summary && deliverable.summary.length > 0 ? [...deliverable.summary] : [''],
+    connections: deliverable.connections ? { ...deliverable.connections } : { structure: 0, program: 0, data: 0 },
+  }
+  showAddModal.value = true
+}
+
+async function handleUpdateMilestone(milestone) {
+  const id = editingMilestone.value?.id
+  if (!id) return
+  try {
+    const res = await fetch(`/api/milestones/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        week: milestone.week,
+        team: milestone.team,
+        title: milestone.title,
+        summary: milestone.summary,
+        connections: milestone.connections,
+      }),
+    })
+    if (res.ok) {
+      await fetchMilestones()
+    } else {
+      console.error('Failed to update milestone:', await res.text())
+    }
+  } catch (err) {
+    console.error('Error updating milestone:', err)
+  }
+  editingMilestone.value = null
   showAddModal.value = false
 }
 

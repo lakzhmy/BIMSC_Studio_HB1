@@ -3,7 +3,7 @@
     <div class="bg-white rounded-xl shadow-2xl max-w-lg w-full mx-4 overflow-hidden">
       <!-- Header -->
       <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
-        <h2 class="text-lg font-bold text-slate-900">Add Milestone</h2>
+        <h2 class="text-lg font-bold text-slate-900">{{ editing ? 'Edit Milestone' : 'Add Milestone' }}</h2>
         <button @click="close" class="text-slate-400 hover:text-slate-600 transition-colors">
           <svg class="w-5 h-5" viewBox="0 0 20 20" fill="currentColor">
             <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
@@ -136,7 +136,7 @@
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
           </svg>
-          {{ saving ? 'Saving...' : 'Add Milestone' }}
+          {{ saving ? 'Saving...' : (editing ? 'Save Changes' : 'Add Milestone') }}
         </button>
       </div>
     </div>
@@ -144,11 +144,12 @@
 </template>
 
 <script setup>
-import { reactive, computed, ref } from 'vue'
+import { reactive, computed, ref, watch } from 'vue'
 
 const props = defineProps({
   isOpen: { type: Boolean, default: false },
   weeks: { type: Array, required: true },
+  editing: { type: Object, default: null },
 })
 
 const emit = defineEmits(['close', 'save'])
@@ -163,6 +164,19 @@ const defaultForm = () => ({
 
 const form = reactive(defaultForm())
 const saving = ref(false)
+
+// When editing prop changes, populate form with existing data
+watch(() => props.editing, (val) => {
+  if (val) {
+    form.week = val.week || 0
+    form.team = val.team || ''
+    form.title = val.title || ''
+    form.summary = val.summary && val.summary.length > 0 ? [...val.summary] : ['']
+    form.connections = val.connections ? { ...val.connections } : { structure: 0, program: 0, data: 0 }
+  } else {
+    Object.assign(form, defaultForm())
+  }
+}, { immediate: true })
 
 const otherTeams = computed(() => {
   const all = [
