@@ -23,11 +23,12 @@
       </div>
 
       <!-- Main Grid: game takes 3/5, sidebar takes 2/5 -->
-      <div class="grid grid-cols-1 lg:grid-cols-5 gap-6 items-start">
+      <!-- Row 1: Game ↔ Team Health + Calmness Ranking (aligned heights) -->
+      <div class="grid grid-cols-1 lg:grid-cols-5 gap-6 items-stretch">
 
         <!-- ── Game Area (left 3/5) ─────────────────────────────────────── -->
         <div class="lg:col-span-3">
-          <div class="card p-5 flex flex-col gap-4">
+          <div class="card p-5 flex flex-col gap-4 h-full">
 
             <!-- Status Bar -->
             <div class="flex items-center justify-between">
@@ -69,12 +70,12 @@
               </div>
             </div>
 
-            <!-- Blob Playground -->
+            <!-- Blob Playground (fills remaining height) -->
             <div
               ref="gameArea"
-              class="relative rounded-xl overflow-hidden select-none bg-slate-50"
+              class="relative rounded-xl overflow-hidden select-none bg-slate-50 flex-1"
               :class="gameState === 'playing' ? 'cursor-crosshair' : 'cursor-default'"
-              style="height: 320px;"
+              style="min-height: 240px;"
             >
               <transition name="fade">
                 <div
@@ -116,29 +117,11 @@
               </transition-group>
             </div>
 
-            <!-- Benchmark strip (inline, no separate card) -->
-            <div class="border-t border-slate-100 pt-3">
-              <div class="flex gap-2">
-                <div
-                  v-for="tier in STRESS_TIERS"
-                  :key="tier.label"
-                  class="flex-1 text-center py-1.5 px-1 rounded-lg border text-xs"
-                  :class="tier.bgClass"
-                >
-                  <span class="text-base">{{ tier.emoji }}</span>
-                  <p class="font-semibold leading-tight mt-0.5" :class="tier.textClass">{{ tier.label }}</p>
-                  <p class="text-slate-500 leading-tight">{{ tier.popsLabel }}</p>
-                  <p class="font-bold leading-tight" :class="tier.textClass">{{ tier.healthLabel }}</p>
-                </div>
-              </div>
-              <p class="text-xs text-slate-400 mt-2">Fewer pops = calmer = higher health. Resist the urge.</p>
-            </div>
-
           </div>
         </div>
 
-        <!-- ── Sidebar (right 2/5) ──────────────────────────────────────── -->
-        <div class="lg:col-span-2 flex flex-col gap-5">
+        <!-- ── Right column row 1: Team Health + Calmness Ranking ────────── -->
+        <div class="lg:col-span-2 flex flex-col gap-5 h-full">
 
           <!-- Team Health -->
           <div class="card p-4">
@@ -158,10 +141,10 @@
             </div>
           </div>
 
-          <!-- Calmness Ranking — vertical list -->
-          <div class="card p-4">
+          <!-- Calmness Ranking — fills remaining space to match game height -->
+          <div class="card p-4 flex-1 flex flex-col">
             <h2 class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Calmness Ranking</h2>
-            <div class="space-y-1.5">
+            <div class="space-y-1.5 flex-1">
               <div
                 v-for="(member, idx) in sortedLeaderboard"
                 :key="member.id"
@@ -189,13 +172,41 @@
             </div>
           </div>
 
-          <!-- Top Poppers -->
-          <div class="card p-4">
+        </div>
+      </div>
+
+      <!-- Row 2: How It Works ↔ Top Poppers (aligned heights) -->
+      <div class="grid grid-cols-1 lg:grid-cols-5 gap-6 items-stretch mt-6">
+
+        <!-- ── Benchmark / How It Works (left 3/5) ──────────────────────── -->
+        <div class="lg:col-span-3">
+          <div class="card p-5 h-full flex flex-col">
+            <h2 class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">How It Works</h2>
+            <div class="flex gap-2 flex-1">
+              <div
+                v-for="tier in STRESS_TIERS"
+                :key="tier.label"
+                class="flex-1 text-center py-2.5 px-1.5 rounded-lg border text-xs flex flex-col items-center justify-center"
+                :class="tier.bgClass"
+              >
+                <span class="text-xl">{{ tier.emoji }}</span>
+                <p class="font-semibold leading-tight mt-1" :class="tier.textClass">{{ tier.label }}</p>
+                <p class="text-slate-500 leading-tight mt-0.5">{{ tier.popsLabel }}</p>
+                <p class="font-bold leading-tight" :class="tier.textClass">{{ tier.healthLabel }}</p>
+              </div>
+            </div>
+            <p class="text-xs text-slate-400 mt-3">Fewer pops = calmer = higher health. Resist the urge.</p>
+          </div>
+        </div>
+
+        <!-- ── Top Poppers (right 2/5) ──────────────────────────────────── -->
+        <div class="lg:col-span-2">
+          <div class="card p-4 h-full flex flex-col">
             <div class="flex items-center justify-between mb-3">
               <h2 class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Top Poppers</h2>
               <span class="text-xs text-slate-400">{{ totalPlayers }} player{{ totalPlayers !== 1 ? 's' : '' }}</span>
             </div>
-            <div v-if="topPoppers.length" class="space-y-2 mb-3">
+            <div v-if="topPoppers.length" class="space-y-2 flex-1">
               <div v-for="(entry, idx) in topPoppers" :key="entry.id" class="flex items-center gap-2">
                 <span class="text-base flex-shrink-0 w-5 text-center">
                   {{ idx === 0 ? '🥇' : idx === 1 ? '🥈' : '🥉' }}
@@ -209,14 +220,14 @@
                 </span>
               </div>
             </div>
-            <p v-else class="text-xs text-slate-400 italic mb-3">No games played yet.</p>
-            <div class="border-t border-slate-100 pt-2 flex items-center justify-between">
+            <p v-else class="text-xs text-slate-400 italic flex-1">No games played yet.</p>
+            <div class="border-t border-slate-100 pt-2 flex items-center justify-between mt-auto">
               <span class="text-xs text-slate-500">Total pops logged</span>
               <span class="text-sm font-bold text-slate-900">{{ totalPops }}</span>
             </div>
           </div>
-
         </div>
+
       </div>
     </div>
   </main>
