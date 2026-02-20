@@ -15,6 +15,6 @@ import AppShell from '@/components/AppShell.vue'
 const route = useRoute()
 
 const showShell = computed(() => {
-  return ['dashboard', 'kpi', 'timeline', 'viewer', 'teams', 'team-detail'].includes(route.name)
+  return ['dashboard', 'kpi', 'timeline', 'viewer', 'stress-test'].includes(route.name)
 })
 </script>
