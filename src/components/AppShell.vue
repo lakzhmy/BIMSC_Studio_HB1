@@ -21,13 +21,6 @@
       <div class="h-16 px-6 flex items-center justify-between">
         <div class="flex items-center gap-4">
           <h1 class="text-2xl font-bold">Lung Tower Studio</h1>
-          <div
-            v-if="projectHealthData"
-            class="flex items-center gap-2 px-3 py-1 border rounded-lg bg-green-50 border-green-200"
-          >
-            <div class="w-2 h-2 rounded-full animate-pulse bg-green-500"></div>
-            <span class="text-sm font-medium text-green-700">{{ projectHealthData.overall }}% Health</span>
-          </div>
         </div>
 
         <div class="flex items-center gap-4">

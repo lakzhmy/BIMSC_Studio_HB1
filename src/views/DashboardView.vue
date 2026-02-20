@@ -17,6 +17,13 @@
               <span class="truncate">{{ item.text }}</span>
             </div>
           </div>
+          <div v-else-if="stat.teamBreakdown" class="space-y-1.5">
+            <p class="text-2xl font-bold text-slate-900 mb-1">{{ stat.value }}</p>
+            <div v-for="tb in stat.teamBreakdown" :key="tb.team" class="flex items-center justify-between text-xs">
+              <span :class="['font-semibold', tb.colorClass]">{{ tb.label }}</span>
+              <span :class="tb.health > 0 ? 'font-bold text-slate-800' : 'text-slate-400'">{{ tb.health > 0 ? tb.health + '%' : '—' }}</span>
+            </div>
+          </div>
           <template v-else>
             <p class="text-3xl font-bold text-slate-900">{{ stat.value }}</p>
             <p class="text-xs mt-2 text-slate-500 flex items-center gap-2">
@@ -177,6 +184,15 @@ const teamHealthChange = computed(() => {
   return parts.length ? parts.join(' · ') : 'Play Stress Test to score'
 })
 
+const teamHealthBreakdown = computed(() => {
+  const colorMap = { structure: 'text-green-600', program: 'text-blue-600', data: 'text-red-600' }
+  const labelMap = { structure: 'Structure', program: 'Program', data: 'Data' }
+  return ['structure', 'program', 'data'].map((tid) => {
+    const h = userStore.getTeamHealth(tid)
+    return { team: tid, label: labelMap[tid], health: h, colorClass: colorMap[tid] }
+  })
+})
+
 const quickStats = computed(() => {
   const health = kpiHealth.value
   const timeline = timelineSummary.value
@@ -206,6 +222,7 @@ const quickStats = computed(() => {
       label: 'Team Health',
       value: teamHealthValue.value !== null ? `${teamHealthValue.value}%` : '—',
       change: teamHealthChange.value,
+      teamBreakdown: teamHealthBreakdown.value,
       link: '/stress-test'
     }
   ]
