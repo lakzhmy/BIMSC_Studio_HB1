@@ -41,9 +41,12 @@
                 <polyline :points="teamPoints.program" :class="trackStrokeClass('program')" class="fill-none stroke-[3]" />
                 <polyline :points="teamPoints.data" :class="trackStrokeClass('data')" class="fill-none stroke-[3]" />
               </svg>
-              <div class="absolute -translate-x-1/2 top-0 -translate-y-8 z-10 pointer-events-none" :style="currentWeekMarkerStyle">
-                <div class="text-xs font-semibold text-slate-700 bg-white/95 border border-slate-200 rounded-full px-3.5 py-1.5 shadow-sm">
+              <div class="group absolute -translate-x-1/2 top-0 -translate-y-8 z-10" :style="currentWeekMarkerStyle">
+                <div class="text-xs font-semibold text-slate-700 bg-white/95 border border-slate-200 rounded-full px-3.5 py-1.5 shadow-sm cursor-default">
                   We are here now
+                </div>
+                <div class="absolute left-1/2 -translate-x-1/2 top-full mt-1 w-52 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600 shadow-lg opacity-0 pointer-events-none transition-opacity group-hover:opacity-100 group-hover:pointer-events-auto z-[100] text-center">
+                  {{ currentDateTimeString }}
                 </div>
               </div>
               <div class="absolute -translate-x-1/2 -top-[24px] z-10 flex flex-col items-center pointer-events-none" :style="currentWeekMarkerStyle">
@@ -308,16 +311,49 @@ const teamBaseY = {
   program: 76
 }
 
-const currentWeekMarker = 5
+// Week start dates (Monday of each week)
+// Week 1: Jan 12, Week 2: Jan 19, ..., Week 10: Mar 16
+const WEEK_START_DATES = Array.from({ length: 10 }, (_, i) => {
+  const d = new Date(2026, 0, 12 + i * 7) // Jan 12 + i weeks
+  return d
+})
+
+// Compute the precise fractional week position based on the real calendar.
+// Returns a float: 1.0 = start of week 1, 1.5 = middle of week 1, 10.99 = end of week 10
+const currentWeekFraction = computed(() => {
+  const now = new Date()
+  const week1Start = WEEK_START_DATES[0].getTime()
+  const msPerWeek = 7 * 24 * 60 * 60 * 1000
+  const elapsed = now.getTime() - week1Start
+  const fraction = elapsed / msPerWeek + 1 // +1 because week 1 = 1.0
+  return Math.max(1, Math.min(10.99, fraction))
+})
+
+// Integer week marker for isPastWeek checks
+const currentWeekMarker = computed(() => Math.floor(currentWeekFraction.value))
+
+// Formatted date/time string for the tooltip
+const currentDateTimeString = computed(() => {
+  const now = new Date()
+  return now.toLocaleDateString('en-GB', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+})
 
 const currentWeekMarkerStyle = computed(() => {
   const total = courseTimeline.value.length
   if (total <= 1) {
     return { left: '0%' }
   }
-  const clampedWeek = Math.min(Math.max(currentWeekMarker, 1), total)
-  const left = ((clampedWeek - 1) / (total - 1)) * 100
-  return { left: `${left}%` }
+  // Use fractional position for smooth placement between weeks
+  const pos = currentWeekFraction.value - 1 // 0-based
+  const left = (pos / (total - 1)) * 100
+  return { left: `${Math.max(0, Math.min(100, left))}%` }
 })
 
 function filteredDeliverables(items) {
@@ -348,7 +384,7 @@ function isWeekSelected(weekNumber) {
 }
 
 function isPastWeek(weekNumber) {
-  return weekNumber <= currentWeekMarker
+  return weekNumber <= currentWeekMarker.value
 }
 
 function weekHasTeam(week, team) {
