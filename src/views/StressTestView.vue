@@ -549,7 +549,7 @@ const topPoppers = computed(() => {
 })
 
 const totalPops = computed(() =>
-  Object.values(userStore.stressTestScores).reduce((sum, e) => sum + (e.bestScore ?? 0), 0)
+  Object.values(userStore.stressTestScores).reduce((sum, e) => sum + (e.totalPops ?? e.bestScore ?? 0), 0)
 )
 
 const totalPlayers = computed(() =>

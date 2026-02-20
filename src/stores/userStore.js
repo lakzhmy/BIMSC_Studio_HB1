@@ -325,6 +325,7 @@ export const useUserStore = defineStore('user', () => {
       bestScore: isNewBest ? score : (existing?.bestScore ?? score),
       bestHealth: isNewBest ? health : (existing?.bestHealth ?? health),
       highestPops: Math.max(score, existing?.highestPops ?? 0),
+      totalPops: (existing?.totalPops ?? 0) + score,
       totalGames: (existing?.totalGames ?? 0) + 1,
       timestamp: new Date().toISOString()
     }
