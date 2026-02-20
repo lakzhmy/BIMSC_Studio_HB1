@@ -144,7 +144,7 @@
 </template>
 
 <script setup>
-import { reactive, computed } from 'vue'
+import { reactive, computed, ref } from 'vue'
 
 const props = defineProps({
   isOpen: { type: Boolean, default: false },
@@ -162,7 +162,7 @@ const defaultForm = () => ({
 })
 
 const form = reactive(defaultForm())
-const saving = reactive({ value: false })
+const saving = ref(false)
 
 const otherTeams = computed(() => {
   const all = [
@@ -210,7 +210,7 @@ function close() {
 }
 
 async function handleSubmit() {
-  if (!isValid.value) return
+  if (!isValid.value || saving.value) return
   saving.value = true
 
   const cleanSummary = form.summary.map((s) => s.trim()).filter(Boolean)
