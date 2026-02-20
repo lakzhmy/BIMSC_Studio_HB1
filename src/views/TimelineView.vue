@@ -356,10 +356,11 @@ const teamClasses = {
   data: 'bg-red-50 text-red-700 border-red-200'
 }
 
+// SVG viewBox height is 96. Space lines evenly with comfortable margins.
 const teamBaseY = {
-  structure: 14,
-  data: 40,
-  program: 66
+  structure: 20,
+  data: 48,
+  program: 76
 }
 
 const currentWeekMarker = 5
@@ -510,9 +511,13 @@ function buildTeamPoints(team) {
     .join(' ')
 }
 
+// Convert SVG Y (0–96) to a percentage of container height so dots sit centered on lines.
+// The dot is 16px (w-4 h-4), offset by half to center on the line.
 function nodeStyle(week, team) {
+  const svgY = weekTeamYSeparated(week, team)
+  const pct = (svgY / 96) * 100
   return {
-    top: `${weekTeamYSeparated(week, team) - 8}px`
+    top: `calc(${pct}% - 8px)`
   }
 }
 
