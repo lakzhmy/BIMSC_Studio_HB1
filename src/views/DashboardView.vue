@@ -32,7 +32,7 @@
         <div class="flex items-center justify-between mb-6">
           <h2 class="text-xl font-bold text-slate-900">Team Members</h2>
           <router-link to="/stress-test" class="text-sm font-medium text-blue-600 hover:text-blue-700">
-            Play Stress Test to update health →
+            Play Stress Test to update team health →
           </router-link>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
