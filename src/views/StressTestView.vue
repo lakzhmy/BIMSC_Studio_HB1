@@ -149,31 +149,9 @@
           </div>
         </div>
 
-        <!-- Sidebar: Leaderboard + Team Health -->
+        <!-- Sidebar: Calmness Ranking + Top Poppers -->
         <div class="flex flex-col gap-4">
-          <!-- Team Health Summary -->
-          <div class="card p-5">
-            <h2 class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-4">Team Health</h2>
-            <div class="space-y-4">
-              <div v-for="team in teamHealthSummary" :key="team.id">
-                <div class="flex items-center justify-between mb-1">
-                  <span class="text-sm font-medium" :class="team.textClass">{{ team.name }}</span>
-                  <span class="text-sm font-bold text-slate-900">
-                    {{ team.health > 0 ? team.health + '%' : '—' }}
-                  </span>
-                </div>
-                <div class="h-2 bg-slate-200 rounded-full">
-                  <div
-                    class="h-2 rounded-full transition-all duration-700"
-                    :class="healthBarColorClass(team.health)"
-                    :style="{ width: team.health + '%' }"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Member Leaderboard -->
+          <!-- Calmness Ranking (aligned with game area at top) -->
           <div class="card p-5">
             <h2 class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-4">Calmness Ranking</h2>
             <div class="space-y-3">
@@ -211,6 +189,43 @@
                   {{ member.health > 0 ? member.health + '%' : '—' }}
                 </span>
               </div>
+            </div>
+          </div>
+
+          <!-- Top Poppers — engagement tracker -->
+          <div class="card p-5">
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Top Poppers</h2>
+              <span class="text-xs text-slate-400">{{ totalPlayers }} player{{ totalPlayers !== 1 ? 's' : '' }} so far</span>
+            </div>
+
+            <div v-if="topPoppers.length" class="space-y-3 mb-4">
+              <div
+                v-for="(entry, idx) in topPoppers"
+                :key="entry.id"
+                class="flex items-center gap-3"
+              >
+                <span class="text-lg flex-shrink-0 w-6 text-center">
+                  {{ idx === 0 ? '🥇' : idx === 1 ? '🥈' : '🥉' }}
+                </span>
+                <div class="w-8 h-8 flex-shrink-0">
+                  <MemberBlob :member="entry" size="32px" />
+                </div>
+                <div class="flex-1 min-w-0">
+                  <p class="text-xs font-medium text-slate-900 truncate">{{ entry.name }}</p>
+                  <p class="text-xs text-slate-400">best game</p>
+                </div>
+                <span class="text-sm font-bold text-slate-800 flex-shrink-0">
+                  {{ entry.bestScore }} <span class="text-xs font-normal text-slate-400">pops</span>
+                </span>
+              </div>
+            </div>
+            <p v-else class="text-xs text-slate-400 italic mb-4">No games played yet.</p>
+
+            <!-- Total engagement -->
+            <div class="border-t border-slate-100 pt-3 flex items-center justify-between">
+              <span class="text-xs text-slate-500">Total pops logged</span>
+              <span class="text-sm font-bold text-slate-900">{{ totalPops }}</span>
             </div>
           </div>
         </div>
@@ -506,14 +521,25 @@ const sortedLeaderboard = computed(() => {
     .sort((a, b) => b.health - a.health)
 })
 
-// ── Team Health Summary ──────────────────────────────────────────────────────
-const teamHealthSummary = computed(() => {
-  return [
-    { id: 'structure', name: 'Green Structure', textClass: 'text-green-700' },
-    { id: 'program', name: 'Blue Program', textClass: 'text-blue-700' },
-    { id: 'data', name: 'Red Data', textClass: 'text-red-700' },
-  ].map((t) => ({ ...t, health: userStore.getTeamHealth(t.id) }))
+// ── Top Poppers (engagement — highest raw pop count per member) ──────────────
+const topPoppers = computed(() => {
+  return [...allMembers.value]
+    .map((m) => {
+      const entry = userStore.stressTestScores[m.id]
+      return { ...m, bestScore: entry?.bestScore ?? 0 }
+    })
+    .filter((m) => m.bestScore > 0)
+    .sort((a, b) => b.bestScore - a.bestScore)
+    .slice(0, 3)
 })
+
+const totalPops = computed(() =>
+  Object.values(userStore.stressTestScores).reduce((sum, e) => sum + (e.bestScore ?? 0), 0)
+)
+
+const totalPlayers = computed(() =>
+  Object.keys(userStore.stressTestScores).length
+)
 </script>
 
 <style scoped>
