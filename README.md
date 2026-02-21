@@ -34,11 +34,12 @@ Lung Tower Studio is a project management and collaboration platform for three t
 
 - **Google OAuth login** with persistent team and avatar profile (stored in PostgreSQL and localStorage)
 - **Avatar Lab** — each user configures an animated blob avatar with sliders for speed, wobble, complexity, and shade
-- **Dashboard** — overview of project health, all team members, recent activity, and milestone tracking
+- **Dashboard** — overview of project health, all team members, recent activity, and milestone tracking (milestones from DB)
 - **KPI Dashboard** — live data from Google Sheets; separate tabs for Program, Structure, Data, and Vitals
-- **Timeline** — 10-week polyline timeline with per-team deliverable cards and a "We are here" marker
+- **Timeline** — 10-week polyline timeline with DB-backed milestones (full CRUD: create, edit, delete) and cross-team connections
 - **3D Viewer** — week-by-week Speckle BIM model viewer with a timeline slider (weeks 1-5 have live models)
 - **Teams** — team cards, member management (add/remove), meetings, actions, and hour tracking
+- **Stress Test** — interactive blob-popping mini-game that measures user stress; scores persisted to PostgreSQL with per-member leaderboards, team health aggregation, and cumulative engagement tracking
 
 ---
 
@@ -74,13 +75,21 @@ Browser
   │     └── Speckle models via reverse proxy (/streams, /objects → app.speckle.systems)
   │
   └── Express server (port 5174)
-        ├── GET  /auth/google         → redirect to Google OAuth
-        ├── GET  /auth/callback       → exchange code, fetch profile, upsert PostgreSQL
-        ├── POST /api/users/profile   → save team + avatar config to PostgreSQL
-        └── Speckle proxy             → injects Bearer token, forwards to app.speckle.systems
+        ├── GET  /auth/google              → redirect to Google OAuth
+        ├── GET  /auth/callback            → exchange code, fetch profile, upsert PostgreSQL
+        ├── POST /api/users/profile        → save team + avatar config to PostgreSQL
+        ├── GET  /api/milestones           → list all milestones (joined with author name)
+        ├── POST /api/milestones           → create a milestone
+        ├── PUT  /api/milestones/:id       → update a milestone
+        ├── DELETE /api/milestones/:id     → delete a milestone
+        ├── GET  /api/stress-test/scores   → list all stress test scores
+        ├── POST /api/stress-test/score    → upsert a member's stress test score
+        └── Speckle proxy                  → injects Bearer token, forwards to app.speckle.systems
 
 PostgreSQL
-  └── users table (googleId, name, email, team, avatar config, timestamps)
+  ├── users table              (googleId, name, email, team, avatar config, timestamps)
+  ├── milestones table         (week, team, title, summary[], connections JSONB, author)
+  └── stress_test_scores table (member_id, scores, health, pops, total_games, timestamps)
 ```
 
 **Auth flow:**
@@ -215,6 +224,7 @@ BIMSC_Studio_HB1/
     │   ├── MemberBlob.vue            # Generic member blob avatar (accepts member prop)
     │   ├── AvatarPreview.vue         # Live blob preview for AddMemberModal
     │   ├── AddMemberModal.vue        # Full-screen modal: add team member with avatar config
+    │   ├── AddMilestoneModal.vue     # Modal: create milestone with week, team, title, summary, connections
     │   ├── BreathingChart.vue        # SVG animated wave: filtration efficacy (dirty→clean air)
     │   ├── PorousVisualization.vue   # 200-floor bubble matrix: tower vital signs by zone
     │   ├── ProjectComplexity.vue     # SVG stepped line chart: project complexity weeks 1-7
@@ -229,7 +239,8 @@ BIMSC_Studio_HB1/
         ├── TimelineView.vue          # 10-week polyline timeline with deliverable cards
         ├── ViewerView.vue            # Speckle 3D BIM viewer with week slider
         ├── TeamsView.vue             # Team cards + all-members grid + add member
-        └── TeamDetailView.vue        # Single team: members, meetings, actions, hours
+        ├── TeamDetailView.vue        # Single team: members, meetings, actions, hours
+        └── StressTestView.vue        # Interactive stress test game with leaderboard + engagement stats
 ```
 
 ---
@@ -247,13 +258,14 @@ BIMSC_Studio_HB1/
 | `/viewer` | `ViewerView.vue` | Yes | Speckle 3D model viewer. Select week 1-10 via slider; weeks 1-5 have live models. |
 | `/teams` | `TeamsView.vue` | Yes | Three team cards with stats. Full member grid. Add/remove members. |
 | `/teams/:id` | `TeamDetailView.vue` | Yes | Per-team members, meetings, actions (with status), and hour totals. |
+| `/stress-test` | `StressTestView.vue` | Yes | Interactive blob-popping stress test game with team health leaderboard. |
 
 **Navigation guard logic** (`src/router/index.js`):
 1. Logged-in user visiting `/` → redirect to `/dashboard` (or `/profile` if no team set)
 2. Unauthenticated user visiting any protected route → redirect to `/`
 3. Authenticated user with no team visiting `/dashboard` → redirect to `/profile`
 
-**Shell vs bare layout** (`App.vue`): Routes `dashboard`, `kpi`, `timeline`, `viewer`, `teams`, `team-detail` render inside `AppShell` (header + nav + bubbles). Routes `login`, `auth-success`, `profile` render without the shell.
+**Shell vs bare layout** (`App.vue`): Routes `dashboard`, `kpi`, `timeline`, `viewer`, `teams`, `team-detail`, `stress-test` render inside `AppShell` (header + nav + bubbles). Routes `login`, `auth-success`, `profile` render without the shell.
 
 ---
 
@@ -281,6 +293,9 @@ Animated SVG blob avatars. Each avatar is controlled by four parameters:
 
 ### `AddMemberModal.vue`
 Full-screen overlay for adding a team member. Fields: name, role, team (dropdown), mood. Optional avatar configuration with 4 sliders and a live `AvatarPreview`. A "Match my avatar" checkbox copies the current user's avatar settings. Emits `submit` (with member data) and `close`.
+
+### `AddMilestoneModal.vue`
+Modal for creating a new milestone in the Timeline. Fields: week (1-10), team (structure/program/data), title, summary (text array), and connections (JSONB linking to other teams). On submit, sends a `POST /api/milestones` request to persist the milestone to PostgreSQL. Used in `TimelineView.vue`.
 
 ### `BreathingChart.vue`
 SVG wave chart in the Vitals KPI tab. Shows "dirty air" (red area) declining while "clean air" (green area) rises over time, representing the tower's filtration efficacy. Animated with CSS `@keyframes`.
@@ -315,7 +330,13 @@ Single store: `src/stores/userStore.js`. All state is persisted to `localStorage
   teamMeetings: { structure: [...], program: [...], data: [...] },
   teamActions:  { structure: [...], program: [...], data: [...] },
   meetingNotes: [...],
-  memberHours:  { [memberId]: [{ hours, description, date }] }
+  memberHours:  { [memberId]: [{ hours, description, date }] },
+  stressTestScores: {
+    [memberId]: {
+      lastScore, lastHealth, bestScore, bestHealth,
+      highestPops, totalPops, totalGames, timestamp
+    }
+  }
 }
 ```
 
@@ -343,6 +364,10 @@ Single store: `src/stores/userStore.js`. All state is persisted to `localStorage
 | `updateActionStatus(team, id, status)` | Update action status, persist |
 | `addMemberHours(memberId, entry)` | Append hours entry for a member |
 | `getTotalMemberHours(memberId)` | Sum all hours for a member |
+| `loadStressScores()` | Fetch all stress scores from PostgreSQL (`GET /api/stress-test/scores`) and merge into local state |
+| `saveStressTestScore(memberId, score)` | Compute health, update local state, and upsert to DB (`POST /api/stress-test/score`). Tracks `lastScore`, `bestScore`, `highestPops`, `totalPops` (cumulative), and `totalGames`. Returns `true` if new personal best. |
+| `getMemberHealth(memberId)` | Returns the member's latest stress health percentage (0-100) |
+| `getTeamHealth(teamId)` | Average `getMemberHealth` across all members of a team |
 
 ---
 
@@ -438,25 +463,134 @@ User-added members, meetings, and actions are stored in the Pinia store (and per
 | `/auth/google` | GET | Initiate Google OAuth redirect |
 | `/auth/callback` | GET | OAuth code exchange + DB upsert + redirect |
 | `/api/users/profile` | POST | Save `team` and `avatarConfig` to PostgreSQL |
+| `/api/milestones` | GET | Fetch all milestones (with author name join) ordered by week/team |
+| `/api/milestones` | POST | Create milestone — requires `week`, `team`, `title`; optional `summary`, `connections`, `created_by` |
+| `/api/milestones/:id` | PUT | Update milestone fields (partial update via `COALESCE`) |
+| `/api/milestones/:id` | DELETE | Delete a milestone |
+| `/api/stress-test/scores` | GET | Fetch all stress test scores ordered by `member_id` |
+| `/api/stress-test/score` | POST | Upsert a member's score — uses `ON CONFLICT (member_id) DO UPDATE` |
 | `/streams/**` | ALL | Proxy to Speckle (injects Bearer token) |
 | `/objects/**` | ALL | Proxy to Speckle |
 | `/graphql` | ALL | Proxy to Speckle |
 
-`server/db.js` — PostgreSQL connection pool. On startup, creates the `users` table if it doesn't exist:
+`server/db.js` — PostgreSQL connection pool. On startup, creates three tables if they don't exist:
 
+**`users`** — Google OAuth profiles with team and avatar configuration:
 ```sql
 CREATE TABLE IF NOT EXISTS users (
   id SERIAL PRIMARY KEY,
   google_id TEXT UNIQUE NOT NULL,
-  name TEXT, email TEXT, photo_url TEXT,
-  given_name TEXT, family_name TEXT, locale TEXT, verified_email BOOLEAN,
-  team TEXT,
-  avatar_speed NUMERIC, avatar_wobble NUMERIC,
-  avatar_complexity NUMERIC, avatar_shade NUMERIC,
+  email TEXT UNIQUE NOT NULL,
+  verified_email BOOLEAN DEFAULT FALSE,
+  name TEXT, given_name TEXT, family_name TEXT,
+  picture TEXT, locale TEXT, team TEXT,
+  avatar_speed REAL DEFAULT 2,
+  avatar_wobble INTEGER DEFAULT 30,
+  avatar_complexity INTEGER DEFAULT 50,
+  avatar_shade INTEGER DEFAULT 2,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 ```
+
+**`milestones`** — Per-week, per-team deliverables managed via the Timeline view:
+```sql
+CREATE TABLE IF NOT EXISTS milestones (
+  id SERIAL PRIMARY KEY,
+  week INTEGER NOT NULL CHECK (week >= 1 AND week <= 10),
+  team TEXT NOT NULL CHECK (team IN ('structure', 'program', 'data')),
+  title TEXT NOT NULL,
+  summary TEXT[] DEFAULT '{}',
+  connections JSONB DEFAULT '{}',
+  created_by TEXT REFERENCES users(google_id),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+**`stress_test_scores`** — Per-member stress test game stats (one row per player, upserted on every game):
+```sql
+CREATE TABLE IF NOT EXISTS stress_test_scores (
+  id SERIAL PRIMARY KEY,
+  member_id INTEGER NOT NULL UNIQUE,
+  google_id TEXT,
+  last_score INTEGER NOT NULL DEFAULT 0,
+  last_health INTEGER NOT NULL DEFAULT 0,
+  best_score INTEGER NOT NULL DEFAULT 0,
+  best_health INTEGER NOT NULL DEFAULT 0,
+  highest_pops INTEGER NOT NULL DEFAULT 0,
+  total_pops INTEGER NOT NULL DEFAULT 0,
+  total_games INTEGER NOT NULL DEFAULT 0,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+> **`total_pops`** is cumulative across all games a player has ever played — it tracks overall engagement, not high scores. **`highest_pops`** is the single-game maximum.
+
+---
+
+## Stress Test
+
+`StressTestView.vue` — an interactive blob-popping mini-game that measures a player's stress response.
+
+### Gameplay
+- User clicks **Start Test** → 30-second countdown begins
+- 8 animated blobs appear in the game area; popping one immediately spawns a replacement
+- Each click increments the pop counter; at the end, health is calculated
+
+### Scoring formula
+```
+health = max(1, round(100 − (pops / 60) × 100))
+```
+Fewer pops = higher health. Max meaningful pops in 30s ≈ 60 (2/second sustained).
+
+### Stress tiers
+
+| Tier | Pops | Health | Emoji |
+|---|---|---|---|
+| Zen | 0–9 | 85–100% | 🌊 |
+| Calm | 10–20 | 67–83% | 😌 |
+| Moderate | 21–33 | 45–65% | 😐 |
+| Stressed | 34–49 | 18–43% | 😰 |
+| Overwhelmed | 50+ | 0–17% | 🔥 |
+
+### Persistence
+- Scores are saved to PostgreSQL via `POST /api/stress-test/score` (upsert on `member_id`)
+- On mount, all scores are loaded from `GET /api/stress-test/scores` into the Pinia store
+- The store tracks per member: `lastScore`, `lastHealth`, `bestScore`, `bestHealth`, `highestPops`, `totalPops`, `totalGames`
+- `totalPops` accumulates every pop from every game (engagement metric), not a high score
+
+### Widgets
+- **Team Health** — average `getMemberHealth()` for each team (structure/program/data)
+- **Calmness Ranking** — all members sorted by latest health, with blob avatars and stress emoji
+- **How It Works** — visual reference of the 5 stress tiers
+- **Top Poppers** — top 3 players by `highestPops` (single-game record), plus a "Total pops logged" counter showing cumulative engagement across all players and all games
+
+### Identity
+- Game always runs as the logged-in user (matched to a team member by name)
+- Guest users can play but scores are not persisted
+- Personal best detection: "✦ Personal best!" shown when the new health exceeds the stored `bestHealth`
+
+---
+
+## Milestones System
+
+Milestones are deliverables tracked per week (1-10) and per team. They are fully persisted in PostgreSQL and managed via a REST API.
+
+### Data model
+Each milestone has: `week`, `team`, `title`, `summary` (text array), `connections` (JSONB linking to other teams), and `created_by` (references `users.google_id`).
+
+### Where milestones appear
+- **Timeline view** — the primary interface. Users can create milestones via `AddMilestoneModal`, edit them inline, or delete them. The timeline builds entirely from DB milestones (no hardcoded deliverables).
+- **Dashboard view** — fetches milestones from the DB and displays the current week's deliverables per team in the activity/milestone tracker section.
+
+### API
+| Method | Endpoint | Purpose |
+|---|---|---|
+| GET | `/api/milestones` | All milestones with author name (joined from `users`), ordered by week/team |
+| POST | `/api/milestones` | Create — requires `week`, `team`, `title` |
+| PUT | `/api/milestones/:id` | Partial update via `COALESCE` |
+| DELETE | `/api/milestones/:id` | Delete by ID |
 
 ---
 
