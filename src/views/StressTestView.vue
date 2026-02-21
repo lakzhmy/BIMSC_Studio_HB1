@@ -7,18 +7,13 @@
           <h1 class="text-3xl font-bold text-slate-900">Stress Test</h1>
           <p class="text-slate-500 mt-1">The blobs are waiting. What will you do?</p>
         </div>
-        <!-- Play As selector -->
+        <!-- Play As display (locked to logged-in user) -->
         <div class="flex items-center gap-3">
-          <label class="text-sm font-medium text-slate-700">Playing as:</label>
-          <select
-            v-model="selectedMemberId"
-            :disabled="gameState === 'playing'"
-            class="px-3 py-2 rounded-lg border border-slate-200 bg-white text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option v-for="member in allMembers" :key="member.id" :value="member.id">
-              {{ member.name }} ({{ member.teamLabel }})
-            </option>
-          </select>
+          <span class="text-sm font-medium text-slate-700">Playing as:</span>
+          <span class="px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 text-sm font-semibold text-slate-800">
+            {{ playingAsName }}
+            <span v-if="isGuest" class="ml-1 text-xs font-normal text-slate-400">(guest)</span>
+          </span>
         </div>
       </div>
 
@@ -234,7 +229,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useUserStore } from '@/stores/userStore'
 import { teams as sampleTeams } from '@/data/sampleData'
 import MemberBlob from '@/components/MemberBlob.vue'
@@ -351,18 +346,46 @@ const allMembers = computed(() => {
   return members
 })
 
-// ── "Play As" selection ──────────────────────────────────────────────────────
-const selectedMemberId = ref(null)
+// ── "Play As" — always the logged-in user, no impersonation ─────────────────
 
-const defaultMemberId = computed(() => {
+// Find the team member whose name matches the logged-in user's Google name.
+// Returns null if no match (guest mode).
+const loggedInMemberId = computed(() => {
   if (!allMembers.value.length) return null
-  const myTeamMembers = allMembers.value.filter((m) => m.teamId === userStore.selectedTeam)
-  return (myTeamMembers[0] ?? allMembers.value[0]).id
+  if (!userStore.isLoggedIn || !userStore.currentUser.name) return null
+
+  const userName = userStore.currentUser.name.toLowerCase().trim()
+  const givenName = userStore.currentUser.givenName?.toLowerCase().trim()
+
+  // Exact full-name match
+  const exactMatch = allMembers.value.find((m) => m.name.toLowerCase().trim() === userName)
+  if (exactMatch) return exactMatch.id
+
+  // Given-name prefix match within the user's own team
+  if (givenName) {
+    const teamMatch = allMembers.value.find(
+      (m) => m.teamId === userStore.selectedTeam && m.name.toLowerCase().startsWith(givenName)
+    )
+    if (teamMatch) return teamMatch.id
+  }
+
+  return null // guest — no matching team member
 })
 
-function getSelectedMemberId() {
-  return selectedMemberId.value ?? defaultMemberId.value
-}
+const isGuest = computed(() => loggedInMemberId.value === null)
+
+const playingAsName = computed(() => {
+  if (!userStore.isLoggedIn) return 'Guest'
+  if (loggedInMemberId.value !== null) {
+    return allMembers.value.find((m) => m.id === loggedInMemberId.value)?.name ?? userStore.currentUser.name
+  }
+  return userStore.currentUser.name || 'Guest'
+})
+
+// On mount: pull all scores from DB so leaderboard is always current
+onMounted(async () => {
+  await userStore.loadStressScores()
+})
 
 // ── Game State ───────────────────────────────────────────────────────────────
 const gameState = ref('idle') // 'idle' | 'playing' | 'done'
@@ -447,8 +470,6 @@ function popBlob(id) {
 const MAX_BLOBS = 8
 
 function startGame() {
-  if (!selectedMemberId.value) selectedMemberId.value = defaultMemberId.value
-
   score.value = 0
   timeLeft.value = 30
   lastHealth.value = 0
@@ -485,8 +506,12 @@ function endGame() {
     description: TIER_DESCRIPTIONS[tier.label] || '',
   }
 
-  const memberId = getSelectedMemberId()
-  isNewBest.value = userStore.saveStressTestScore(memberId, score.value)
+  // Only save to leaderboard if the user maps to a real team member (not a guest)
+  if (loggedInMemberId.value !== null) {
+    isNewBest.value = userStore.saveStressTestScore(loggedInMemberId.value, score.value)
+  } else {
+    isNewBest.value = false
+  }
 }
 
 onUnmounted(() => {

@@ -91,7 +91,12 @@ async function fetchMilestones() {
     console.error('Failed to fetch milestones:', err)
   }
 }
-onMounted(fetchMilestones)
+onMounted(async () => {
+  await Promise.all([
+    fetchMilestones(),
+    userStore.loadStressScores(),
+  ])
+})
 
 // ── Calendar-based current week (same logic as TimelineView) ──
 const WEEK_START_DATES = Array.from({ length: 10 }, (_, i) => new Date(2026, 0, 12 + i * 7))

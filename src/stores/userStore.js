@@ -315,11 +315,35 @@ export const useUserStore = defineStore('user', () => {
     return Math.max(1, raw)
   }
 
+  // Load all stress test scores from the database and merge into local state
+  async function loadStressScores() {
+    try {
+      const res = await fetch('/api/stress-test/scores')
+      if (!res.ok) return
+      const rows = await res.json()
+      rows.forEach((row) => {
+        stressTestScores.value[row.member_id] = {
+          lastScore: row.last_score,
+          lastHealth: row.last_health,
+          bestScore: row.best_score,
+          bestHealth: row.best_health,
+          highestPops: row.highest_pops,
+          totalPops: row.total_pops,
+          totalGames: row.total_games,
+          timestamp: row.updated_at,
+        }
+      })
+      persistData()
+    } catch (err) {
+      console.error('Failed to load stress scores from DB:', err)
+    }
+  }
+
   function saveStressTestScore(memberId, score) {
     const health = computeStressHealth(score)
     const existing = stressTestScores.value[memberId]
     const isNewBest = !existing || health > (existing.bestHealth ?? 0)
-    stressTestScores.value[memberId] = {
+    const newEntry = {
       lastScore: score,
       lastHealth: health,
       bestScore: isNewBest ? score : (existing?.bestScore ?? score),
@@ -327,9 +351,28 @@ export const useUserStore = defineStore('user', () => {
       highestPops: Math.max(score, existing?.highestPops ?? 0),
       totalPops: (existing?.totalPops ?? 0) + score,
       totalGames: (existing?.totalGames ?? 0) + 1,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     }
+    stressTestScores.value[memberId] = newEntry
     persistData()
+
+    // Persist to database (fire-and-forget)
+    fetch('/api/stress-test/score', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        member_id: memberId,
+        google_id: currentUser.value.googleId || null,
+        last_score: newEntry.lastScore,
+        last_health: newEntry.lastHealth,
+        best_score: newEntry.bestScore,
+        best_health: newEntry.bestHealth,
+        highest_pops: newEntry.highestPops,
+        total_pops: newEntry.totalPops,
+        total_games: newEntry.totalGames,
+      }),
+    }).catch((err) => console.error('Failed to save stress score to DB:', err))
+
     return isNewBest
   }
 
@@ -408,6 +451,7 @@ export const useUserStore = defineStore('user', () => {
     updateActionStatus,
     addMemberHours,
     getTotalMemberHours,
+    loadStressScores,
     saveStressTestScore,
     getMemberHealth,
     getTeamHealth,

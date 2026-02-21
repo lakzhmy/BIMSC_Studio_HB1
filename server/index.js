@@ -157,6 +157,62 @@ app.delete('/api/milestones/:id', async (req, res) => {
   }
 })
 
+// --- Stress Test Scores ---
+
+// GET all stress test scores
+app.get('/api/stress-test/scores', async (req, res) => {
+  try {
+    const result = await query('SELECT * FROM stress_test_scores ORDER BY member_id')
+    res.json(result.rows)
+  } catch (err) {
+    console.error('[db] stress scores fetch failed:', err.message)
+    res.status(500).json({ error: 'Failed to fetch scores' })
+  }
+})
+
+// POST upsert a stress test score for a member
+app.post('/api/stress-test/score', async (req, res) => {
+  const { member_id, google_id, last_score, last_health, best_score, best_health, highest_pops, total_pops, total_games } = req.body
+
+  if (!member_id) {
+    return res.status(400).json({ error: 'member_id is required' })
+  }
+
+  try {
+    const result = await query(
+      `INSERT INTO stress_test_scores
+         (member_id, google_id, last_score, last_health, best_score, best_health, highest_pops, total_pops, total_games, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
+       ON CONFLICT (member_id) DO UPDATE SET
+         google_id    = EXCLUDED.google_id,
+         last_score   = EXCLUDED.last_score,
+         last_health  = EXCLUDED.last_health,
+         best_score   = EXCLUDED.best_score,
+         best_health  = EXCLUDED.best_health,
+         highest_pops = EXCLUDED.highest_pops,
+         total_pops   = EXCLUDED.total_pops,
+         total_games  = EXCLUDED.total_games,
+         updated_at   = NOW()
+       RETURNING *`,
+      [
+        member_id,
+        google_id || null,
+        last_score ?? 0,
+        last_health ?? 0,
+        best_score ?? 0,
+        best_health ?? 0,
+        highest_pops ?? 0,
+        total_pops ?? 0,
+        total_games ?? 0,
+      ]
+    )
+    res.json(result.rows[0])
+  } catch (err) {
+    console.error('[db] stress score save failed:', err.message)
+    res.status(500).json({ error: 'Failed to save score' })
+  }
+})
+
 if (!hasSpeckleToken) {
   console.warn('Warning: SPECKLE_TOKEN is not set. Private streams will fail to load.')
 } else {

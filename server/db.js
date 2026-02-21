@@ -48,4 +48,21 @@ export async function initDb() {
     )
   `)
   console.log('[db] milestones table ready')
+
+  await query(`
+    CREATE TABLE IF NOT EXISTS stress_test_scores (
+      id           SERIAL PRIMARY KEY,
+      member_id    INTEGER NOT NULL UNIQUE,
+      google_id    TEXT,
+      last_score   INTEGER NOT NULL DEFAULT 0,
+      last_health  INTEGER NOT NULL DEFAULT 0,
+      best_score   INTEGER NOT NULL DEFAULT 0,
+      best_health  INTEGER NOT NULL DEFAULT 0,
+      highest_pops INTEGER NOT NULL DEFAULT 0,
+      total_pops   INTEGER NOT NULL DEFAULT 0,
+      total_games  INTEGER NOT NULL DEFAULT 0,
+      updated_at   TIMESTAMPTZ DEFAULT NOW()
+    )
+  `)
+  console.log('[db] stress_test_scores table ready')
 }
