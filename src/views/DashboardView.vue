@@ -109,7 +109,8 @@ const currentWeekFraction = computed(() => {
   return Math.max(1, Math.min(10.99, fraction))
 })
 
-const currentWeekNumber = computed(() => Math.floor(currentWeekFraction.value))
+// Round to nearest week to match the timeline tab convention
+const currentWeekNumber = computed(() => Math.min(10, Math.round(currentWeekFraction.value)))
 
 const todayString = computed(() => {
   return new Date().toLocaleDateString('en-GB', {

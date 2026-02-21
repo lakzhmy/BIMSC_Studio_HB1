@@ -329,8 +329,9 @@ const currentWeekFraction = computed(() => {
   return Math.max(1, Math.min(10.99, fraction))
 })
 
-// Integer week marker for isPastWeek checks
-const currentWeekMarker = computed(() => Math.floor(currentWeekFraction.value))
+// Round to nearest week: past the midpoint of week N → display week N+1
+// (matches the academic convention where Feb 21 = "week 7" when >50% through week 6)
+const currentWeekMarker = computed(() => Math.min(10, Math.round(currentWeekFraction.value)))
 
 // Formatted date/time string for the tooltip
 const currentDateTimeString = computed(() => {
@@ -384,7 +385,8 @@ function isWeekSelected(weekNumber) {
 }
 
 function isPastWeek(weekNumber) {
-  return weekNumber <= currentWeekMarker.value
+  // Strict less-than: the current week is not "past" — only completed weeks get checkmarks
+  return weekNumber < currentWeekMarker.value
 }
 
 function weekHasTeam(week, team) {
