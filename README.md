@@ -441,7 +441,7 @@ UI conventions:
 
 - **Teams & members:**
   - Structure: Charles Abi Chahine, Ramy Ayoub, Hani Karime
-  - Program: Ramón García, Ahmad Baltaji, Mahmoud Mohamed
+  - Program: Gildardo Ramón García Ayala, Ahmad Baltaji, Mahmoud Mohamed
   - Data: Emilie El Chidiac, María Sánchez Domínguez, Lakzhmy Mari Zaro
 - **`courseTimeline`** — 10 weeks of milestones with deliverables per team
 - **`projectHealth`** — overall 87%, breakdown by schedule/budget/quality/team, risks, milestones

@@ -109,7 +109,7 @@ export const teams = [
     colorDark: '#2563eb',
     description: 'Spatial planning and user experience',
     members: [
-      { id: 4, name: 'Ramón García', role: 'Program Lead', status: 'online', avatar: { complexity: 60, speed: 1.8, wobble: 35, shade: 0 } },
+      { id: 4, name: 'Gildardo Ramón García Ayala', role: 'Program Lead', status: 'online', avatar: { complexity: 60, speed: 1.8, wobble: 35, shade: 0 } },
       { id: 5, name: 'Ahmad Baltaji', role: 'Space Planner', status: 'online', avatar: { complexity: 48, speed: 2.3, wobble: 26, shade: 2 } },
       { id: 6, name: 'Mahmoud Mohamed', role: 'UX Architect', status: 'online', avatar: { complexity: 52, speed: 2.1, wobble: 29, shade: 4 } }
     ],
