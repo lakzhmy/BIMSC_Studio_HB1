@@ -197,10 +197,7 @@
         <!-- ── Top Poppers (right 2/5) ──────────────────────────────────── -->
         <div class="lg:col-span-2">
           <div class="card p-4 h-full flex flex-col">
-            <div class="flex items-center justify-between mb-3">
-              <h2 class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Top Poppers</h2>
-              <span class="text-xs text-slate-400">{{ totalPlayers }} player{{ totalPlayers !== 1 ? 's' : '' }}</span>
-            </div>
+            <h2 class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Top Poppers</h2>
             <div v-if="topPoppers.length" class="space-y-2 flex-1">
               <div v-for="(entry, idx) in topPoppers" :key="entry.id" class="flex items-center gap-2">
                 <span class="text-base flex-shrink-0 w-5 text-center">
@@ -574,11 +571,7 @@ const topPoppers = computed(() => {
 })
 
 const totalPops = computed(() =>
-  Object.values(userStore.stressTestScores).reduce((sum, e) => sum + (e.totalPops ?? e.bestScore ?? 0), 0)
-)
-
-const totalPlayers = computed(() =>
-  Object.keys(userStore.stressTestScores).length
+  Object.values(userStore.stressTestScores).reduce((sum, e) => sum + (e.totalPops ?? 0), 0)
 )
 </script>
 
