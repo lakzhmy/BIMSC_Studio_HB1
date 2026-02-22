@@ -527,23 +527,34 @@ const connectedEdgeIds = computed(() => {
   )
 })
 
-// Dynamic viewBox grows downward if new nodes are added below the default range
+// Dynamic viewBox: 960-wide for a slight scale-down; grows downward for extra nodes
 const maxNodeCy = computed(() => nodes.value.reduce((m, n) => Math.max(m, n.cy), 396))
-const dynamicViewBox = computed(() => `0 0 900 ${Math.max(540, maxNodeCy.value + 130)}`)
+const dynamicViewBox = computed(() => `0 0 960 ${Math.max(560, maxNodeCy.value + 150)}`)
 
 // Halo ring and label Y positions — vertically centred on the node column
 const haloCy     = computed(() => (140 + maxNodeCy.value) / 2)
-const haloLabelY = computed(() => maxNodeCy.value + 80)
+const haloLabelY = computed(() => maxNodeCy.value + 90)
 
 const tooltipStyle = computed(() => {
   if (!activeNode.value) return { display: 'none' }
-  const rawX   = (activeNode.value.cx / 900) * 100
+  const viewH  = parseInt(dynamicViewBox.value.split(' ')[3])
+  const viewW  = 960
+
+  // Horizontal: clamp tighter for edge columns so the 256px card stays in view
+  const rawX   = (activeNode.value.cx / viewW) * 100
   const clampX = Math.min(Math.max(rawX, 16), 84)
-  const yPct   = (activeNode.value.cy / parseInt(dynamicViewBox.value.split(' ')[3])) * 100
+
+  const yPct = (activeNode.value.cy / viewH) * 100
+
+  // If the node is in the top 28% of the viewBox, flip the card below the node
+  const showBelow = (activeNode.value.cy / viewH) < 0.28
+
   return {
-    left: `${clampX}%`,
-    top:  `${yPct}%`,
-    transform: 'translate(-50%, calc(-100% - 18px))',
+    left:      `${clampX}%`,
+    top:       `${yPct}%`,
+    transform: showBelow
+      ? 'translate(-50%, 32px)'                  // card appears below node
+      : 'translate(-50%, calc(-100% - 18px))',   // card appears above node
   }
 })
 
