@@ -1,108 +1,67 @@
 <template>
-  <div class="space-y-6">
+  <div class="space-y-4">
     <!-- Week and Space Index Selectors -->
-    <div class="flex flex-wrap gap-4 p-4 bg-white rounded-lg border border-slate-200">
-      <div class="flex flex-col gap-2">
-        <label class="text-sm font-medium text-slate-700">Week</label>
-        <select v-model="selectedWeek" class="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm">
+    <div class="flex flex-wrap gap-3">
+      <div class="flex flex-col gap-1">
+        <label class="text-xs font-medium text-slate-700">Week</label>
+        <select v-model="selectedWeek" class="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-sm">
           <option value="">Select a week</option>
           <option v-for="week in weeks" :key="week" :value="week">{{ week }}</option>
         </select>
       </div>
 
-      <div class="flex flex-col gap-2">
-        <label class="text-sm font-medium text-slate-700">Space Index</label>
-        <select v-model="selectedColumnC" class="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm">
+      <div class="flex flex-col gap-1">
+        <label class="text-xs font-medium text-slate-700">Space Index</label>
+        <select v-model="selectedColumnC" class="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-sm">
           <option value="">Select a value</option>
           <option v-for="val in availableColumnCValues" :key="val" :value="val">{{ val }}</option>
         </select>
       </div>
 
-      <div v-if="spaceName" class="flex flex-col gap-2">
-        <label class="text-sm font-medium text-slate-700">Space Name</label>
-        <div class="px-4 py-2 bg-slate-100 border border-slate-200 rounded-lg text-sm line-height-relaxed">
+      <div v-if="spaceName" class="flex flex-col gap-1">
+        <label class="text-xs font-medium text-slate-700">Space Name</label>
+        <div class="px-3 py-1.5 bg-slate-100 border border-slate-200 rounded-lg text-sm">
           {{ spaceName }}
         </div>
       </div>
     </div>
 
-    <!-- KPI Cards (Columns E+) -->
-    <div v-if="selectedColumnC && kpiCards.length > 0" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <!-- KPI Cards with inline summary (Columns E+) -->
+    <div v-if="selectedColumnC && kpiCards.length > 0" class="space-y-3">
       <div
         v-for="(kpi, index) in kpiCards"
         :key="kpi.id"
-        class="bg-white p-6 rounded-lg border border-slate-200 hover:shadow-lg transition-shadow cursor-pointer"
+        :class="['bg-slate-50 p-4 rounded-lg border border-slate-100 hover:shadow-md transition-shadow cursor-pointer', hoveredSummaryKey === summaryKeyByIndex[index] ? 'shadow-md border-slate-300' : '']"
         @mouseenter="setHoveredSummaryKey(index)"
         @mouseleave="clearHoveredSummaryKey"
       >
-        <div class="flex items-start justify-between mb-4">
+        <div class="flex items-start justify-between mb-2">
           <div class="flex-1">
-            <h3 class="text-sm font-semibold text-slate-700 mb-1">{{ kpi.name }}</h3>
-            <p class="text-xs text-slate-500">{{ getProgramUnit(index) }}</p>
+            <h3 class="text-xs font-semibold text-slate-700">{{ kpi.name }}</h3>
+            <p class="text-[11px] text-slate-500">{{ getProgramUnit(index) }}</p>
           </div>
-          <div :class="['w-2 h-2 rounded-full flex-shrink-0 mt-1', kpi.status === 'good' ? 'bg-green-500' : kpi.status === 'warning' ? 'bg-yellow-500' : 'bg-red-500']"></div>
+          <div :class="['w-2 h-2 rounded-full flex-shrink-0 mt-0.5', kpi.status === 'good' ? 'bg-green-500' : kpi.status === 'warning' ? 'bg-yellow-500' : 'bg-red-500']"></div>
         </div>
-        <div class="space-y-3">
-          <div class="flex items-end gap-2">
-            <div class="text-3xl font-bold text-slate-900">{{ typeof kpi.value === 'number' ? kpi.value.toFixed(2) : kpi.value }}</div>
-          </div>
-          <div class="flex items-center gap-2 text-xs text-slate-500">
-            <span class="capitalize">Status: {{ kpi.status }}</span>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div v-if="selectedColumnC && kpiCards.length > 0" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-      <div
-        v-for="card in summaryCards"
-        :key="card.id"
-        :class="['bg-white p-6 rounded-lg border border-slate-200 transition-shadow', hoveredSummaryKey === card.key ? 'shadow-lg border-slate-300' : '']"
-      >
-        <div class="flex items-center justify-between mb-3">
-          <div class="flex items-center gap-2">
-            <h3 class="text-sm font-semibold text-slate-700">{{ card.title }}</h3>
-            <span class="text-xs text-slate-400">{{ card.subtitle }}</span>
-          </div>
-        </div>
-        <div class="text-3xl font-bold text-slate-900">{{ card.displayValue }}</div>
-        <div v-if="card.visual?.type === 'bullet'" class="mt-6 space-y-4">
-          <div class="text-xs text-slate-500">
-            <span>Target: {{ card.visual.target }}</span>
-          </div>
-          <div class="flex items-center gap-2 text-xs text-slate-500">
-            <span :class="['text-[11px] px-2 py-0.5 rounded-full border', card.delta <= 0 ? 'bg-green-100 text-green-700 border-green-200' : 'bg-red-100 text-red-700 border-red-200']">
-              {{ card.delta > 0 ? '+' : '' }}{{ formatDelta(card.delta) }}
+        <div class="text-2xl font-bold text-slate-900 mb-3">{{ typeof kpi.value === 'number' ? kpi.value.toFixed(2) : kpi.value }}</div>
+        <template v-if="summaryCards[index]">
+          <div class="text-[11px] text-slate-500">Target: {{ summaryCards[index].visual?.target }}</div>
+          <div class="flex items-center gap-2 mt-1 mb-3">
+            <span :class="['text-[10px] px-2 py-0.5 rounded-full border', summaryCards[index].delta <= 0 ? 'bg-green-100 text-green-700 border-green-200' : 'bg-red-100 text-red-700 border-red-200']">
+              {{ summaryCards[index].delta > 0 ? '+' : '' }}{{ formatDelta(summaryCards[index].delta) }}
             </span>
           </div>
-          <div class="relative h-2 rounded-full bg-slate-100 overflow-visible">
-            <div
-              class="absolute left-0 top-0 h-full rounded-full"
-              :style="{ width: `${card.bulletValuePct}%`, backgroundColor: '#3b82f6' }"
-            ></div>
-            <div
-              class="absolute top-0 h-full w-0.5 bg-slate-500"
-              :style="{ left: `${card.bulletTargetPct}%` }"
-            ></div>
-            <div
-              class="absolute top-0 h-2 w-2 bg-yellow-400 shadow-sm"
-              :style="{ left: `calc(${card.bulletTargetPct}% - 4px)`, transform: 'rotate(45deg)' }"
-            ></div>
-            <div
-              class="absolute -top-5 text-[10px] text-slate-600"
-              :style="{ left: `calc(${card.bulletTargetPct}% - 8px)` }"
-            >
-              {{ formatValue(card.visual.target) }}
-            </div>
+          <div class="relative h-2 rounded-full bg-slate-200 overflow-visible">
+            <div class="absolute left-0 top-0 h-full rounded-full" :style="{ width: `${summaryCards[index].bulletValuePct}%`, backgroundColor: '#3b82f6' }"></div>
+            <div class="absolute top-0 h-full w-0.5 bg-slate-500" :style="{ left: `${summaryCards[index].bulletTargetPct}%` }"></div>
+            <div class="absolute top-0 h-2 w-2 bg-yellow-400 shadow-sm" :style="{ left: `calc(${summaryCards[index].bulletTargetPct}% - 4px)`, transform: 'rotate(45deg)' }"></div>
+            <div class="absolute -top-5 text-[10px] text-slate-600" :style="{ left: `calc(${summaryCards[index].bulletTargetPct}% - 8px)` }">{{ formatValue(summaryCards[index].visual?.target) }}</div>
           </div>
-        </div>
+        </template>
       </div>
     </div>
 
     <!-- No Data State -->
-    <div v-else-if="!selectedColumnC" class="bg-slate-100 rounded-lg p-12 text-center">
-      <p class="text-slate-500">Select a space index to view KPI data</p>
-    </div>
+    <p v-else-if="!selectedColumnC" class="text-slate-400 text-sm">Select a space index to view KPI data</p>
   </div>
 </template>
 

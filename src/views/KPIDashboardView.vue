@@ -1,141 +1,183 @@
 <template>
   <main class="py-8 px-6">
-      <div class="max-w-7xl mx-auto space-y-6">
-        <!-- Category Tabs -->
-        <div class="flex gap-2">
-          <button v-for="category in categories" :key="category.id" @click="selectedCategory = category.id" :class="['px-6 py-2 text-sm font-medium rounded-lg transition-colors', selectedCategory === category.id ? 'text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50']" :style="selectedCategory === category.id ? { backgroundColor: category.color } : {}">
-            {{ category.label }}
-          </button>
+    <div class="max-w-7xl mx-auto space-y-6">
+
+      <!-- Loading State -->
+      <div v-if="isLoading" class="text-center py-16">
+        <p class="text-slate-500 text-lg">Loading KPI data...</p>
+      </div>
+
+      <!-- Error State -->
+      <div v-else-if="loadError" class="bg-red-50 border border-red-200 rounded-lg p-6">
+        <h3 class="text-red-900 font-semibold mb-2">Error Loading Data</h3>
+        <p class="text-red-700 text-sm">{{ loadError }}</p>
+        <button @click="loadData" class="mt-4 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded text-sm font-medium">
+          Retry
+        </button>
+      </div>
+
+      <!-- Row 1: Program | Structure | Data -->
+      <div v-else class="grid lg:grid-cols-3 gap-6 items-start">
+
+        <!-- Program Widget -->
+        <div class="bg-white rounded-lg border border-slate-200 p-6 space-y-4">
+          <div>
+            <h2 class="text-lg font-bold text-slate-900" style="color: #3b82f6;">Program</h2>
+            <p class="text-xs text-slate-500">Space usage and program KPIs</p>
+          </div>
+          <ProgramKPISelector v-if="programSheetData" :sheetData="programSheetData" />
+          <p v-else class="text-slate-400 text-sm">No program data available</p>
         </div>
 
-        <!-- Week and Scenario Selectors -->
-        <div v-if="selectedCategory !== 'vitals' && selectedCategory !== 'program'" class="flex flex-wrap gap-4 p-4 bg-white rounded-lg border border-slate-200">
-          <div class="flex flex-col gap-2">
-            <label class="text-sm font-medium text-slate-700">Week</label>
-            <select v-model="selectedWeek" class="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm">
-              <option value="">Select Week</option>
-              <option v-for="week in weeks" :key="week" :value="week">{{ week }}</option>
-            </select>
+        <!-- Structure Widget -->
+        <div class="bg-white rounded-lg border border-slate-200 p-6 space-y-4">
+          <div>
+            <h2 class="text-lg font-bold" style="color: #10b981;">Structure</h2>
+            <p class="text-xs text-slate-500">Structural performance KPIs</p>
           </div>
 
-          <div class="flex flex-col gap-2">
-            <label class="text-sm font-medium text-slate-700">Scenario</label>
-            <select v-model="selectedScenario" class="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm">
-              <option value="">Select Scenario</option>
-              <option v-for="scenario in scenarios" :key="scenario" :value="scenario">{{ scenario }}</option>
-            </select>
-          </div>
-        </div>
-
-        <!-- Program Selector (isolated component) -->
-        <ProgramKPISelector v-if="selectedCategory === 'program' && currentSheetData" :sheetData="currentSheetData" />
-
-        <!-- Loading State -->
-        <div v-if="isLoading" class="text-center py-16">
-          <p class="text-slate-500 text-lg">Loading KPI data...</p>
-        </div>
-
-        <!-- Error State -->
-        <div v-else-if="loadError" class="bg-red-50 border border-red-200 rounded-lg p-6">
-          <h3 class="text-red-900 font-semibold mb-2">Error Loading Data</h3>
-          <p class="text-red-700 text-sm">{{ loadError }}</p>
-          <button @click="loadData" class="mt-4 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded text-sm font-medium">
-            Retry
-          </button>
-        </div>
-
-        <!-- KPI Cards (not for PROGRAM) -->
-        <div v-if="selectedCategory !== 'vitals' && selectedCategory !== 'program' && filteredKPIs.length > 0" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div
-            v-for="(kpi, index) in filteredKPIs"
-            :key="kpi.id"
-            class="bg-white p-6 rounded-lg border border-slate-200 hover:shadow-lg transition-shadow cursor-pointer"
-            @mouseenter="hoveredStructureIndex = index"
-            @mouseleave="hoveredStructureIndex = null"
-          >
-            <div class="flex items-start justify-between mb-4">
-              <div class="flex-1">
-                <h3 class="text-sm font-semibold text-slate-700 mb-1">{{ kpi.name }}</h3>
-                <p class="text-xs text-slate-500">{{ kpi.unit }}</p>
-              </div>
-              <div :class="['w-2 h-2 rounded-full flex-shrink-0 mt-1', kpi.status === 'good' ? 'bg-green-500' : kpi.status === 'warning' ? 'bg-yellow-500' : 'bg-red-500']"></div>
+          <!-- Structure Selectors -->
+          <div class="flex flex-wrap gap-3">
+            <div class="flex flex-col gap-1">
+              <label class="text-xs font-medium text-slate-700">Week</label>
+              <select v-model="structureWeek" class="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-sm">
+                <option value="">Select Week</option>
+                <option v-for="week in structureWeeks" :key="week" :value="week">{{ week }}</option>
+              </select>
             </div>
-            <div class="space-y-3">
-              <div class="flex items-end gap-2">
-                <div class="text-3xl font-bold text-slate-900">{{ typeof kpi.value === 'number' ? kpi.value.toFixed(2) : kpi.value }}</div>
-              </div>
-              <div class="flex items-center gap-2 text-xs text-slate-500">
-                <span class="capitalize">Status: {{ kpi.status }}</span>
-              </div>
+            <div class="flex flex-col gap-1">
+              <label class="text-xs font-medium text-slate-700">Scenario</label>
+              <select v-model="structureScenario" class="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-sm">
+                <option value="">Select Scenario</option>
+                <option v-for="scenario in structureScenarios" :key="scenario" :value="scenario">{{ scenario }}</option>
+              </select>
             </div>
           </div>
-        </div>
 
-        <!-- Structure/Data Summary Cards -->
-        <div v-if="(selectedCategory === 'structure' || selectedCategory === 'data') && filteredKPIs.length > 0" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div
-            v-for="(card, index) in structureSummaryCards"
-            :key="card.id"
-            :class="['bg-white p-6 rounded-lg border border-slate-200 transition-shadow', hoveredStructureIndex === index ? 'shadow-lg border-slate-300' : '']"
-          >
-            <div class="text-xs text-slate-500">Target: {{ card.displayTarget }}</div>
-            <div class="flex items-center gap-2 text-xs text-slate-500 mt-1">
-              <span :class="['text-[11px] px-2 py-0.5 rounded-full border', card.delta <= 0 ? 'bg-green-100 text-green-700 border-green-200' : 'bg-red-100 text-red-700 border-red-200']">
-                {{ card.delta > 0 ? '+' : '' }}{{ card.displayDelta }}
-              </span>
-            </div>
-            <div class="mt-6 space-y-4">
-              <div class="relative h-2 rounded-full bg-slate-100 overflow-visible">
-                <div
-                  class="absolute left-0 top-0 h-full rounded-full"
-                  :style="{ width: `${card.bulletValuePct}%`, backgroundColor: card.color }"
-                ></div>
-                <div
-                  class="absolute top-0 h-full w-0.5 bg-slate-500"
-                  :style="{ left: `${card.bulletTargetPct}%` }"
-                ></div>
-                <div
-                  class="absolute top-0 h-2 w-2 bg-yellow-400 shadow-sm"
-                  :style="{ left: `calc(${card.bulletTargetPct}% - 4px)`, transform: 'rotate(45deg)' }"
-                ></div>
-                <div
-                  class="absolute -top-5 text-[10px] text-slate-600"
-                  :style="{ left: `calc(${card.bulletTargetPct}% - 8px)` }"
-                >
-                  {{ card.displayTarget }}
+          <!-- Structure KPI Cards with inline bullet charts -->
+          <div v-if="structureFilteredKPIs.length > 0" class="space-y-3">
+            <div
+              v-for="(kpi, index) in structureFilteredKPIs"
+              :key="kpi.id"
+              class="bg-slate-50 p-4 rounded-lg border border-slate-100 hover:shadow-md transition-shadow cursor-pointer"
+              @mouseenter="hoveredStructureIndex = index"
+              @mouseleave="hoveredStructureIndex = null"
+            >
+              <div class="flex items-start justify-between mb-2">
+                <div class="flex-1">
+                  <h3 class="text-xs font-semibold text-slate-700">{{ kpi.name }}</h3>
+                  <p class="text-[11px] text-slate-500">{{ kpi.unit }}</p>
                 </div>
+                <div :class="['w-2 h-2 rounded-full flex-shrink-0 mt-0.5', kpi.status === 'good' ? 'bg-green-500' : kpi.status === 'warning' ? 'bg-yellow-500' : 'bg-red-500']"></div>
               </div>
+              <div class="text-2xl font-bold text-slate-900 mb-3">{{ typeof kpi.value === 'number' ? kpi.value.toFixed(2) : kpi.value }}</div>
+              <template v-if="structureSummaryCards[index]">
+                <div class="text-[11px] text-slate-500">Target: {{ structureSummaryCards[index].displayTarget }}</div>
+                <div class="flex items-center gap-2 mt-1 mb-3">
+                  <span :class="['text-[10px] px-2 py-0.5 rounded-full border', structureSummaryCards[index].delta <= 0 ? 'bg-green-100 text-green-700 border-green-200' : 'bg-red-100 text-red-700 border-red-200']">
+                    {{ structureSummaryCards[index].delta > 0 ? '+' : '' }}{{ structureSummaryCards[index].displayDelta }}
+                  </span>
+                </div>
+                <div class="relative h-2 rounded-full bg-slate-200 overflow-visible">
+                  <div class="absolute left-0 top-0 h-full rounded-full" :style="{ width: `${structureSummaryCards[index].bulletValuePct}%`, backgroundColor: structureSummaryCards[index].color }"></div>
+                  <div class="absolute top-0 h-full w-0.5 bg-slate-500" :style="{ left: `${structureSummaryCards[index].bulletTargetPct}%` }"></div>
+                  <div class="absolute top-0 h-2 w-2 bg-yellow-400 shadow-sm" :style="{ left: `calc(${structureSummaryCards[index].bulletTargetPct}% - 4px)`, transform: 'rotate(45deg)' }"></div>
+                  <div class="absolute -top-5 text-[10px] text-slate-600" :style="{ left: `calc(${structureSummaryCards[index].bulletTargetPct}% - 8px)` }">{{ structureSummaryCards[index].displayTarget }}</div>
+                </div>
+              </template>
             </div>
+          </div>
+
+          <p v-else-if="!structureWeek || !structureScenario" class="text-slate-400 text-sm">Select a week and scenario to view data</p>
+        </div>
+
+        <!-- Data Widget -->
+        <div class="bg-white rounded-lg border border-slate-200 p-6 space-y-4">
+          <div>
+            <h2 class="text-lg font-bold" style="color: #ef4444;">Data</h2>
+            <p class="text-xs text-slate-500">Data environment KPIs</p>
+          </div>
+
+          <!-- Data Selectors -->
+          <div class="flex flex-wrap gap-3">
+            <div class="flex flex-col gap-1">
+              <label class="text-xs font-medium text-slate-700">Week</label>
+              <select v-model="dataWeek" class="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-sm">
+                <option value="">Select Week</option>
+                <option v-for="week in dataWeeks" :key="week" :value="week">{{ week }}</option>
+              </select>
+            </div>
+            <div class="flex flex-col gap-1">
+              <label class="text-xs font-medium text-slate-700">Scenario</label>
+              <select v-model="dataScenario" class="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-sm">
+                <option value="">Select Scenario</option>
+                <option v-for="scenario in dataScenarios" :key="scenario" :value="scenario">{{ scenario }}</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Data KPI Cards with inline bullet charts -->
+          <div v-if="dataFilteredKPIs.length > 0" class="space-y-3">
+            <div
+              v-for="(kpi, index) in dataFilteredKPIs"
+              :key="kpi.id"
+              class="bg-slate-50 p-4 rounded-lg border border-slate-100 hover:shadow-md transition-shadow cursor-pointer"
+              @mouseenter="hoveredDataIndex = index"
+              @mouseleave="hoveredDataIndex = null"
+            >
+              <div class="flex items-start justify-between mb-2">
+                <div class="flex-1">
+                  <h3 class="text-xs font-semibold text-slate-700">{{ kpi.name }}</h3>
+                  <p class="text-[11px] text-slate-500">{{ kpi.unit }}</p>
+                </div>
+                <div :class="['w-2 h-2 rounded-full flex-shrink-0 mt-0.5', kpi.status === 'good' ? 'bg-green-500' : kpi.status === 'warning' ? 'bg-yellow-500' : 'bg-red-500']"></div>
+              </div>
+              <div class="text-2xl font-bold text-slate-900 mb-3">{{ typeof kpi.value === 'number' ? kpi.value.toFixed(2) : kpi.value }}</div>
+              <template v-if="dataSummaryCards[index]">
+                <div class="text-[11px] text-slate-500">Target: {{ dataSummaryCards[index].displayTarget }}</div>
+                <div class="flex items-center gap-2 mt-1 mb-3">
+                  <span :class="['text-[10px] px-2 py-0.5 rounded-full border', dataSummaryCards[index].delta <= 0 ? 'bg-green-100 text-green-700 border-green-200' : 'bg-red-100 text-red-700 border-red-200']">
+                    {{ dataSummaryCards[index].delta > 0 ? '+' : '' }}{{ dataSummaryCards[index].displayDelta }}
+                  </span>
+                </div>
+                <div class="relative h-2 rounded-full bg-slate-200 overflow-visible">
+                  <div class="absolute left-0 top-0 h-full rounded-full" :style="{ width: `${dataSummaryCards[index].bulletValuePct}%`, backgroundColor: dataSummaryCards[index].color }"></div>
+                  <div class="absolute top-0 h-full w-0.5 bg-slate-500" :style="{ left: `${dataSummaryCards[index].bulletTargetPct}%` }"></div>
+                  <div class="absolute top-0 h-2 w-2 bg-yellow-400 shadow-sm" :style="{ left: `calc(${dataSummaryCards[index].bulletTargetPct}% - 4px)`, transform: 'rotate(45deg)' }"></div>
+                  <div class="absolute -top-5 text-[10px] text-slate-600" :style="{ left: `calc(${dataSummaryCards[index].bulletTargetPct}% - 8px)` }">{{ dataSummaryCards[index].displayTarget }}</div>
+                </div>
+              </template>
+            </div>
+          </div>
+
+          <p v-else-if="!dataWeek || !dataScenario" class="text-slate-400 text-sm">Select a week and scenario to view data</p>
+        </div>
+
+      </div>
+
+      <!-- Row 2: Vitals (full width) -->
+      <div v-if="!isLoading && !loadError" class="bg-white rounded-lg border border-slate-200 p-6 space-y-6">
+        <div>
+          <h2 class="text-lg font-bold" style="color: #8b5cf6;">Vitals</h2>
+          <p class="text-slate-500 text-sm">Building performance visualizations and real-time monitoring.</p>
+        </div>
+
+        <div class="grid lg:grid-cols-2 gap-6">
+          <div class="bg-slate-50 p-4 rounded-lg border border-slate-100 hover:shadow-lg transition-shadow">
+            <BreathingChart />
+          </div>
+          <div class="bg-slate-50 p-4 rounded-lg border border-slate-100 hover:shadow-lg transition-shadow">
+            <ProjectComplexity />
           </div>
         </div>
 
-        <!-- No Data State -->
-        <div v-else-if="selectedCategory !== 'vitals' && selectedCategory !== 'program'" class="bg-slate-100 rounded-lg p-12 text-center">
-          <p class="text-slate-500">Select a week and scenario to view KPI data</p>
-        </div>
-
-        <!-- Vitals Visualizations -->
-        <div v-if="selectedCategory === 'vitals'" class="space-y-6">
-          <div class="bg-white rounded-lg border border-slate-200 p-6">
-            <h2 class="text-2xl font-bold text-slate-900 mb-2">Vitals</h2>
-            <p class="text-slate-500">Building performance visualizations and real-time monitoring.</p>
-          </div>
-
-          <div class="grid lg:grid-cols-2 gap-6">
-            <div class="bg-white p-6 rounded-lg border border-slate-200 hover:shadow-lg transition-shadow">
-              <BreathingChart />
-            </div>
-            <div class="bg-white p-6 rounded-lg border border-slate-200 hover:shadow-lg transition-shadow">
-              <ProjectComplexity />
-            </div>
-          </div>
-
-          <div class="bg-white p-6 rounded-lg border border-slate-200 hover:shadow-lg transition-shadow">
-            <PorousVisualization />
-          </div>
+        <div class="bg-slate-50 p-4 rounded-lg border border-slate-100 hover:shadow-lg transition-shadow">
+          <PorousVisualization />
         </div>
       </div>
-    </main>
+
+    </div>
+  </main>
 </template>
 
 <script setup>
@@ -145,150 +187,229 @@ import BreathingChart from '@/components/BreathingChart.vue'
 import PorousVisualization from '@/components/PorousVisualization.vue'
 import ProjectComplexity from '@/components/ProjectComplexity.vue'
 import { fetchKPIsByCategory, getKPIsForSelection } from '@/services/googleSheetsService'
-const selectedCategory = ref('program')
-const selectedWeek = ref('')
-const selectedScenario = ref('')
+
+// --- Global state ---
 const isLoading = ref(false)
 const loadError = ref('')
+
+// --- Per-widget hover state ---
 const hoveredStructureIndex = ref(null)
-const isRestoringSelection = ref(false)
+const hoveredDataIndex = ref(null)
 
-const selectionKey = (category) => `kpi-selection-${category}`
-
-const loadStoredSelection = (category) => {
-  try {
-    const stored = localStorage.getItem(selectionKey(category))
-    return stored ? JSON.parse(stored) : null
-  } catch (error) {
-    return null
-  }
-}
-
-const storeSelection = (category, week, scenario) => {
-  try {
-    localStorage.setItem(selectionKey(category), JSON.stringify({ week, scenario }))
-  } catch (error) {
-    // Ignore storage errors
-  }
-}
-
-const categories = [
-  { id: 'program', label: 'Program', color: '#3b82f6' },
-  { id: 'structure', label: 'Structure', color: '#10b981' },
-  { id: 'data', label: 'Data', color: '#ef4444' },
-  { id: 'vitals', label: 'Vitals', color: '#8b5cf6' },
-]
-
+// --- Sheet data store ---
 const sheetDataByCategory = ref({
   program: null,
   structure: null,
   data: null,
-  vitals: null,
 })
 
+// --- Per-category sheet data ---
+const programSheetData = computed(() => sheetDataByCategory.value.program)
+const structureSheetData = computed(() => sheetDataByCategory.value.structure)
+const dataSheetData = computed(() => sheetDataByCategory.value.data)
 
-const currentSheetData = computed(() => sheetDataByCategory.value[selectedCategory.value])
+// --- Structure widget state ---
+const structureWeek = ref('')
+const structureScenario = ref('')
 
-const weeks = computed(() => {
-  const data = currentSheetData.value
-  if (!data || !Array.isArray(data.weeks)) {
-    return []
-  }
-  if (selectedCategory.value !== 'structure' && selectedCategory.value !== 'data') {
-    return data.weeks
-  }
+const structureWeeks = computed(() => {
+  const data = structureSheetData.value
+  if (!data || !Array.isArray(data.weeks)) return []
   return data.weeks.filter(week => !/target/i.test(String(week)))
 })
 
-const scenarios = computed(() => {
-  if (!selectedWeek.value || !currentSheetData.value) {
-    return []
-  }
-  const data = currentSheetData.value.data || []
-  const scenariosForWeek = data
-    .filter(row => row && row.week === selectedWeek.value)
+const structureScenarios = computed(() => {
+  if (!structureWeek.value || !structureSheetData.value) return []
+  const rows = structureSheetData.value.data || []
+  const scenariosForWeek = rows
+    .filter(row => row && row.week === structureWeek.value)
     .map(row => row?.scenario)
     .filter(v => v && v.trim())
-    .filter(v => {
-      if (selectedCategory.value !== 'structure' && selectedCategory.value !== 'data') {
-        return true
-      }
-      return !/target/i.test(v)
-    })
+    .filter(v => !/target/i.test(v))
   return [...new Set(scenariosForWeek)]
 })
 
-const filteredKPIs = computed(() => {
-  if (!selectedWeek.value || !selectedScenario.value || !currentSheetData.value) {
-    return []
-  }
-  const result = getKPIsForSelection(currentSheetData.value, selectedWeek.value, selectedScenario.value)
+const structureFilteredKPIs = computed(() => {
+  if (!structureWeek.value || !structureScenario.value || !structureSheetData.value) return []
+  const result = getKPIsForSelection(structureSheetData.value, structureWeek.value, structureScenario.value)
   return Array.isArray(result) ? result : []
 })
 
 const structureSummaryCards = computed(() => {
-  if (selectedCategory.value !== 'structure' && selectedCategory.value !== 'data') {
-    return []
-  }
-  const targets = currentSheetData.value?.targetsByScenario?.[selectedScenario.value] || []
-
-  const formatValue = (value) => {
-    return Number(value).toLocaleString(undefined, { maximumFractionDigits: 2 })
-  }
-
+  const targets = structureSheetData.value?.targetsByScenario?.[structureScenario.value] || []
+  const formatValue = (value) => Number(value).toLocaleString(undefined, { maximumFractionDigits: 2 })
   const parseNumber = (value) => {
-    if (typeof value === 'number') {
-      return value
-    }
+    if (typeof value === 'number') return value
     const sanitized = String(value || '').replace(/,/g, '')
     const match = sanitized.match(/-?\d*\.?\d+/)
-    if (!match) {
-      return 0
-    }
+    if (!match) return 0
     const parsed = Number(match[0])
     return Number.isNaN(parsed) ? 0 : parsed
   }
-
-  const barColor = selectedCategory.value === 'data' ? '#ef4444' : '#10b981'
-
-  return filteredKPIs.value.map((kpi, index) => {
+  return structureFilteredKPIs.value.map((kpi, index) => {
     const value = parseNumber(kpi.value)
     const target = parseNumber(targets[index])
     const max = Math.max(value, target) * 1.2 || 1
     const delta = value - target
     return {
-      id: `summary-${kpi.id}`,
-      title: kpi.name,
+      id: `structure-summary-${kpi.id}`,
       displayValue: formatValue(value),
       displayTarget: formatValue(target),
       displayDelta: formatValue(delta),
       delta,
       bulletValuePct: Math.min((value / max) * 100, 100),
       bulletTargetPct: Math.min((target / max) * 100, 100),
-      color: barColor,
+      color: '#10b981',
     }
   })
 })
 
+// --- Data widget state ---
+const dataWeek = ref('')
+const dataScenario = ref('')
 
+const dataWeeks = computed(() => {
+  const data = dataSheetData.value
+  if (!data || !Array.isArray(data.weeks)) return []
+  return data.weeks.filter(week => !/target/i.test(String(week)))
+})
+
+const dataScenarios = computed(() => {
+  if (!dataWeek.value || !dataSheetData.value) return []
+  const rows = dataSheetData.value.data || []
+  const scenariosForWeek = rows
+    .filter(row => row && row.week === dataWeek.value)
+    .map(row => row?.scenario)
+    .filter(v => v && v.trim())
+    .filter(v => !/target/i.test(v))
+  return [...new Set(scenariosForWeek)]
+})
+
+const dataFilteredKPIs = computed(() => {
+  if (!dataWeek.value || !dataScenario.value || !dataSheetData.value) return []
+  const result = getKPIsForSelection(dataSheetData.value, dataWeek.value, dataScenario.value)
+  return Array.isArray(result) ? result : []
+})
+
+const dataSummaryCards = computed(() => {
+  const targets = dataSheetData.value?.targetsByScenario?.[dataScenario.value] || []
+  const formatValue = (value) => Number(value).toLocaleString(undefined, { maximumFractionDigits: 2 })
+  const parseNumber = (value) => {
+    if (typeof value === 'number') return value
+    const sanitized = String(value || '').replace(/,/g, '')
+    const match = sanitized.match(/-?\d*\.?\d+/)
+    if (!match) return 0
+    const parsed = Number(match[0])
+    return Number.isNaN(parsed) ? 0 : parsed
+  }
+  return dataFilteredKPIs.value.map((kpi, index) => {
+    const value = parseNumber(kpi.value)
+    const target = parseNumber(targets[index])
+    const max = Math.max(value, target) * 1.2 || 1
+    const delta = value - target
+    return {
+      id: `data-summary-${kpi.id}`,
+      displayValue: formatValue(value),
+      displayTarget: formatValue(target),
+      displayDelta: formatValue(delta),
+      delta,
+      bulletValuePct: Math.min((value / max) * 100, 100),
+      bulletTargetPct: Math.min((target / max) * 100, 100),
+      color: '#ef4444',
+    }
+  })
+})
+
+// --- localStorage helpers ---
+const loadStoredSelection = (category) => {
+  try {
+    const stored = localStorage.getItem(`kpi-selection-${category}`)
+    return stored ? JSON.parse(stored) : null
+  } catch {
+    return null
+  }
+}
+
+const storeSelection = (category, week, scenario) => {
+  try {
+    localStorage.setItem(`kpi-selection-${category}`, JSON.stringify({ week, scenario }))
+  } catch {
+    // ignore
+  }
+}
+
+// --- Auto-select first week when weeks load (structure) ---
+watch(() => structureWeeks.value, (newWeeks) => {
+  if (!newWeeks || newWeeks.length === 0) return
+  const stored = loadStoredSelection('structure')
+  if (stored?.week && newWeeks.includes(stored.week)) {
+    structureWeek.value = stored.week
+    return
+  }
+  if (!structureWeek.value || !newWeeks.includes(structureWeek.value)) {
+    structureWeek.value = newWeeks[0]
+  }
+})
+
+watch(() => structureScenarios.value, (newScenarios) => {
+  if (!newScenarios || newScenarios.length === 0) return
+  const stored = loadStoredSelection('structure')
+  if (stored?.scenario && newScenarios.includes(stored.scenario)) {
+    structureScenario.value = stored.scenario
+    return
+  }
+  if (!structureScenario.value || !newScenarios.includes(structureScenario.value)) {
+    structureScenario.value = newScenarios[0]
+  }
+})
+
+watch(() => [structureWeek.value, structureScenario.value], ([week, scenario]) => {
+  if (week && scenario) storeSelection('structure', week, scenario)
+})
+
+// --- Auto-select first week when weeks load (data) ---
+watch(() => dataWeeks.value, (newWeeks) => {
+  if (!newWeeks || newWeeks.length === 0) return
+  const stored = loadStoredSelection('data')
+  if (stored?.week && newWeeks.includes(stored.week)) {
+    dataWeek.value = stored.week
+    return
+  }
+  if (!dataWeek.value || !newWeeks.includes(dataWeek.value)) {
+    dataWeek.value = newWeeks[0]
+  }
+})
+
+watch(() => dataScenarios.value, (newScenarios) => {
+  if (!newScenarios || newScenarios.length === 0) return
+  const stored = loadStoredSelection('data')
+  if (stored?.scenario && newScenarios.includes(stored.scenario)) {
+    dataScenario.value = stored.scenario
+    return
+  }
+  if (!dataScenario.value || !newScenarios.includes(dataScenario.value)) {
+    dataScenario.value = newScenarios[0]
+  }
+})
+
+watch(() => [dataWeek.value, dataScenario.value], ([week, scenario]) => {
+  if (week && scenario) storeSelection('data', week, scenario)
+})
+
+// --- Data loading ---
 async function loadData() {
   isLoading.value = true
   loadError.value = ''
   try {
-    console.log('Loading KPI data from Google Sheets...')
-    const [programData, structureData, dataData, vitalsData] = await Promise.all([
+    const [programData, structureData, dataData] = await Promise.all([
       fetchKPIsByCategory('program'),
       fetchKPIsByCategory('structure'),
       fetchKPIsByCategory('data'),
-      fetchKPIsByCategory('vitals'),
     ])
-    console.log('Loaded data:', { programData, structureData, dataData, vitalsData })
-    
     sheetDataByCategory.value = {
       program: programData,
       structure: structureData,
       data: dataData,
-      vitals: vitalsData,
     }
   } catch (error) {
     console.error('Failed to load KPI data:', error)
@@ -298,65 +419,17 @@ async function loadData() {
   }
 }
 
-watch(() => selectedCategory.value, (category) => {
-  const stored = loadStoredSelection(category)
-  if (stored) {
-    isRestoringSelection.value = true
-    selectedWeek.value = stored.week || ''
-    selectedScenario.value = stored.scenario || ''
-    isRestoringSelection.value = false
-  } else {
-    selectedWeek.value = ''
-    selectedScenario.value = ''
-  }
-})
-
-watch(() => weeks.value, (newWeeks) => {
-  if (!newWeeks || newWeeks.length === 0) {
-    return
-  }
-  const stored = loadStoredSelection(selectedCategory.value)
-  if (stored?.week && newWeeks.includes(stored.week)) {
-    selectedWeek.value = stored.week
-    return
-  }
-  if (!selectedWeek.value || !newWeeks.includes(selectedWeek.value)) {
-    selectedWeek.value = newWeeks[0]
-  }
-})
-
-watch(() => selectedWeek.value, () => {
-  // Keep scenario if still valid; scenarios watcher will correct if needed.
-})
-
-watch(() => scenarios.value, (newScenarios) => {
-  if (!newScenarios || newScenarios.length === 0) {
-    return
-  }
-  const stored = loadStoredSelection(selectedCategory.value)
-  if (stored?.scenario && newScenarios.includes(stored.scenario)) {
-    selectedScenario.value = stored.scenario
-    return
-  }
-  if (!selectedScenario.value || !newScenarios.includes(selectedScenario.value)) {
-    selectedScenario.value = newScenarios[0]
-  }
-})
-
-watch(() => [selectedCategory.value, selectedWeek.value, selectedScenario.value], ([category, week, scenario]) => {
-  if (category && week && scenario) {
-    storeSelection(category, week, scenario)
-  }
-})
-
 onMounted(() => {
   loadData()
-  const stored = loadStoredSelection(selectedCategory.value)
-  if (stored) {
-    isRestoringSelection.value = true
-    selectedWeek.value = stored.week || ''
-    selectedScenario.value = stored.scenario || ''
-    isRestoringSelection.value = false
+  const storedStructure = loadStoredSelection('structure')
+  if (storedStructure) {
+    structureWeek.value = storedStructure.week || ''
+    structureScenario.value = storedStructure.scenario || ''
+  }
+  const storedData = loadStoredSelection('data')
+  if (storedData) {
+    dataWeek.value = storedData.week || ''
+    dataScenario.value = storedData.scenario || ''
   }
 })
 </script>
