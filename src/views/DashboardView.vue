@@ -95,6 +95,7 @@ onMounted(async () => {
   await Promise.all([
     fetchMilestones(),
     userStore.loadStressScores(),
+    userStore.loadKpiHealth(),
   ])
 })
 

@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { teams as sampleTeams } from '@/data/sampleData'
+import { fetchKPIsByCategory } from '@/services/googleSheetsService'
 
 const STORAGE_KEY = 'bimsc_studio_data'
 
@@ -126,6 +127,79 @@ export const useUserStore = defineStore('user', () => {
 
   function setKpiHealth(health) {
     kpiHealth.value = { ...health }
+  }
+
+  async function loadKpiHealth() {
+    // Skip if already populated by KPIDashboardView's live selection
+    if (kpiHealth.value.total > 0) return
+    try {
+      const [programData, structureData, dataData] = await Promise.all([
+        fetchKPIsByCategory('program'),
+        fetchKPIsByCategory('structure'),
+        fetchKPIsByCategory('data'),
+      ])
+
+      const parse = (v) => {
+        if (typeof v === 'number') return v
+        const m = String(v || '').replace(/,/g, '').match(/-?\d*\.?\d+/)
+        return m ? Number(m[0]) : 0
+      }
+
+      const msPerWeek = 7 * 24 * 60 * 60 * 1000
+      const currentWeek = Math.max(1, Math.min(10,
+        Math.round((Date.now() - new Date(2026, 0, 12).getTime()) / msPerWeek) + 1
+      ))
+
+      const bestWeekRow = (sheetData) => {
+        if (!sheetData?.data?.length) return null
+        const weeks = [...new Set(sheetData.data.map(r => r.week))].sort((a, b) => Number(a) - Number(b))
+        const past = weeks.filter(w => Number(w) <= currentWeek)
+        const targetWeek = past.length ? past[past.length - 1] : weeks[0]
+        return sheetData.data.find(r => r.week === targetWeek) || null
+      }
+
+      let total = 0
+      let onTarget = 0
+
+      // Program: aggregate sum/avg vs targets
+      if (programData?.data?.length) {
+        const data = programData.data
+        const targets = programData.targets || []
+        const sum = (idx) => data.reduce((acc, r) => acc + parse((r.kpis || [])[idx]?.value), 0)
+        const avg = (idx) => {
+          const rows = data.filter(r => (r.kpis || [])[idx])
+          return rows.length ? rows.reduce((acc, r) => acc + parse(r.kpis[idx].value), 0) / rows.length : 0
+        }
+        ;[sum(0), avg(1), avg(2)].forEach((v, i) => {
+          total++
+          if (parse(targets[i]) === 0 || v <= parse(targets[i])) onTarget++
+        })
+      }
+
+      // Structure: use row closest to current week
+      const strRow = bestWeekRow(structureData)
+      if (strRow) {
+        const targets = (structureData.targetsByScenario || {})[strRow.scenario] || []
+        ;(strRow.kpis || []).forEach((kpi, i) => {
+          total++
+          if (parse(kpi.value) - parse(targets[i]) <= 0) onTarget++
+        })
+      }
+
+      // Data: same
+      const dataRow = bestWeekRow(dataData)
+      if (dataRow) {
+        const targets = (dataData.targetsByScenario || {})[dataRow.scenario] || []
+        ;(dataRow.kpis || []).forEach((kpi, i) => {
+          total++
+          if (parse(kpi.value) - parse(targets[i]) <= 0) onTarget++
+        })
+      }
+
+      kpiHealth.value = { total, onTarget, warnings: total - onTarget }
+    } catch (err) {
+      console.error('Failed to load KPI health:', err)
+    }
   }
   // Actions
   function login({ email, name, photoURL, googleId, verifiedEmail, givenName, familyName, locale } = {}) {
@@ -464,6 +538,7 @@ export const useUserStore = defineStore('user', () => {
     getMemberHealth,
     getTeamHealth,
     setKpiHealth,
+    loadKpiHealth,
 
     // Getters
     teamColor,
