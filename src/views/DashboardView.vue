@@ -121,13 +121,8 @@ const todayString = computed(() => {
   })
 })
 
-// ── KPI Health from sampleData kpiMetrics ──
-const kpiHealth = computed(() => {
-  const total = kpiMetrics.length
-  const onTarget = kpiMetrics.filter((k) => k.status === 'good').length
-  const warnings = total - onTarget
-  return { total, onTarget, warnings }
-})
+// ── KPI Health from live KPI dashboard data ──
+const kpiHealth = computed(() => userStore.kpiHealth)
 
 const timelineSummary = computed(() => {
   const totalWeeks = baseTimeline.length

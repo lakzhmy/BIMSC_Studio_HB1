@@ -120,6 +120,13 @@ export const useUserStore = defineStore('user', () => {
 
   // Stress Test Scores - best score per member (used for team health)
   const stressTestScores = ref(storedData?.stressTestScores || {})
+
+  // Live KPI Health - updated by KPIDashboardView when data loads
+  const kpiHealth = ref({ total: 0, onTarget: 0, warnings: 0 })
+
+  function setKpiHealth(health) {
+    kpiHealth.value = { ...health }
+  }
   // Actions
   function login({ email, name, photoURL, googleId, verifiedEmail, givenName, familyName, locale } = {}) {
     currentUser.value.googleId = googleId || ''
@@ -431,6 +438,7 @@ export const useUserStore = defineStore('user', () => {
     teamActions,
     memberHours,
     stressTestScores,
+    kpiHealth,
 
     // Actions
     login,
@@ -455,6 +463,7 @@ export const useUserStore = defineStore('user', () => {
     saveStressTestScore,
     getMemberHealth,
     getTeamHealth,
+    setKpiHealth,
 
     // Getters
     teamColor,

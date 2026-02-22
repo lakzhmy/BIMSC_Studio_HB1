@@ -199,6 +199,9 @@ import BreathingChart from '@/components/BreathingChart.vue'
 import PorousVisualization from '@/components/PorousVisualization.vue'
 import ProjectComplexity from '@/components/ProjectComplexity.vue'
 import { fetchKPIsByCategory, getKPIsForSelection } from '@/services/googleSheetsService'
+import { useUserStore } from '@/stores/userStore'
+
+const userStore = useUserStore()
 
 // --- Global state ---
 const isLoading = ref(false)
@@ -407,6 +410,38 @@ watch(() => dataScenarios.value, (newScenarios) => {
 watch(() => [dataWeek.value, dataScenario.value], ([week, scenario]) => {
   if (week && scenario) storeSelection('data', week, scenario)
 })
+
+// --- Live KPI health (pushed to dashboard store) ---
+const programKpiHealth = computed(() => {
+  const data = programSheetData.value?.data
+  const targets = programSheetData.value?.targets || []
+  if (!data?.length) return { total: 0, onTarget: 0 }
+  const parse = (v) => {
+    if (typeof v === 'number') return v
+    const m = String(v || '').replace(/,/g, '').match(/-?\d*\.?\d+/)
+    return m ? Number(m[0]) : 0
+  }
+  const sum = (idx) => data.reduce((acc, row) => acc + parse((row.kpis || [])[idx]?.value), 0)
+  const avg = (idx) => {
+    const rows = data.filter(r => (r.kpis || [])[idx])
+    return rows.length ? rows.reduce((acc, r) => acc + parse(r.kpis[idx].value), 0) / rows.length : 0
+  }
+  const values = [sum(0), avg(1), avg(2)]
+  const onTarget = values.filter((v, i) => parse(targets[i]) === 0 || v - parse(targets[i]) <= 0).length
+  return { total: 3, onTarget }
+})
+
+watch(
+  [programKpiHealth, structureSummaryCards, dataSummaryCards],
+  ([prog, strCards, dataCards]) => {
+    const strOnTarget = strCards.filter(c => c.delta <= 0).length
+    const dataOnTarget = dataCards.filter(c => c.delta <= 0).length
+    const total = prog.total + strCards.length + dataCards.length
+    const onTarget = prog.onTarget + strOnTarget + dataOnTarget
+    userStore.setKpiHealth({ total, onTarget, warnings: total - onTarget })
+  },
+  { immediate: true }
+)
 
 // --- Data loading ---
 async function loadData() {
