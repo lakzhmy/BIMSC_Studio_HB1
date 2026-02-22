@@ -41,7 +41,7 @@
             <h3 class="text-xs font-semibold text-slate-700">{{ kpi.name }}</h3>
             <p class="text-[11px] text-slate-500">{{ getProgramUnit(index) }}</p>
           </div>
-          <div :class="['w-2 h-2 rounded-full flex-shrink-0 mt-0.5', kpi.status === 'good' ? 'bg-green-500' : kpi.status === 'warning' ? 'bg-yellow-500' : 'bg-red-500']"></div>
+          <div :class="['w-2 h-2 rounded-full flex-shrink-0 mt-0.5', summaryCards[index] ? (summaryCards[index].delta <= 0 ? 'bg-green-500' : 'bg-red-500') : 'bg-slate-300']"></div>
         </div>
         <div class="text-2xl font-bold text-slate-900 mb-3">{{ typeof kpi.value === 'number' ? kpi.value.toFixed(2) : kpi.value }}</div>
         <template v-if="summaryCards[index]">
