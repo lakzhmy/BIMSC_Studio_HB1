@@ -74,6 +74,10 @@ const props = defineProps({
     type: Object,
     required: true,
   },
+  currentWeek: {
+    type: Number,
+    default: null,
+  },
 })
 
 const selectedWeek = ref('')
@@ -297,13 +301,17 @@ const clearHoveredSummaryKey = () => {
   hoveredSummaryKey.value = ''
 }
 
-// Auto-set first week when data loads
+// Auto-set current week when data loads
 watch(() => weeks.value, (newWeeks) => {
-  if (!newWeeks || newWeeks.length === 0) {
-    return
-  }
+  if (!newWeeks || newWeeks.length === 0) return
   if (!selectedWeek.value || !newWeeks.includes(Number(selectedWeek.value))) {
-    selectedWeek.value = newWeeks[0]
+    if (props.currentWeek) {
+      const sorted = [...newWeeks].sort((a, b) => a - b)
+      const past = sorted.filter(w => w <= props.currentWeek)
+      selectedWeek.value = past.length ? past[past.length - 1] : sorted[0]
+    } else {
+      selectedWeek.value = newWeeks[0]
+    }
   }
 })
 

@@ -25,7 +25,7 @@
             <h2 class="text-lg font-bold text-slate-900" style="color: #3b82f6;">Program</h2>
             <p class="text-xs text-slate-500">Space usage and program KPIs</p>
           </div>
-          <ProgramKPISelector v-if="programSheetData" :sheetData="programSheetData" />
+          <ProgramKPISelector v-if="programSheetData" :sheetData="programSheetData" :currentWeek="currentWeekNumber" />
           <p v-else class="text-slate-400 text-sm">No program data available</p>
         </div>
 
@@ -203,6 +203,21 @@ import { useUserStore } from '@/stores/userStore'
 
 const userStore = useUserStore()
 
+// --- Current calendar week (Jan 12 2026 = Week 1, +7 days per week) ---
+const currentWeekNumber = computed(() => {
+  const msPerWeek = 7 * 24 * 60 * 60 * 1000
+  const week1Start = new Date(2026, 0, 12).getTime()
+  const week = Math.round((Date.now() - week1Start) / msPerWeek) + 1
+  return Math.max(1, Math.min(10, week))
+})
+
+// Pick the highest available week <= current; fall back to first week
+const closestWeek = (weeks) => {
+  const sorted = [...weeks].sort((a, b) => Number(a) - Number(b))
+  const past = sorted.filter(w => Number(w) <= currentWeekNumber.value)
+  return past.length ? past[past.length - 1] : sorted[0]
+}
+
 // --- Global state ---
 const isLoading = ref(false)
 const loadError = ref('')
@@ -353,7 +368,7 @@ const storeSelection = (category, week, scenario) => {
   }
 }
 
-// --- Auto-select first week when weeks load (structure) ---
+// --- Auto-select current week when weeks load (structure) ---
 watch(() => structureWeeks.value, (newWeeks) => {
   if (!newWeeks || newWeeks.length === 0) return
   const stored = loadStoredSelection('structure')
@@ -362,7 +377,7 @@ watch(() => structureWeeks.value, (newWeeks) => {
     return
   }
   if (!structureWeek.value || !newWeeks.includes(structureWeek.value)) {
-    structureWeek.value = newWeeks[0]
+    structureWeek.value = closestWeek(newWeeks)
   }
 })
 
@@ -382,7 +397,7 @@ watch(() => [structureWeek.value, structureScenario.value], ([week, scenario]) =
   if (week && scenario) storeSelection('structure', week, scenario)
 })
 
-// --- Auto-select first week when weeks load (data) ---
+// --- Auto-select current week when weeks load (data) ---
 watch(() => dataWeeks.value, (newWeeks) => {
   if (!newWeeks || newWeeks.length === 0) return
   const stored = loadStoredSelection('data')
@@ -391,7 +406,7 @@ watch(() => dataWeeks.value, (newWeeks) => {
     return
   }
   if (!dataWeek.value || !newWeeks.includes(dataWeek.value)) {
-    dataWeek.value = newWeeks[0]
+    dataWeek.value = closestWeek(newWeeks)
   }
 })
 
