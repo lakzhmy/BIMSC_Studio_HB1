@@ -33,6 +33,12 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
+      path: '/kpi-map',
+      name: 'kpi-map',
+      component: () => import('@/views/KPIMapView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
       path: '/timeline',
       name: 'timeline',
       component: () => import('@/views/TimelineView.vue'),
