@@ -17,12 +17,13 @@
           <option v-for="val in availableColumnCValues" :key="val" :value="val">{{ val }}</option>
         </select>
       </div>
+    </div>
 
-      <div v-if="spaceName" class="flex flex-col gap-1">
-        <label class="text-xs font-medium text-slate-700">Space Name</label>
-        <div class="px-3 py-1.5 bg-slate-100 border border-slate-200 rounded-lg text-sm">
-          {{ spaceName }}
-        </div>
+    <!-- Space Name (own row for consistent height alignment) -->
+    <div class="flex flex-col gap-1">
+      <label class="text-xs font-medium text-slate-700">Space Name</label>
+      <div class="px-3 py-1.5 bg-slate-100 border border-slate-200 rounded-lg text-sm">
+        {{ spaceName || '\u00A0' }}
       </div>
     </div>
 

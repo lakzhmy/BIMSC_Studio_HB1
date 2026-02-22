@@ -30,7 +30,7 @@
         </div>
 
         <!-- Structure Widget -->
-        <div class="bg-white rounded-lg border border-slate-200 p-6 flex flex-col justify-end space-y-4">
+        <div class="bg-white rounded-lg border border-slate-200 p-6 space-y-4">
           <div>
             <h2 class="text-lg font-bold" style="color: #10b981;">Structure</h2>
             <p class="text-xs text-slate-500">Structural performance KPIs</p>
@@ -52,6 +52,12 @@
                 <option v-for="scenario in structureScenarios" :key="scenario" :value="scenario">{{ scenario }}</option>
               </select>
             </div>
+          </div>
+
+          <!-- Spacer matching Program's Space Name row -->
+          <div class="flex flex-col gap-1 invisible" aria-hidden="true">
+            <label class="text-xs font-medium text-slate-700">Space Name</label>
+            <div class="px-3 py-1.5 bg-slate-100 border border-slate-200 rounded-lg text-sm">&nbsp;</div>
           </div>
 
           <!-- Structure KPI Cards with inline bullet charts -->
@@ -92,7 +98,7 @@
         </div>
 
         <!-- Data Widget -->
-        <div class="bg-white rounded-lg border border-slate-200 p-6 flex flex-col justify-end space-y-4">
+        <div class="bg-white rounded-lg border border-slate-200 p-6 space-y-4">
           <div>
             <h2 class="text-lg font-bold" style="color: #ef4444;">Data</h2>
             <p class="text-xs text-slate-500">Data environment KPIs</p>
@@ -114,6 +120,12 @@
                 <option v-for="scenario in dataScenarios" :key="scenario" :value="scenario">{{ scenario }}</option>
               </select>
             </div>
+          </div>
+
+          <!-- Spacer matching Program's Space Name row -->
+          <div class="flex flex-col gap-1 invisible" aria-hidden="true">
+            <label class="text-xs font-medium text-slate-700">Space Name</label>
+            <div class="px-3 py-1.5 bg-slate-100 border border-slate-200 rounded-lg text-sm">&nbsp;</div>
           </div>
 
           <!-- Data KPI Cards with inline bullet charts -->
