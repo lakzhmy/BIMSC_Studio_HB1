@@ -30,7 +30,7 @@
         </div>
 
         <!-- Structure Widget -->
-        <div class="bg-white rounded-lg border border-slate-200 p-6 space-y-4">
+        <div class="bg-white rounded-lg border border-slate-200 p-6 flex flex-col justify-end space-y-4">
           <div>
             <h2 class="text-lg font-bold" style="color: #10b981;">Structure</h2>
             <p class="text-xs text-slate-500">Structural performance KPIs</p>
@@ -92,7 +92,7 @@
         </div>
 
         <!-- Data Widget -->
-        <div class="bg-white rounded-lg border border-slate-200 p-6 space-y-4">
+        <div class="bg-white rounded-lg border border-slate-200 p-6 flex flex-col justify-end space-y-4">
           <div>
             <h2 class="text-lg font-bold" style="color: #ef4444;">Data</h2>
             <p class="text-xs text-slate-500">Data environment KPIs</p>
