@@ -213,6 +213,139 @@ app.post('/api/stress-test/score', async (req, res) => {
   }
 })
 
+// --- KPI Map ---
+
+// GET all nodes and edges
+app.get('/api/kpi-map', async (req, res) => {
+  try {
+    const [nodesResult, edgesResult] = await Promise.all([
+      query('SELECT * FROM kpi_nodes ORDER BY team, cy'),
+      query('SELECT * FROM kpi_edges ORDER BY created_at'),
+    ])
+    res.json({ nodes: nodesResult.rows, edges: edgesResult.rows })
+  } catch (err) {
+    console.error('[db] kpi-map fetch failed:', err.message)
+    res.status(500).json({ error: 'Failed to fetch KPI map' })
+  }
+})
+
+// PUT update a node
+app.put('/api/kpi-map/nodes/:id', async (req, res) => {
+  const { id } = req.params
+  const { label, sublabel, description, team } = req.body
+  try {
+    const result = await query(
+      `UPDATE kpi_nodes SET
+        label       = COALESCE($1, label),
+        sublabel    = COALESCE($2, sublabel),
+        description = COALESCE($3, description),
+        team        = COALESCE($4, team),
+        updated_at  = NOW()
+       WHERE id = $5 RETURNING *`,
+      [label, sublabel, description, team, id]
+    )
+    if (!result.rows.length) return res.status(404).json({ error: 'Node not found' })
+    res.json(result.rows[0])
+  } catch (err) {
+    console.error('[db] kpi node update failed:', err.message)
+    res.status(500).json({ error: 'Failed to update node' })
+  }
+})
+
+// POST create a new node (id + cx + cy auto-calculated)
+app.post('/api/kpi-map/nodes', async (req, res) => {
+  const { team, label, sublabel = '', description = '' } = req.body
+  if (!team || !label) return res.status(400).json({ error: 'team and label are required' })
+
+  try {
+    const prefix = { program: 'P', structure: 'S', data: 'D' }[team]
+    const cx     = { program: 450, structure: 730, data: 170 }[team]
+    const { rows: existing } = await query('SELECT id FROM kpi_nodes WHERE team = $1', [team])
+    const newId = `${prefix}${existing.length + 1}`
+    const cy    = existing.length * 128 + 140
+
+    const result = await query(
+      `INSERT INTO kpi_nodes (id, team, label, sublabel, description, cx, cy)
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+      [newId, team, label, sublabel, description, cx, cy]
+    )
+    res.status(201).json(result.rows[0])
+  } catch (err) {
+    console.error('[db] kpi node create failed:', err.message)
+    res.status(500).json({ error: 'Failed to create node' })
+  }
+})
+
+// DELETE a node (edges cascade via FK)
+app.delete('/api/kpi-map/nodes/:id', async (req, res) => {
+  const { id } = req.params
+  try {
+    const result = await query('DELETE FROM kpi_nodes WHERE id = $1 RETURNING id', [id])
+    if (!result.rows.length) return res.status(404).json({ error: 'Node not found' })
+    res.json({ ok: true, deleted: id })
+  } catch (err) {
+    console.error('[db] kpi node delete failed:', err.message)
+    res.status(500).json({ error: 'Failed to delete node' })
+  }
+})
+
+// POST create a new edge
+app.post('/api/kpi-map/edges', async (req, res) => {
+  const { source_id, target_id, strength = 'medium' } = req.body
+  if (!source_id || !target_id) return res.status(400).json({ error: 'source_id and target_id are required' })
+
+  // Derive type from team prefix
+  const srcTeam = source_id[0]
+  const tgtTeam = target_id[0]
+  const type = srcTeam === tgtTeam ? 'within' : 'cross'
+  const id = `e-${source_id}-${target_id}`
+
+  try {
+    const result = await query(
+      `INSERT INTO kpi_edges (id, source_id, target_id, strength, type)
+       VALUES ($1, $2, $3, $4, $5)
+       ON CONFLICT (id) DO UPDATE SET strength = EXCLUDED.strength
+       RETURNING *`,
+      [id, source_id, target_id, strength, type]
+    )
+    res.status(201).json(result.rows[0])
+  } catch (err) {
+    console.error('[db] kpi edge create failed:', err.message)
+    res.status(500).json({ error: 'Failed to create edge' })
+  }
+})
+
+// PUT update edge strength
+app.put('/api/kpi-map/edges/:id', async (req, res) => {
+  const { id } = req.params
+  const { strength } = req.body
+  if (!strength) return res.status(400).json({ error: 'strength is required' })
+  try {
+    const result = await query(
+      'UPDATE kpi_edges SET strength = $1 WHERE id = $2 RETURNING *',
+      [strength, id]
+    )
+    if (!result.rows.length) return res.status(404).json({ error: 'Edge not found' })
+    res.json(result.rows[0])
+  } catch (err) {
+    console.error('[db] kpi edge update failed:', err.message)
+    res.status(500).json({ error: 'Failed to update edge' })
+  }
+})
+
+// DELETE an edge
+app.delete('/api/kpi-map/edges/:id', async (req, res) => {
+  const { id } = req.params
+  try {
+    const result = await query('DELETE FROM kpi_edges WHERE id = $1 RETURNING id', [id])
+    if (!result.rows.length) return res.status(404).json({ error: 'Edge not found' })
+    res.json({ ok: true, deleted: id })
+  } catch (err) {
+    console.error('[db] kpi edge delete failed:', err.message)
+    res.status(500).json({ error: 'Failed to delete edge' })
+  }
+})
+
 if (!hasSpeckleToken) {
   console.warn('Warning: SPECKLE_TOKEN is not set. Private streams will fail to load.')
 } else {
