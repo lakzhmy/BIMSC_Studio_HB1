@@ -17,7 +17,7 @@
       </div>
 
       <!-- Row 1: Program | Structure | Data -->
-      <div v-else class="grid lg:grid-cols-3 gap-6 items-start">
+      <div v-else class="grid lg:grid-cols-3 gap-6 items-stretch">
 
         <!-- Program Widget -->
         <div class="bg-white rounded-lg border border-slate-200 p-6 space-y-4">
