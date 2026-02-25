@@ -14,6 +14,9 @@ const SHEET_GIDS: Record<'data' | 'structure' | 'program', string> = {
   program: '631520491',
 };
 
+/** GID for the raw STR_PAR_* parameters sheet */
+const STRUCTURE_PARAMS_GID = '227623084';
+
 interface SheetData {
   values: string[][];
 }
@@ -99,6 +102,24 @@ async function fetchSheet(sheetCategory: 'data' | 'structure' | 'program'): Prom
     return parseCsv(csvText);
   } catch (error) {
     console.error(`Error fetching ${sheetCategory} sheet:`, error);
+    return [];
+  }
+}
+
+/**
+ * Fetch a sheet by arbitrary GID
+ */
+async function fetchSheetByGid(gid: string): Promise<string[][]> {
+  try {
+    const url = `${PUBLISHED_BASE_URL}/${PUBLISHED_SHEET_ID}/pub?gid=${gid}&single=true&output=csv`;
+    const response = await fetch(url, { cache: 'no-store' });
+    if (!response.ok) {
+      throw new Error(`Failed to fetch sheet (gid=${gid}): ${response.statusText}`);
+    }
+    const csvText = await response.text();
+    return parseCsv(csvText);
+  } catch (error) {
+    console.error(`Error fetching sheet gid=${gid}:`, error);
     return [];
   }
 }
@@ -283,4 +304,128 @@ export async function fetchKPIsByCategory(category: 'data' | 'structure' | 'prog
 export function getKPIsForSelection(sheetData: ParsedSheetData, week: string, scenario: string): KPI[] {
   const row = sheetData.data.find(r => r.week === week && r.scenario === scenario);
   return row?.kpis || [];
+}
+
+// ---------------------------------------------------------------------------
+// Parameter extraction helpers  (used by the formula engine)
+// ---------------------------------------------------------------------------
+
+import {
+  PARAMETERS,
+  type ParamValues,
+  toParamValues,
+} from './kpiFormulas';
+
+/**
+ * Extract raw parameter values from a ParsedSheetData row.
+ *
+ * The sheet column headers (kpiNames) are matched against parameter full names
+ * (e.g. `PRG_PAR_Area`) or labels (e.g. `Area`).  The returned ParamValues
+ * object is keyed by the short variable alias (e.g. `Ar`).
+ */
+export function extractParamValues(
+  kpiNames: string[],
+  kpis: KPI[],
+): ParamValues {
+  const raw: Record<string, number | string> = {};
+
+  for (let i = 0; i < kpiNames.length; i++) {
+    const colName = kpiNames[i]?.trim();
+    const kpi = kpis[i];
+    if (!colName || !kpi) continue;
+
+    // Try matching by full parameter name first
+    const byName = PARAMETERS.find(p => p.name === colName);
+    if (byName) {
+      raw[byName.name] = kpi.value;
+      continue;
+    }
+
+    // Fallback: match by label
+    const byLabel = PARAMETERS.find(
+      p => p.label.toLowerCase() === colName.toLowerCase(),
+    );
+    if (byLabel) {
+      raw[byLabel.name] = kpi.value;
+    }
+  }
+
+  return toParamValues(raw);
+}
+
+/**
+ * Extract parameter values for every data row in a ParsedSheetData result.
+ * Returns an array of `{ week, scenario, params }` for downstream computation.
+ */
+export function extractAllParamRows(
+  sheetData: ParsedSheetData,
+): Array<{ week: string; scenario: string; spaceName?: string; params: ParamValues }> {
+  return sheetData.data.map(row => ({
+    week: row.week,
+    scenario: row.scenario,
+    spaceName: row.spaceName,
+    params: extractParamValues(sheetData.kpiNames, row.kpis),
+  }));
+}
+
+// ---------------------------------------------------------------------------
+// Structure raw-parameter sheet  (GID 227623084)
+// ---------------------------------------------------------------------------
+
+export interface StructureParamRow {
+  week: string;
+  scenario: string;
+  params: ParamValues;
+}
+
+/**
+ * Fetch the raw STR_PAR_* parameters sheet and return typed rows.
+ * Sheet layout: Week | Scenario | STR_PAR_HeatReduction | ... | STR_PAR_NoiseInterior
+ */
+export async function fetchStructureParams(): Promise<{
+  weeks: string[];
+  scenarios: string[];
+  rows: StructureParamRow[];
+}> {
+  const csvRows = await fetchSheetByGid(STRUCTURE_PARAMS_GID);
+  if (csvRows.length < 2) return { weeks: [], scenarios: [], rows: [] };
+
+  const headerRow = csvRows[0];
+  // Column names from C onward are the STR_PAR_* parameter names
+  const paramNames = headerRow.slice(2).map(h => h?.trim() || '');
+
+  const weeks = new Set<string>();
+  const scenarios = new Set<string>();
+  const rows: StructureParamRow[] = [];
+
+  for (let i = 1; i < csvRows.length; i++) {
+    const row = csvRows[i];
+    if (!row || row.length < 3) continue;
+
+    const week = row[0]?.trim() || '';
+    const scenario = row[1]?.trim() || '';
+    if (!week || !scenario) continue;
+
+    weeks.add(week);
+    scenarios.add(scenario);
+
+    const raw: Record<string, number | string> = {};
+    for (let j = 0; j < paramNames.length; j++) {
+      const name = paramNames[j];
+      const val = row[2 + j]?.trim() || '';
+      if (name) raw[name] = val;
+    }
+
+    rows.push({
+      week,
+      scenario,
+      params: toParamValues(raw),
+    });
+  }
+
+  return {
+    weeks: Array.from(weeks),
+    scenarios: Array.from(scenarios),
+    rows,
+  };
 }

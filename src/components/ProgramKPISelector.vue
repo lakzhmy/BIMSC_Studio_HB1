@@ -68,6 +68,8 @@
 
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
+import { KPI_BY_CATEGORY, computeKPI, computeAggregateKPIs } from '@/services/kpiFormulas'
+import { extractParamValues } from '@/services/googleSheetsService'
 
 const props = defineProps({
   sheetData: {
@@ -133,7 +135,22 @@ const kpiCards = computed(() => {
   }
   const data = props.sheetData.data || []
   const row = data.find(r => r && r.scenario === selectedColumnC.value)
-  return Array.isArray(row?.kpis) ? row.kpis : []
+  if (!row || !Array.isArray(row.kpis)) return []
+
+  // Extract raw PRG_PAR_* parameter values from the row
+  const kpiNames = props.sheetData.kpiNames || []
+  const params = extractParamValues(kpiNames, row.kpis)
+
+  // Compute the three program KPIs from the formulas
+  const defs = KPI_BY_CATEGORY['program']
+  return defs.map(def => ({
+    id: def.id,
+    name: def.name,
+    value: Math.round(computeKPI(def, params) * 100) / 100,
+    unit: def.unit,
+    target: def.target,
+    status: 'good',
+  }))
 })
 
 
@@ -203,13 +220,35 @@ const formatValue = (value) => {
 }
 
 const summaryData = computed(() => {
-  const epaValue = sumByIndex(summaryIndexes.epa)
-  const ppiValue = averageByIndex(summaryIndexes.ppi)
-  const rcirValue = averageByIndex(summaryIndexes.rcir)
+  if (!props.sheetData?.data) {
+    return { epa: { value: 0, target: 0, delta: 0, bulletValuePct: 0, bulletTargetPct: 0 }, ppi: { value: 0, target: 0, delta: 0, bulletValuePct: 0, bulletTargetPct: 0 }, rcir: { value: 0, target: 0, delta: 0, bulletValuePct: 0, bulletTargetPct: 0 } }
+  }
 
-  const epaTarget = getSummaryTarget('epa') || 1000000
-  const ppiTarget = getSummaryTarget('ppi')
-  const rcirTarget = getSummaryTarget('rcir')
+  const data = props.sheetData.data || []
+  const kpiNames = props.sheetData.kpiNames || []
+
+  // Extract params for all rows and compute aggregate KPIs
+  const allParams = data.map(row => {
+    return extractParamValues(kpiNames, row.kpis || [])
+  })
+
+  const defs = KPI_BY_CATEGORY['program']
+  const epaDef = defs.find(d => d.id === 'effective-programmatic-area')
+  const ppiDef = defs.find(d => d.id === 'programmatic-proximity-index')
+  const rcirDef = defs.find(d => d.id === 'resource-consumption-intensity-ratio')
+
+  // EPA: sum across all rows
+  const epaValue = allParams.reduce((acc, p) => acc + (epaDef ? computeKPI(epaDef, p) : 0), 0)
+  // PPI: use aggregate (Σ(1/Da) / Σ(1/Di))
+  const ppiValue = ppiDef?.computeAggregate ? ppiDef.computeAggregate(allParams) : 0
+  // RCIR: average across all rows
+  const rcirValue = allParams.length > 0
+    ? allParams.reduce((acc, p) => acc + (rcirDef ? computeKPI(rcirDef, p) : 0), 0) / allParams.length
+    : 0
+
+  const epaTarget = epaDef?.target ?? 1000000
+  const ppiTarget = ppiDef?.target ?? 0.7
+  const rcirTarget = rcirDef?.target ?? 0.6
 
   const bulletConfig = (value, target) => {
     const max = Math.max(value, target) * 1.2 || 1
@@ -227,12 +266,12 @@ const summaryData = computed(() => {
       ...bulletConfig(epaValue, epaTarget),
     },
     ppi: {
-      value: ppiValue,
+      value: Math.round(ppiValue * 100) / 100,
       target: ppiTarget,
       ...bulletConfig(ppiValue, ppiTarget),
     },
     rcir: {
-      value: rcirValue,
+      value: Math.round(rcirValue * 100) / 100,
       target: rcirTarget,
       ...bulletConfig(rcirValue, rcirTarget),
     },

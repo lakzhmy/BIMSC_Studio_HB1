@@ -198,7 +198,8 @@ import ProgramKPISelector from '@/components/ProgramKPISelector.vue'
 import BreathingChart from '@/components/BreathingChart.vue'
 import PorousVisualization from '@/components/PorousVisualization.vue'
 import ProjectComplexity from '@/components/ProjectComplexity.vue'
-import { fetchKPIsByCategory, getKPIsForSelection } from '@/services/googleSheetsService'
+import { fetchKPIsByCategory, getKPIsForSelection, fetchStructureParams } from '@/services/googleSheetsService'
+import { KPI_BY_CATEGORY, computeKPI } from '@/services/kpiFormulas'
 import { useUserStore } from '@/stores/userStore'
 
 const userStore = useUserStore()
@@ -233,6 +234,9 @@ const sheetDataByCategory = ref({
   data: null,
 })
 
+// --- Structure raw params store ---
+const structureParamsData = ref({ weeks: [], scenarios: [], rows: [] })
+
 // --- Per-category sheet data ---
 const programSheetData = computed(() => sheetDataByCategory.value.program)
 const structureSheetData = computed(() => sheetDataByCategory.value.structure)
@@ -243,14 +247,14 @@ const structureWeek = ref('')
 const structureScenario = ref('')
 
 const structureWeeks = computed(() => {
-  const data = structureSheetData.value
+  const data = structureParamsData.value
   if (!data || !Array.isArray(data.weeks)) return []
   return data.weeks.filter(week => !/target/i.test(String(week)))
 })
 
 const structureScenarios = computed(() => {
-  if (!structureWeek.value || !structureSheetData.value) return []
-  const rows = structureSheetData.value.data || []
+  if (!structureWeek.value || !structureParamsData.value) return []
+  const rows = structureParamsData.value.rows || []
   const scenariosForWeek = rows
     .filter(row => row && row.week === structureWeek.value)
     .map(row => row?.scenario)
@@ -259,10 +263,22 @@ const structureScenarios = computed(() => {
   return [...new Set(scenariosForWeek)]
 })
 
+// Compute structure KPIs from raw params using the formula engine
 const structureFilteredKPIs = computed(() => {
-  if (!structureWeek.value || !structureScenario.value || !structureSheetData.value) return []
-  const result = getKPIsForSelection(structureSheetData.value, structureWeek.value, structureScenario.value)
-  return Array.isArray(result) ? result : []
+  if (!structureWeek.value || !structureScenario.value) return []
+  const rows = structureParamsData.value.rows || []
+  const row = rows.find(r => r.week === structureWeek.value && r.scenario === structureScenario.value)
+  if (!row) return []
+
+  const defs = KPI_BY_CATEGORY['structure']
+  return defs.map(def => ({
+    id: def.id,
+    name: def.name,
+    value: Math.round(computeKPI(def, row.params) * 100) / 100,
+    unit: def.unit,
+    target: def.target,
+    status: 'good',
+  }))
 })
 
 const structureSummaryCards = computed(() => {
@@ -278,18 +294,18 @@ const structureSummaryCards = computed(() => {
   }
   return structureFilteredKPIs.value.map((kpi, index) => {
     const value = parseNumber(kpi.value)
-    const target = parseNumber(targets[index])
-    const max = Math.max(value, target) * 1.2 || 1
+    const target = kpi.target ?? 0
     const delta = value - target
+    const max = Math.max(value, target) * 1.2 || 1
     return {
       id: `structure-summary-${kpi.id}`,
       displayValue: formatValue(value),
       displayTarget: formatValue(target),
-      displayDelta: formatValue(delta),
+      displayDelta: formatValue(Math.abs(delta)),
       delta,
       bulletValuePct: Math.min((value / max) * 100, 100),
       bulletTargetPct: Math.min((target / max) * 100, 100),
-      color: '#10b981',
+      color: delta >= 0 ? '#10b981' : '#ef4444',
     }
   })
 })
@@ -463,16 +479,18 @@ async function loadData() {
   isLoading.value = true
   loadError.value = ''
   try {
-    const [programData, structureData, dataData] = await Promise.all([
+    const [programData, structureData, dataData, strParamsResult] = await Promise.all([
       fetchKPIsByCategory('program'),
       fetchKPIsByCategory('structure'),
       fetchKPIsByCategory('data'),
+      fetchStructureParams(),
     ])
     sheetDataByCategory.value = {
       program: programData,
       structure: structureData,
       data: dataData,
     }
+    structureParamsData.value = strParamsResult
   } catch (error) {
     console.error('Failed to load KPI data:', error)
     loadError.value = `Error: ${error instanceof Error ? error.message : String(error)}`

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import {
   LineChart,
   Line,
@@ -14,7 +14,18 @@ import {
 import { Calendar, Download, RefreshCw, Filter } from 'lucide-react';
 import { KPICard } from './components/KPICard';
 import { currentKPIs, kpiHistory, teams } from '../../data/sampleData';
-import { fetchKPIsByCategory } from '../../services/googleSheetsService';
+import {
+  fetchKPIsByCategory,
+  extractAllParamRows,
+} from '../../services/googleSheetsService';
+import {
+  KPI_BY_CATEGORY,
+  computeKPI,
+  computeAggregateKPIs,
+  type ParamValues,
+  type ComputedKPI,
+  type KPICategory as FormulaCategory,
+} from '../../services/kpiFormulas';
 
 type TimeRange = '1w' | '1m' | '3m' | 'all';
 type KPIMetric = 'embodied_carbon' | 'floor_area' | 'energy_use' | 'facade_ratio' | 'structural_efficiency' | 'daylight_factor';
@@ -55,6 +66,17 @@ export function KPIDashboard() {
   const [programSpaceIndex, setProgramSpaceIndex] = useState('');
   const [programLoading, setProgramLoading] = useState(false);
   const [programError, setProgramError] = useState('');
+
+  // ── Formula-engine state (structure & environment tabs) ──────────────────
+  const [structureParams, setStructureParams] = useState<
+    Array<{ week: string; scenario: string; params: ParamValues }>
+  >([]);
+  const [dataParams, setDataParams] = useState<
+    Array<{ week: string; scenario: string; params: ParamValues }>
+  >([]);
+  const [formulaLoading, setFormulaLoading] = useState(false);
+  const [formulaError, setFormulaError] = useState('');
+  const [selectedScenario, setSelectedScenario] = useState('');
 
   // Categorize KPIs
   const categoryMetrics: Record<KPICategory, KPIMetric[]> = {
@@ -131,31 +153,47 @@ export function KPIDashboard() {
     return kpiHistory.slice(-6).map(d => d[metric] as number);
   };
 
+  // ── Load all three sheets on mount ────────────────────────────────────
   useEffect(() => {
     let isMounted = true;
-    const loadProgramData = async () => {
+
+    const loadAll = async () => {
       setProgramLoading(true);
+      setFormulaLoading(true);
       setProgramError('');
+      setFormulaError('');
+
       try {
-        const data = await fetchKPIsByCategory('program');
-        if (isMounted) {
-          setProgramSheetData(data as ProgramSheetData);
-        }
+        const [programData, structureData, envData] = await Promise.all([
+          fetchKPIsByCategory('program'),
+          fetchKPIsByCategory('structure'),
+          fetchKPIsByCategory('data'),
+        ]);
+
+        if (!isMounted) return;
+
+        // Program sheet (existing behaviour)
+        setProgramSheetData(programData as ProgramSheetData);
+
+        // Structure & environment: extract param rows for formula engine
+        setStructureParams(extractAllParamRows(structureData));
+        setDataParams(extractAllParamRows(envData));
       } catch (error) {
         if (isMounted) {
-          setProgramError(error instanceof Error ? error.message : String(error));
+          const msg = error instanceof Error ? error.message : String(error);
+          setProgramError(msg);
+          setFormulaError(msg);
         }
       } finally {
         if (isMounted) {
           setProgramLoading(false);
+          setFormulaLoading(false);
         }
       }
     };
 
-    loadProgramData();
-    return () => {
-      isMounted = false;
-    };
+    loadAll();
+    return () => { isMounted = false; };
   }, []);
 
   const programSpaceIndexes = useMemo(() => {
@@ -240,6 +278,60 @@ export function KPIDashboard() {
     }
   }, [programSpaceIndex, programSpaceIndexes]);
 
+  // ── Computed KPIs for structure and environment tabs ──────────────────
+  const formulaCategoryMap: Record<KPICategory, FormulaCategory> = {
+    program: 'program',
+    structure: 'structure',
+    data: 'environment',
+  };
+
+  const activeParamRows = selectedCategory === 'structure' ? structureParams : dataParams;
+
+  const scenarioOptions = useMemo(() => {
+    return Array.from(new Set(activeParamRows.map(r => r.scenario))).filter(Boolean);
+  }, [activeParamRows]);
+
+  useEffect(() => {
+    if (!selectedScenario && scenarioOptions.length > 0) {
+      setSelectedScenario(scenarioOptions[0]);
+    }
+  }, [selectedScenario, scenarioOptions]);
+
+  const computedKPIs: ComputedKPI[] = useMemo(() => {
+    if (selectedCategory === 'program') return []; // handled separately
+
+    const formulaCat = formulaCategoryMap[selectedCategory];
+    const filtered = activeParamRows.filter(r => !selectedScenario || r.scenario === selectedScenario);
+    if (filtered.length === 0) return [];
+
+    // Merge all param rows so cross-domain params are available
+    // (structure KPIs may need ENV params and vice-versa)
+    const merged: ParamValues[] = filtered.map(r => ({ ...r.params }));
+
+    // Also inject any params from the other sheet when available
+    const otherParams = selectedCategory === 'structure' ? dataParams : structureParams;
+    const otherFiltered = otherParams.filter(r => !selectedScenario || r.scenario === selectedScenario);
+    if (otherFiltered.length > 0) {
+      // Simple strategy: average the "other" params and inject into every row
+      const avg: ParamValues = {};
+      for (const row of otherFiltered) {
+        for (const [k, v] of Object.entries(row.params)) {
+          avg[k] = (avg[k] ?? 0) + v;
+        }
+      }
+      for (const k of Object.keys(avg)) {
+        avg[k] /= otherFiltered.length;
+      }
+      for (const m of merged) {
+        for (const [k, v] of Object.entries(avg)) {
+          if (m[k] === undefined) m[k] = v;
+        }
+      }
+    }
+
+    return computeAggregateKPIs(merged, formulaCat);
+  }, [selectedCategory, activeParamRows, selectedScenario, structureParams, dataParams]);
+
   return (
     <div className="p-6 bg-slate-50 min-h-screen">
       {/* Header */}
@@ -266,14 +358,14 @@ export function KPIDashboard() {
           {(['program', 'structure', 'data'] as KPICategory[]).map((category) => (
             <button
               key={category}
-              onClick={() => setSelectedCategory(category)}
+              onClick={() => { setSelectedCategory(category); setSelectedScenario(''); }}
               className={`px-6 py-2 text-sm font-medium transition-colors ${
                 selectedCategory === category
                   ? 'bg-blue-600 text-white'
                   : 'text-slate-600 hover:bg-slate-50'
               }`}
             >
-              {category === 'program' ? 'PROGRAM KPIs' : category === 'structure' ? 'STRUCTURE KPIs' : 'DATA KPIs'}
+              {category === 'program' ? 'PROGRAM KPIs' : category === 'structure' ? 'STRUCTURE KPIs' : 'ENVIRONMENT KPIs'}
             </button>
           ))}
         </div>
@@ -380,80 +472,72 @@ export function KPIDashboard() {
             <p className="text-slate-500">Select a space index to view program KPI data</p>
           </div>
         )
+      ) : formulaLoading ? (
+        <div className="bg-slate-100 rounded-lg p-12 text-center mb-8">
+          <p className="text-slate-500">Loading {selectedCategory} parameter data…</p>
+        </div>
+      ) : formulaError ? (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6 mb-8">
+          <h3 className="text-red-900 font-semibold mb-2">Error Loading Data</h3>
+          <p className="text-red-700 text-sm">{formulaError}</p>
+        </div>
+      ) : computedKPIs.length > 0 ? (
+        <>
+          {/* Scenario selector for structure / environment tabs */}
+          {scenarioOptions.length > 1 && (
+            <div className="flex flex-wrap gap-4 p-4 bg-white rounded-lg border border-slate-200 mb-6">
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium text-slate-700">Scenario</label>
+                <select
+                  value={selectedScenario}
+                  onChange={(e) => setSelectedScenario(e.target.value)}
+                  className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm"
+                >
+                  {scenarioOptions.map((s) => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+            {computedKPIs.map((kpi) => (
+              <KPICard
+                key={kpi.id}
+                title={kpi.name}
+                value={Math.round(kpi.value * 100) / 100}
+                target={0}
+                unit={kpi.unit}
+                trend={0}
+                status="on-track"
+                teamColor={selectedCategory === 'structure' ? '#8b5cf6' : '#06b6d4'}
+                sparklineData={[]}
+                showTarget={false}
+              />
+            ))}
+          </div>
+
+          {/* Formula reference */}
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 mb-6">
+            <h3 className="text-sm font-semibold text-slate-700 mb-3">Formula Reference</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {computedKPIs.map((kpi) => {
+                const def = KPI_BY_CATEGORY[formulaCategoryMap[selectedCategory]]?.find(d => d.id === kpi.id);
+                return def ? (
+                  <div key={kpi.id} className="text-xs text-slate-500 font-mono bg-slate-50 rounded px-3 py-2">
+                    <span className="text-slate-700 font-semibold">{kpi.name}</span>
+                    <br />
+                    = {def.formula}
+                  </div>
+                ) : null;
+              })}
+            </div>
+          </div>
+        </>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-          {categoryMetrics[selectedCategory].includes('embodied_carbon') && (
-            <KPICard
-              title={currentKPIs.embodied_carbon.description}
-              value={currentKPIs.embodied_carbon.value}
-              target={currentKPIs.embodied_carbon.target}
-              unit={currentKPIs.embodied_carbon.unit}
-              trend={currentKPIs.embodied_carbon.trend}
-              status={currentKPIs.embodied_carbon.status}
-              teamColor={getTeamColor(currentKPIs.embodied_carbon.team)}
-              sparklineData={getSparklineData('embodied_carbon')}
-            />
-          )}
-          {categoryMetrics[selectedCategory].includes('floor_area') && (
-            <KPICard
-              title={currentKPIs.floor_area.description}
-              value={currentKPIs.floor_area.value}
-              target={currentKPIs.floor_area.target}
-              unit={currentKPIs.floor_area.unit}
-              trend={currentKPIs.floor_area.trend}
-              status={currentKPIs.floor_area.status}
-              teamColor={getTeamColor(currentKPIs.floor_area.team)}
-              sparklineData={getSparklineData('floor_area')}
-            />
-          )}
-          {categoryMetrics[selectedCategory].includes('energy_use') && (
-            <KPICard
-              title={currentKPIs.energy_use.description}
-              value={currentKPIs.energy_use.value}
-              target={currentKPIs.energy_use.target}
-              unit={currentKPIs.energy_use.unit}
-              trend={currentKPIs.energy_use.trend}
-              status={currentKPIs.energy_use.status}
-              teamColor={getTeamColor(currentKPIs.energy_use.team)}
-              sparklineData={getSparklineData('energy_use')}
-            />
-          )}
-          {categoryMetrics[selectedCategory].includes('facade_ratio') && (
-            <KPICard
-              title={currentKPIs.facade_ratio.description}
-              value={currentKPIs.facade_ratio.value}
-              target={currentKPIs.facade_ratio.target}
-              unit={currentKPIs.facade_ratio.unit}
-              trend={currentKPIs.facade_ratio.trend}
-              status={currentKPIs.facade_ratio.status}
-              teamColor={getTeamColor(currentKPIs.facade_ratio.team)}
-              sparklineData={getSparklineData('facade_ratio')}
-            />
-          )}
-          {categoryMetrics[selectedCategory].includes('structural_efficiency') && (
-            <KPICard
-              title={currentKPIs.structural_efficiency.description}
-              value={currentKPIs.structural_efficiency.value}
-              target={currentKPIs.structural_efficiency.target}
-              unit={currentKPIs.structural_efficiency.unit}
-              trend={currentKPIs.structural_efficiency.trend}
-              status={currentKPIs.structural_efficiency.status}
-              teamColor={getTeamColor(currentKPIs.structural_efficiency.team)}
-              sparklineData={getSparklineData('structural_efficiency')}
-            />
-          )}
-          {categoryMetrics[selectedCategory].includes('daylight_factor') && (
-            <KPICard
-              title={currentKPIs.daylight_factor.description}
-              value={currentKPIs.daylight_factor.value}
-              target={currentKPIs.daylight_factor.target}
-              unit={currentKPIs.daylight_factor.unit}
-              trend={currentKPIs.daylight_factor.trend}
-              status={currentKPIs.daylight_factor.status}
-              teamColor={getTeamColor(currentKPIs.daylight_factor.team)}
-              sparklineData={getSparklineData('daylight_factor')}
-            />
-          )}
+        <div className="bg-slate-100 rounded-lg p-12 text-center mb-8">
+          <p className="text-slate-500">No parameter data available for {selectedCategory} KPIs</p>
         </div>
       )}
 
