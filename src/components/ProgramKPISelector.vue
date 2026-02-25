@@ -1,15 +1,7 @@
 <template>
   <div class="space-y-4">
-    <!-- Week and Space Index Selectors -->
+    <!-- Space Index Selector -->
     <div class="flex flex-wrap gap-3">
-      <div class="flex flex-col gap-1">
-        <label class="text-xs font-medium text-slate-700">Week</label>
-        <select v-model="selectedWeek" class="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-sm">
-          <option value="">Select a week</option>
-          <option v-for="week in weeks" :key="week" :value="week">{{ week }}</option>
-        </select>
-      </div>
-
       <div class="flex flex-col gap-1">
         <label class="text-xs font-medium text-slate-700">Space Index</label>
         <select v-model="selectedColumnC" class="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-sm">
@@ -41,18 +33,18 @@
             <h3 class="text-xs font-semibold text-slate-700">{{ kpi.name }}</h3>
             <p class="text-[11px] text-slate-500">{{ getProgramUnit(index) }}</p>
           </div>
-          <div :class="['w-2 h-2 rounded-full flex-shrink-0 mt-0.5', summaryCards[index] ? (summaryCards[index].delta <= 0 ? 'bg-green-500' : 'bg-red-500') : 'bg-slate-300']"></div>
+          <div :class="['w-2 h-2 rounded-full flex-shrink-0 mt-0.5', summaryCards[index] ? (summaryCards[index].withinMargin ? 'bg-green-500' : 'bg-red-500') : 'bg-slate-300']"></div>
         </div>
         <div class="text-2xl font-bold text-slate-900 mb-3">{{ typeof kpi.value === 'number' ? kpi.value.toFixed(2) : kpi.value }}</div>
         <template v-if="summaryCards[index]">
           <div class="text-[11px] text-slate-500">Target: {{ summaryCards[index].visual?.target }}</div>
           <div class="flex items-center gap-2 mt-1 mb-3">
-            <span :class="['text-[10px] px-2 py-0.5 rounded-full border', summaryCards[index].delta <= 0 ? 'bg-green-100 text-green-700 border-green-200' : 'bg-red-100 text-red-700 border-red-200']">
+            <span :class="['text-[10px] px-2 py-0.5 rounded-full border', summaryCards[index].withinMargin ? 'bg-green-100 text-green-700 border-green-200' : 'bg-red-100 text-red-700 border-red-200']">
               {{ summaryCards[index].delta > 0 ? '+' : '' }}{{ formatDelta(summaryCards[index].delta) }}
             </span>
           </div>
           <div class="relative h-2 rounded-full bg-slate-200 overflow-visible">
-            <div class="absolute left-0 top-0 h-full rounded-full" :style="{ width: `${summaryCards[index].bulletValuePct}%`, backgroundColor: '#3b82f6' }"></div>
+            <div class="absolute left-0 top-0 h-full rounded-full" :style="{ width: `${summaryCards[index].bulletValuePct}%`, backgroundColor: summaryCards[index].withinMargin ? '#10b981' : '#ef4444' }"></div>
             <div class="absolute top-0 h-full w-0.5 bg-slate-500" :style="{ left: `${summaryCards[index].bulletTargetPct}%` }"></div>
             <div class="absolute top-0 h-2 w-2 bg-yellow-400 shadow-sm" :style="{ left: `calc(${summaryCards[index].bulletTargetPct}% - 4px)`, transform: 'rotate(45deg)' }"></div>
             <div class="absolute -top-5 text-[10px] text-slate-600" :style="{ left: `calc(${summaryCards[index].bulletTargetPct}% - 8px)` }">{{ formatValue(summaryCards[index].visual?.target) }}</div>
@@ -82,7 +74,6 @@ const props = defineProps({
   },
 })
 
-const selectedWeek = ref('')
 const selectedColumnC = ref('')
 const hoveredSummaryKey = ref('')
 
@@ -104,10 +95,6 @@ const storeProgramSelection = (week, columnC) => {
     // Ignore storage errors
   }
 }
-
-const weeks = computed(() => {
-  return [3, 4, 5, 6, 7, 8, 9, 10]
-})
 
 const availableColumnCValues = computed(() => {
   if (!props.sheetData?.data) {
@@ -252,8 +239,10 @@ const summaryData = computed(() => {
 
   const bulletConfig = (value, target) => {
     const max = Math.max(value, target) * 1.2 || 1
+    const withinMargin = target === 0 ? value === 0 : Math.abs(value - target) <= Math.abs(target) * 0.1
     return {
       delta: value - target,
+      withinMargin,
       bulletValuePct: Math.min((value / max) * 100, 100),
       bulletTargetPct: Math.min((target / max) * 100, 100),
     }
@@ -293,6 +282,7 @@ const summaryCards = computed(() => {
       displayValue: formatValue(epa.value),
       visual: { type: 'bullet', target: epa.target || 0 },
       delta: epa.value - epa.target,
+      withinMargin: epa.withinMargin,
       bulletValuePct: epa.bulletValuePct,
       bulletTargetPct: epa.bulletTargetPct,
     },
@@ -305,6 +295,7 @@ const summaryCards = computed(() => {
       displayValue: formatValue(ppi.value),
       visual: { type: 'bullet', target: ppi.target || 0 },
       delta: ppi.delta,
+      withinMargin: ppi.withinMargin,
       bulletValuePct: ppi.bulletValuePct,
       bulletTargetPct: ppi.bulletTargetPct,
     },
@@ -317,6 +308,7 @@ const summaryCards = computed(() => {
       displayValue: formatValue(rcir.value),
       visual: { type: 'bullet', target: rcir.target || 0 },
       delta: rcir.delta,
+      withinMargin: rcir.withinMargin,
       bulletValuePct: rcir.bulletValuePct,
       bulletTargetPct: rcir.bulletTargetPct,
     },
@@ -340,20 +332,6 @@ const clearHoveredSummaryKey = () => {
   hoveredSummaryKey.value = ''
 }
 
-// Auto-set current week when data loads
-watch(() => weeks.value, (newWeeks) => {
-  if (!newWeeks || newWeeks.length === 0) return
-  if (!selectedWeek.value || !newWeeks.includes(Number(selectedWeek.value))) {
-    if (props.currentWeek) {
-      const sorted = [...newWeeks].sort((a, b) => a - b)
-      const past = sorted.filter(w => w <= props.currentWeek)
-      selectedWeek.value = past.length ? past[past.length - 1] : sorted[0]
-    } else {
-      selectedWeek.value = newWeeks[0]
-    }
-  }
-})
-
 // Auto-set first Column C value when data loads
 watch(() => availableColumnCValues.value, (newValues) => {
   if (!newValues || newValues.length === 0) {
@@ -364,16 +342,15 @@ watch(() => availableColumnCValues.value, (newValues) => {
   }
 })
 
-watch(() => [selectedWeek.value, selectedColumnC.value], ([week, columnC]) => {
-  if (week && columnC) {
-    storeProgramSelection(week, columnC)
+watch(() => selectedColumnC.value, (columnC) => {
+  if (columnC) {
+    storeProgramSelection('', columnC)
   }
 })
 
 onMounted(() => {
   const stored = loadProgramSelection()
   if (stored) {
-    selectedWeek.value = stored.week || ''
     selectedColumnC.value = stored.columnC || ''
   }
 })
