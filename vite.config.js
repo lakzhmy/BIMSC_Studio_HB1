@@ -34,6 +34,12 @@ export default defineConfig(({ mode }) => {
     plugins: [vue()],
     server: {
       proxy: {
+        // Local Express API routes (must be listed BEFORE the catch-all /api)
+        '/api/users': { target: 'http://localhost:5174', changeOrigin: true },
+        '/api/milestones': { target: 'http://localhost:5174', changeOrigin: true },
+        '/api/stress-test': { target: 'http://localhost:5174', changeOrigin: true },
+        '/api/kpi-map': { target: 'http://localhost:5174', changeOrigin: true },
+        // Everything else under /api goes to Speckle
         '/api': speckleProxy,
         '/objects': speckleProxy,
         '/streams': speckleProxy,

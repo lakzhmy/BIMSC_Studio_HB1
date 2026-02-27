@@ -1,4 +1,12 @@
+import dotenv from 'dotenv'
+import path from 'path'
+import { fileURLToPath } from 'url'
 import pg from 'pg'
+
+// Load .env BEFORE creating the pool so DATABASE_URL is available locally
+const __db_dirname = path.dirname(fileURLToPath(import.meta.url))
+dotenv.config({ path: path.resolve(__db_dirname, '../.env') })
+dotenv.config({ path: path.resolve(__db_dirname, '../.env.local') })
 
 const { Pool } = pg
 
