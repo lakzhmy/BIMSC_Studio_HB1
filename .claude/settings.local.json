@@ -11,7 +11,10 @@
       "Bash(node:*)",
       "Bash(npm install:*)",
       "Bash(git push:*)",
-      "Bash(git restore README.md package-lock.json package.json)"
+      "Bash(git restore README.md package-lock.json package.json)",
+      "Bash(xargs grep -l -i \"kpi\\\\|timeline\\\\|KPI\\\\|Timeline\")",
+      "Bash(git fetch origin)",
+      "Bash(git restore vite.config.ts)"
     ]
   }
 }
