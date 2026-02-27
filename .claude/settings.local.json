@@ -14,7 +14,9 @@
       "Bash(git restore README.md package-lock.json package.json)",
       "Bash(xargs grep -l -i \"kpi\\\\|timeline\\\\|KPI\\\\|Timeline\")",
       "Bash(git fetch origin)",
-      "Bash(git restore vite.config.ts)"
+      "Bash(git restore vite.config.ts)",
+      "Bash(ls -lart \"C:/IaaC/BIMSC/BIMSC_Studio/BIMSC_Studio_HB1/vite.config.\"*)",
+      "Bash(git -C \"C:/IaaC/BIMSC/BIMSC_Studio/BIMSC_Studio_HB1\" log --oneline -10 -- vite.config.js vite.config.ts)"
     ]
   }
 }

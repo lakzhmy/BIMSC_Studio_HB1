@@ -5,6 +5,8 @@ import vue from '@vitejs/plugin-vue'
 export default defineConfig(({ mode }) => {
   // Load all env vars (including SPECKLE_TOKEN) from .env / .env.local
   const env = loadEnv(mode, process.cwd(), '')
+  const port = env.PORT || '5174'
+  const backendUrl = `http://localhost:${port}`
   const speckleServerUrl = env.SPECKLE_SERVER_URL || 'https://app.speckle.systems'
   const speckleToken = env.SPECKLE_TOKEN || ''
 
@@ -13,6 +15,8 @@ export default defineConfig(({ mode }) => {
   } else {
     console.log(`Vite proxy: auth enabled, target ${speckleServerUrl}`)
   }
+
+  const backendProxy = { target: backendUrl, changeOrigin: true }
 
   const speckleProxy = {
     target: speckleServerUrl,
@@ -35,19 +39,16 @@ export default defineConfig(({ mode }) => {
     server: {
       proxy: {
         // Local Express API routes (must be listed BEFORE the catch-all /api)
-        '/api/users': { target: 'http://localhost:5174', changeOrigin: true },
-        '/api/milestones': { target: 'http://localhost:5174', changeOrigin: true },
-        '/api/stress-test': { target: 'http://localhost:5174', changeOrigin: true },
-        '/api/kpi-map': { target: 'http://localhost:5174', changeOrigin: true },
+        '/api/users': backendProxy,
+        '/api/milestones': backendProxy,
+        '/api/stress-test': backendProxy,
+        '/api/kpi-map': backendProxy,
         // Everything else under /api goes to Speckle
         '/api': speckleProxy,
         '/objects': speckleProxy,
         '/streams': speckleProxy,
         '/graphql': speckleProxy,
-        '/auth': {
-          target: 'http://localhost:5174',
-          changeOrigin: true,
-        },
+        '/auth': backendProxy,
       },
     },
     resolve: {

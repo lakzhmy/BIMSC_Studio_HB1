@@ -30,3 +30,4 @@ dist-ssr
 
 # OS
 Thumbs.db
+.claude/settings.local.json
