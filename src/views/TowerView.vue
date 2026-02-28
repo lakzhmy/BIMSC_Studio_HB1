@@ -290,7 +290,7 @@
                 >{{ bar.label }}</text>
               </svg>
               <div class="mt-6">
-                <p class="text-3xl font-bold text-slate-800">1,002,013,509</p>
+                <p class="text-3xl font-bold text-slate-800">1,002,014</p>
                 <p class="text-xs text-slate-400 uppercase tracking-widest mt-1">Total 2D Area · m²</p>
               </div>
             </div>
@@ -482,11 +482,11 @@ const barData = [
 // ── Program key stats ────────────────────────────────────────
 const programStats = [
   { label: 'Total Floors',         value: '210',       bar: 100, color: '#3b82f6' },
-  { label: 'Residential Units',    value: '3,420',     bar: 72,  color: '#4ade80' },
+  { label: 'Residential Units',    value: '5,200',     bar: 72,  color: '#4ade80' },
   { label: 'Office Floor Plates',  value: '48',        bar: 46,  color: '#f87171' },
-  { label: 'Parking Capacity',     value: '5,100',     bar: 54,  color: '#facc15' },
+  { label: 'Parking Capacity',     value: '10,000',    bar: 54,  color: '#facc15' },
   { label: 'Avg. Floor Area',      value: '4,771 m²',  bar: 65,  color: '#7dd3fc' },
-  { label: 'Occupancy Capacity',   value: '18,500',    bar: 88,  color: '#2dd4bf' },
+  { label: 'Occupancy Capacity',   value: '42,000',    bar: 88,  color: '#2dd4bf' },
 ]
 
 // ── KPI rings ─────────────────────────────────────────────────
