@@ -55,7 +55,7 @@ export default defineConfig(({ mode }) => {
       alias: {
         '@': '/src',
       },
-      dedupe: ['three'],
+      dedupe: [],
     },
   }
 })
