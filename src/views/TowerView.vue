@@ -106,17 +106,40 @@
           <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
 
             <!-- 00 - Biological Inspiration -->
-            <div class="concept-step flex flex-col gap-3">
-              <div class="w-full aspect-square bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-center">
-                <svg viewBox="0 0 64 64" class="w-20 h-20" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M32 58 L32 38" />
-                  <path d="M32 38 L18 24 M32 38 L46 24" />
-                  <path d="M18 24 L10 14 M18 24 L24 14" />
-                  <path d="M46 24 L40 14 M46 24 L54 14" />
-                  <path d="M10 14 L7 8 M10 14 L13 9" />
-                  <path d="M24 14 L21 8 M24 14 L27 9" />
-                  <path d="M40 14 L37 8 M40 14 L43 9" />
-                  <path d="M54 14 L51 8 M54 14 L57 9" />
+            <div class="concept-step flex flex-col gap-3" @mouseenter="hoveredStep = 0" @mouseleave="hoveredStep = null">
+              <div class="w-full aspect-square bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-center overflow-hidden">
+                <svg viewBox="0 0 64 64" class="w-20 h-20" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                  <!-- Base tree structure -->
+                  <g :stroke="hoveredStep === 0 ? '#059669' : '#94a3b8'" stroke-width="1.5" style="transition: stroke 0.4s ease;">
+                    <path d="M32 58 L32 38" />
+                    <path d="M32 38 L18 24 M32 38 L46 24" />
+                    <path d="M18 24 L10 14 M18 24 L24 14" />
+                    <path d="M46 24 L40 14 M46 24 L54 14" />
+                    <path d="M10 14 L7 8 M10 14 L13 9" />
+                    <path d="M24 14 L21 8 M24 14 L27 9" />
+                    <path d="M40 14 L37 8 M40 14 L43 9" />
+                    <path d="M54 14 L51 8 M54 14 L57 9" />
+                  </g>
+                  <!-- Animated green upward flow arrows -->
+                  <g v-if="hoveredStep === 0" class="flow-arrows">
+                    <circle r="1.5" fill="#10b981" opacity="0.9">
+                      <animateMotion dur="1.8s" repeatCount="indefinite" path="M32,58 L32,38" />
+                    </circle>
+                    <circle r="1.2" fill="#10b981" opacity="0.7">
+                      <animateMotion dur="1.6s" repeatCount="indefinite" path="M32,38 L18,24 L10,14 L7,8" />
+                    </circle>
+                    <circle r="1.2" fill="#10b981" opacity="0.7">
+                      <animateMotion dur="1.6s" repeatCount="indefinite" begin="0.3s" path="M32,38 L18,24 L24,14 L21,8" />
+                    </circle>
+                    <circle r="1.2" fill="#10b981" opacity="0.7">
+                      <animateMotion dur="1.6s" repeatCount="indefinite" begin="0.15s" path="M32,38 L46,24 L40,14 L37,8" />
+                    </circle>
+                    <circle r="1.2" fill="#10b981" opacity="0.7">
+                      <animateMotion dur="1.6s" repeatCount="indefinite" begin="0.45s" path="M32,38 L46,24 L54,14 L51,8" />
+                    </circle>
+                    <!-- Upward arrow tip at trunk -->
+                    <path d="M30 46 L32 42 L34 46" stroke="#10b981" stroke-width="1.2" fill="none" class="arrow-pulse" />
+                  </g>
                 </svg>
               </div>
               <p class="text-xs font-mono text-slate-300">00</p>
@@ -125,60 +148,138 @@
             </div>
 
             <!-- 01 - Porous Structural Core -->
-            <div class="concept-step flex flex-col gap-3">
-              <div class="w-full aspect-square bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-center">
-                <svg viewBox="0 0 64 64" class="w-20 h-20" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round">
-                  <rect x="12" y="6" width="40" height="52" rx="3" />
-                  <ellipse cx="24" cy="20" rx="5" ry="6" />
-                  <ellipse cx="40" cy="20" rx="5" ry="6" />
-                  <circle cx="32" cy="34" r="5" />
-                  <ellipse cx="21" cy="46" rx="4" ry="5" />
-                  <ellipse cx="43" cy="46" rx="4" ry="5" />
+            <div class="concept-step flex flex-col gap-3" @mouseenter="hoveredStep = 1" @mouseleave="hoveredStep = null">
+              <div class="w-full aspect-square bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-center overflow-hidden">
+                <svg viewBox="0 0 64 64" class="w-20 h-20" fill="none" stroke-linecap="round">
+                  <!-- Core shell -->
+                  <rect x="12" y="6" width="40" height="52" rx="3" :stroke="hoveredStep === 1 ? '#059669' : '#94a3b8'" stroke-width="1.5" style="transition: stroke 0.4s ease;" />
+                  <!-- Pores —  fill green on hover to show filtration -->
+                  <ellipse cx="24" cy="20" rx="5" ry="6" :stroke="hoveredStep === 1 ? '#10b981' : '#94a3b8'" :fill="hoveredStep === 1 ? '#d1fae5' : 'none'" stroke-width="1.5" style="transition: all 0.4s ease;" />
+                  <ellipse cx="40" cy="20" rx="5" ry="6" :stroke="hoveredStep === 1 ? '#10b981' : '#94a3b8'" :fill="hoveredStep === 1 ? '#d1fae5' : 'none'" stroke-width="1.5" style="transition: all 0.4s ease 0.05s;" />
+                  <circle cx="32" cy="34" r="5" :stroke="hoveredStep === 1 ? '#10b981' : '#94a3b8'" :fill="hoveredStep === 1 ? '#d1fae5' : 'none'" stroke-width="1.5" style="transition: all 0.4s ease 0.1s;" />
+                  <ellipse cx="21" cy="46" rx="4" ry="5" :stroke="hoveredStep === 1 ? '#10b981' : '#94a3b8'" :fill="hoveredStep === 1 ? '#d1fae5' : 'none'" stroke-width="1.5" style="transition: all 0.4s ease 0.15s;" />
+                  <ellipse cx="43" cy="46" rx="4" ry="5" :stroke="hoveredStep === 1 ? '#10b981' : '#94a3b8'" :fill="hoveredStep === 1 ? '#d1fae5' : 'none'" stroke-width="1.5" style="transition: all 0.4s ease 0.2s;" />
+                  <!-- Animated particles flowing through pores -->
+                  <g v-if="hoveredStep === 1">
+                    <circle r="1" fill="#6ee7b7" opacity="0.8">
+                      <animateMotion dur="2s" repeatCount="indefinite" path="M4,20 L24,20 L32,34 L43,46 L60,50" />
+                    </circle>
+                    <circle r="1" fill="#6ee7b7" opacity="0.8">
+                      <animateMotion dur="2.2s" repeatCount="indefinite" begin="0.5s" path="M4,40 L21,46 L32,34 L40,20 L60,16" />
+                    </circle>
+                    <circle r="0.8" fill="#34d399" opacity="0.6">
+                      <animateMotion dur="1.8s" repeatCount="indefinite" begin="0.2s" path="M4,30 L24,20 L40,20 L60,14" />
+                    </circle>
+                    <!-- Direction arrows -->
+                    <path d="M7 18 L12 20 L7 22" stroke="#10b981" stroke-width="1" fill="none" class="arrow-pulse" />
+                    <path d="M57 14 L52 16 L57 18" stroke="#10b981" stroke-width="1" fill="none" class="arrow-pulse" style="animation-delay: 0.3s;" />
+                  </g>
                 </svg>
               </div>
               <p class="text-xs font-mono text-slate-300">01</p>
               <p class="text-xs font-bold text-slate-700 uppercase tracking-wider leading-tight">Porous Structural Core</p>
-              <p class="text-xs text-slate-400 leading-relaxed">Voronoi-based load distribution</p>
+              <p class="text-xs text-slate-400 leading-relaxed">Air filters through Voronoi voids</p>
             </div>
 
             <!-- 02 - Program Massing Integration -->
-            <div class="concept-step flex flex-col gap-3">
-              <div class="w-full aspect-square bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-center">
-                <svg viewBox="0 0 64 64" class="w-20 h-20" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                  <rect x="27" y="6" width="10" height="52" rx="2" />
-                  <rect x="6" y="10" width="16" height="18" rx="3" />
-                  <line x1="22" y1="19" x2="27" y2="19" />
-                  <rect x="6" y="34" width="16" height="14" rx="3" />
-                  <line x1="22" y1="41" x2="27" y2="41" />
-                  <rect x="42" y="14" width="16" height="14" rx="3" />
-                  <line x1="37" y1="21" x2="42" y2="21" />
-                  <rect x="42" y="34" width="16" height="18" rx="3" />
-                  <line x1="37" y1="43" x2="42" y2="43" />
+            <div class="concept-step flex flex-col gap-3" @mouseenter="hoveredStep = 2" @mouseleave="hoveredStep = null">
+              <div class="w-full aspect-square bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-center overflow-hidden">
+                <svg viewBox="0 0 64 64" class="w-20 h-20" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                  <!-- Core spine -->
+                  <rect x="27" y="6" width="10" height="52" rx="2" :stroke="hoveredStep === 2 ? '#059669' : '#94a3b8'" stroke-width="1.5" :fill="hoveredStep === 2 ? '#f0fdf4' : 'none'" style="transition: all 0.4s ease;" />
+                  <!-- Capsules -->
+                  <rect x="6" y="10" width="16" height="18" rx="3" :stroke="hoveredStep === 2 ? '#10b981' : '#94a3b8'" stroke-width="1.5" style="transition: stroke 0.4s ease;" />
+                  <rect x="6" y="34" width="16" height="14" rx="3" :stroke="hoveredStep === 2 ? '#10b981' : '#94a3b8'" stroke-width="1.5" style="transition: stroke 0.4s ease 0.05s;" />
+                  <rect x="42" y="14" width="16" height="14" rx="3" :stroke="hoveredStep === 2 ? '#10b981' : '#94a3b8'" stroke-width="1.5" style="transition: stroke 0.4s ease 0.1s;" />
+                  <rect x="42" y="34" width="16" height="18" rx="3" :stroke="hoveredStep === 2 ? '#10b981' : '#94a3b8'" stroke-width="1.5" style="transition: stroke 0.4s ease 0.15s;" />
+                  <!-- Connections -->
+                  <line x1="22" y1="19" x2="27" y2="19" :stroke="hoveredStep === 2 ? '#10b981' : '#94a3b8'" stroke-width="1.5" style="transition: stroke 0.4s ease;" />
+                  <line x1="22" y1="41" x2="27" y2="41" :stroke="hoveredStep === 2 ? '#10b981' : '#94a3b8'" stroke-width="1.5" style="transition: stroke 0.4s ease;" />
+                  <line x1="37" y1="21" x2="42" y2="21" :stroke="hoveredStep === 2 ? '#10b981' : '#94a3b8'" stroke-width="1.5" style="transition: stroke 0.4s ease;" />
+                  <line x1="37" y1="43" x2="42" y2="43" :stroke="hoveredStep === 2 ? '#10b981' : '#94a3b8'" stroke-width="1.5" style="transition: stroke 0.4s ease;" />
+                  <!-- Animated air circulation through connections -->
+                  <g v-if="hoveredStep === 2">
+                    <circle r="1" fill="#10b981" opacity="0.8">
+                      <animateMotion dur="1.4s" repeatCount="indefinite" path="M14,19 L24,19 L32,30 L32,43 L42,43 L50,43" />
+                    </circle>
+                    <circle r="1" fill="#10b981" opacity="0.8">
+                      <animateMotion dur="1.4s" repeatCount="indefinite" begin="0.4s" path="M50,21 L42,21 L32,30 L32,19 L22,19 L14,19" />
+                    </circle>
+                    <circle r="0.8" fill="#34d399" opacity="0.6">
+                      <animateMotion dur="1.6s" repeatCount="indefinite" begin="0.7s" path="M14,41 L27,41 L32,30 L37,21 L50,21" />
+                    </circle>
+                    <!-- Directional arrows on connections -->
+                    <path d="M24 17 L27 19 L24 21" stroke="#10b981" stroke-width="1" fill="none" class="arrow-pulse" />
+                    <path d="M40 19 L37 21 L40 23" stroke="#10b981" stroke-width="1" fill="none" class="arrow-pulse" style="animation-delay: 0.2s;" />
+                  </g>
                 </svg>
               </div>
               <p class="text-xs font-mono text-slate-300">02</p>
               <p class="text-xs font-bold text-slate-700 uppercase tracking-wider leading-tight">Program Massing Integration</p>
-              <p class="text-xs text-slate-400 leading-relaxed">Capsule volumes attached to core</p>
+              <p class="text-xs text-slate-400 leading-relaxed">Air circulates between capsules &amp; core</p>
             </div>
 
             <!-- 03 - Functional Airflow System -->
-            <div class="concept-step flex flex-col gap-3">
-              <div class="w-full aspect-square bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-center">
-                <svg viewBox="0 0 64 64" class="w-20 h-20" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                  <rect x="27" y="6" width="10" height="52" rx="2" />
-                  <rect x="6" y="10" width="16" height="18" rx="3" />
-                  <line x1="22" y1="19" x2="27" y2="19" />
-                  <rect x="6" y="34" width="16" height="14" rx="3" />
-                  <line x1="22" y1="41" x2="27" y2="41" />
-                  <rect x="42" y="14" width="16" height="14" rx="3" />
-                  <line x1="37" y1="21" x2="42" y2="21" />
-                  <rect x="42" y="34" width="16" height="18" rx="3" />
-                  <line x1="37" y1="43" x2="42" y2="43" />
-                  <path d="M1 22 L5 19" stroke-dasharray="2 2" />
-                  <path d="M1 38 L5 35" stroke-dasharray="2 2" />
-                  <path d="M63 22 L59 19" stroke-dasharray="2 2" />
-                  <path d="M63 38 L59 35" stroke-dasharray="2 2" />
-                  <path d="M28 6 L26 2 M32 5 L32 1 M36 6 L38 2" />
+            <div class="concept-step flex flex-col gap-3" @mouseenter="hoveredStep = 3" @mouseleave="hoveredStep = null">
+              <div class="w-full aspect-square bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-center overflow-hidden">
+                <svg viewBox="0 0 64 64" class="w-20 h-20" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                  <!-- Tower structure -->
+                  <rect x="27" y="6" width="10" height="52" rx="2" :stroke="hoveredStep === 3 ? '#059669' : '#94a3b8'" stroke-width="1.5" style="transition: stroke 0.4s ease;" />
+                  <rect x="6" y="10" width="16" height="18" rx="3" :stroke="hoveredStep === 3 ? '#059669' : '#94a3b8'" stroke-width="1.5" style="transition: stroke 0.4s ease;" />
+                  <rect x="6" y="34" width="16" height="14" rx="3" :stroke="hoveredStep === 3 ? '#059669' : '#94a3b8'" stroke-width="1.5" style="transition: stroke 0.4s ease;" />
+                  <rect x="42" y="14" width="16" height="14" rx="3" :stroke="hoveredStep === 3 ? '#059669' : '#94a3b8'" stroke-width="1.5" style="transition: stroke 0.4s ease;" />
+                  <rect x="42" y="34" width="16" height="18" rx="3" :stroke="hoveredStep === 3 ? '#059669' : '#94a3b8'" stroke-width="1.5" style="transition: stroke 0.4s ease;" />
+                  <line x1="22" y1="19" x2="27" y2="19" :stroke="hoveredStep === 3 ? '#059669' : '#94a3b8'" stroke-width="1.5" style="transition: stroke 0.4s ease;" />
+                  <line x1="22" y1="41" x2="27" y2="41" :stroke="hoveredStep === 3 ? '#059669' : '#94a3b8'" stroke-width="1.5" style="transition: stroke 0.4s ease;" />
+                  <line x1="37" y1="21" x2="42" y2="21" :stroke="hoveredStep === 3 ? '#059669' : '#94a3b8'" stroke-width="1.5" style="transition: stroke 0.4s ease;" />
+                  <line x1="37" y1="43" x2="42" y2="43" :stroke="hoveredStep === 3 ? '#059669' : '#94a3b8'" stroke-width="1.5" style="transition: stroke 0.4s ease;" />
+                  <!-- Static dashed air hints -->
+                  <g :stroke="hoveredStep === 3 ? '#94a3b8' : '#94a3b8'" stroke-width="1" stroke-dasharray="2 2" :opacity="hoveredStep === 3 ? 0.3 : 0.6" style="transition: opacity 0.3s ease;">
+                    <path d="M1 22 L5 19" />
+                    <path d="M1 38 L5 35" />
+                    <path d="M63 22 L59 19" />
+                    <path d="M63 38 L59 35" />
+                    <path d="M28 6 L26 2 M32 5 L32 1 M36 6 L38 2" />
+                  </g>
+                  <!-- Animated airflow: dirty air IN from sides, clean air OUT from top -->
+                  <g v-if="hoveredStep === 3">
+                    <!-- Dirty air entering from left (gray/red) -->
+                    <circle r="1.2" fill="#94a3b8" opacity="0.7">
+                      <animateMotion dur="2s" repeatCount="indefinite" path="M0,20 L6,19 L14,19 L22,19 L27,19" />
+                    </circle>
+                    <circle r="1" fill="#94a3b8" opacity="0.5">
+                      <animateMotion dur="2.2s" repeatCount="indefinite" begin="0.4s" path="M0,38 L6,36 L14,41 L22,41 L27,41" />
+                    </circle>
+                    <!-- Dirty air entering from right -->
+                    <circle r="1.2" fill="#94a3b8" opacity="0.7">
+                      <animateMotion dur="2s" repeatCount="indefinite" begin="0.2s" path="M64,20 L58,19 L50,21 L42,21 L37,21" />
+                    </circle>
+                    <circle r="1" fill="#94a3b8" opacity="0.5">
+                      <animateMotion dur="2.2s" repeatCount="indefinite" begin="0.6s" path="M64,40 L58,38 L50,43 L42,43 L37,43" />
+                    </circle>
+                    <!-- Air moves through core (transition color) -->
+                    <circle r="1" fill="#6ee7b7" opacity="0.6">
+                      <animateMotion dur="1.6s" repeatCount="indefinite" begin="0.8s" path="M32,52 L32,40 L32,30 L32,20 L32,10" />
+                    </circle>
+                    <circle r="1" fill="#6ee7b7" opacity="0.6">
+                      <animateMotion dur="1.6s" repeatCount="indefinite" begin="1.4s" path="M32,52 L32,40 L32,30 L32,20 L32,10" />
+                    </circle>
+                    <!-- Clean air exiting from top (green) -->
+                    <circle r="1.5" fill="#10b981" opacity="0.9">
+                      <animateMotion dur="1.2s" repeatCount="indefinite" path="M32,8 L32,2 L30,0" />
+                    </circle>
+                    <circle r="1.2" fill="#10b981" opacity="0.7">
+                      <animateMotion dur="1.2s" repeatCount="indefinite" begin="0.3s" path="M30,8 L26,2" />
+                    </circle>
+                    <circle r="1.2" fill="#10b981" opacity="0.7">
+                      <animateMotion dur="1.2s" repeatCount="indefinite" begin="0.6s" path="M34,8 L38,2" />
+                    </circle>
+                    <!-- Intake arrows (gray) -->
+                    <path d="M2 18 L6 20 L2 22" stroke="#94a3b8" stroke-width="1.2" fill="none" class="arrow-pulse" />
+                    <path d="M62 18 L58 20 L62 22" stroke="#94a3b8" stroke-width="1.2" fill="none" class="arrow-pulse" style="animation-delay: 0.2s;" />
+                    <!-- Exhaust arrows (green) -->
+                    <path d="M30 4 L32 0 L34 4" stroke="#10b981" stroke-width="1.5" fill="none" class="arrow-pulse" style="animation-delay: 0.4s;" />
+                  </g>
                 </svg>
               </div>
               <p class="text-xs font-mono text-slate-300">03</p>
@@ -215,7 +316,7 @@
                     v-for="seg in donutSegments" :key="seg.label"
                     cx="100" cy="100" r="65" fill="none"
                     :stroke="seg.color" stroke-width="30"
-                    :stroke-dasharray="`${seg.length.toFixed(2)} 408.41`"
+                    :stroke-dasharray="`${(seg.length + 1).toFixed(2)} ${(CIRC - seg.length).toFixed(2)}`"
                     :stroke-dashoffset="seg.offset.toFixed(2)"
                     :opacity="hoveredSeg && hoveredSeg.label !== seg.label ? 0.3 : 1"
                     style="transition: opacity 0.2s ease; cursor: pointer;"
@@ -432,6 +533,7 @@ onUnmounted(() => window.removeEventListener('scroll', onScroll))
 // ── Chart hover state ─────────────────────────────────────────
 const hoveredSeg = ref(null)
 const hoveredBar = ref(null)
+const hoveredStep = ref(null)
 
 // ── KPI ring IntersectionObserver ────────────────────────────
 const ringsVisible = ref(false)
@@ -445,7 +547,7 @@ onMounted(() => {
 })
 
 // ── Donut chart (circumference = 2·π·65 ≈ 408.41) ────────────
-const CIRC = 408.41
+const CIRC = 2 * Math.PI * 65
 const rawProgram = [
   { label: 'core',             pct: 43, color: '#3b82f6' },
   { label: 'residential',      pct: 16, color: '#4ade80' },
@@ -540,6 +642,15 @@ const kpiRings = [
 .concept-step:hover > div:first-child {
   border-color: #10b981;
   background: #f0fdf4;
+}
+
+/* ── Airflow arrow pulse ─────────────────────────────────── */
+.arrow-pulse {
+  animation: arrowPulse 1.2s ease-in-out infinite;
+}
+@keyframes arrowPulse {
+  0%, 100% { opacity: 0.5; }
+  50%      { opacity: 1; }
 }
 
 /* ── KPI ring fill animation ─────────────────────────────── */
