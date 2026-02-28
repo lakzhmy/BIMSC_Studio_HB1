@@ -16,7 +16,12 @@
       "Bash(git fetch origin)",
       "Bash(git restore vite.config.ts)",
       "Bash(ls -lart \"C:/IaaC/BIMSC/BIMSC_Studio/BIMSC_Studio_HB1/vite.config.\"*)",
-      "Bash(git -C \"C:/IaaC/BIMSC/BIMSC_Studio/BIMSC_Studio_HB1\" log --oneline -10 -- vite.config.js vite.config.ts)"
+      "Bash(git -C \"C:/IaaC/BIMSC/BIMSC_Studio/BIMSC_Studio_HB1\" log --oneline -10 -- vite.config.js vite.config.ts)",
+      "Bash(magick --version)",
+      "Bash(convert --version)",
+      "Bash(python -c \"from PIL import Image; print\\(''Pillow available''\\)\")",
+      "Bash(pip install Pillow)",
+      "Bash(python:*)"
     ]
   }
 }
