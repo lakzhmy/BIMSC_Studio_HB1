@@ -294,6 +294,39 @@
                 <p class="text-xs text-slate-400 uppercase tracking-widest mt-1">Total 2D Area · m²</p>
               </div>
             </div>
+
+            <!-- Program key stats -->
+            <div class="flex-1 w-full min-w-[180px]">
+              <p class="text-xs font-medium tracking-widest uppercase text-slate-400 mb-5">Program highlights</p>
+              <div class="space-y-4">
+                <div v-for="stat in programStats" :key="stat.label" class="program-stat group">
+                  <div class="flex items-baseline justify-between mb-1">
+                    <span class="text-xs text-slate-500 group-hover:text-slate-700 transition-colors">{{ stat.label }}</span>
+                    <span class="text-sm font-bold text-slate-800">{{ stat.value }}</span>
+                  </div>
+                  <div class="w-full h-1 bg-slate-100 rounded-full overflow-hidden">
+                    <div
+                      class="h-full rounded-full transition-all duration-700"
+                      :style="{ width: stat.bar + '%', background: stat.color }"
+                    />
+                  </div>
+                </div>
+              </div>
+              <div class="mt-6 pt-5 border-t border-slate-100">
+                <div class="flex items-baseline justify-between mb-1">
+                  <span class="text-xs text-slate-400">Public / Private Ratio</span>
+                  <span class="text-sm font-bold text-slate-800">22 / 78</span>
+                </div>
+                <div class="flex h-1.5 rounded-full overflow-hidden mt-1">
+                  <div class="h-full" style="width:22%;background:#3b82f6;"></div>
+                  <div class="h-full" style="width:78%;background:#e2e8f0;"></div>
+                </div>
+                <div class="flex justify-between mt-1">
+                  <span class="text-[10px] text-slate-300">Public</span>
+                  <span class="text-[10px] text-slate-300">Private</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -446,6 +479,16 @@ const barData = [
   return { ...b, h, y: BAR_BOTTOM - h }
 })
 
+// ── Program key stats ────────────────────────────────────────
+const programStats = [
+  { label: 'Total Floors',         value: '210',       bar: 100, color: '#3b82f6' },
+  { label: 'Residential Units',    value: '3,420',     bar: 72,  color: '#4ade80' },
+  { label: 'Office Floor Plates',  value: '48',        bar: 46,  color: '#f87171' },
+  { label: 'Parking Capacity',     value: '5,100',     bar: 54,  color: '#facc15' },
+  { label: 'Avg. Floor Area',      value: '4,771 m²',  bar: 65,  color: '#7dd3fc' },
+  { label: 'Occupancy Capacity',   value: '18,500',    bar: 88,  color: '#2dd4bf' },
+]
+
 // ── KPI rings ─────────────────────────────────────────────────
 const kpiRings = [
   { label: 'Embodied Carbon',       value: '342',  unit: 'kgCO₂e / m²',   fill: 85, color: '#10b981', trend: '↓ 14.5% below target' },
@@ -483,6 +526,11 @@ const kpiRings = [
 }
 .system-card:hover .card-blob {
   transform: scale(1.1);
+}
+
+/* ── Program stat hover ──────────────────────────────────── */
+.program-stat:hover div:last-child div {
+  filter: brightness(1.1);
 }
 
 /* ── Concept step hover ──────────────────────────────────── */
