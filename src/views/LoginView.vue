@@ -37,13 +37,23 @@
           <span class="font-medium text-slate-700">Sign in with Google</span>
         </button>
       </div>
+
+      <!-- Public tower link -->
+      <div class="text-center mt-6">
+        <router-link
+          to="/tower"
+          class="text-sm text-slate-400 hover:text-slate-600 transition-colors"
+        >
+          Explore the Tower →
+        </router-link>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
 import { ref } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, RouterLink } from 'vue-router'
 
 const route = useRoute()
 

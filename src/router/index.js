@@ -10,6 +10,11 @@ const router = createRouter({
       component: () => import('@/views/LoginView.vue'),
     },
     {
+      path: '/tower',
+      name: 'tower',
+      component: () => import('@/views/TowerView.vue'),
+    },
+    {
       path: '/auth/success',
       name: 'auth-success',
       component: () => import('@/views/AuthCallback.vue'),
