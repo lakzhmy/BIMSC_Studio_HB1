@@ -439,46 +439,150 @@
             />
             <div>
               <h3 class="text-xl font-bold text-slate-800">Data</h3>
-              <p class="text-sm text-slate-400">Analytics and performance optimization</p>
+              <p class="text-sm text-slate-400">Tower vitals &amp; environmental performance</p>
             </div>
           </div>
 
-          <!-- KPI rings grid -->
-          <div class="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-10">
-            <div
-              v-for="ring in kpiRings" :key="ring.label"
-              class="flex flex-col items-center text-center gap-2 kpi-ring-item"
-            >
-              <svg viewBox="0 0 80 80" class="w-20 h-20" role="img" :aria-label="ring.label">
-                <!-- Track -->
-                <circle cx="40" cy="40" r="32" fill="none" stroke="#f1f5f9" stroke-width="6" />
-                <!-- Fill — animates in on scroll entry -->
-                <circle
-                  cx="40" cy="40" r="32" fill="none"
-                  :stroke="ring.color" stroke-width="6"
-                  stroke-linecap="round"
-                  transform="rotate(-90, 40, 40)"
-                  stroke-dasharray="201.06"
-                  :stroke-dashoffset="ringsVisible ? (201.06 * (1 - ring.fill / 100)).toFixed(2) : '201.06'"
-                  class="ring-fill"
-                />
-                <!-- Center value -->
-                <text
-                  x="40" y="44"
-                  text-anchor="middle" font-size="13" font-weight="700"
-                  fill="#1e293b" font-family="system-ui, sans-serif"
-                >{{ ring.value }}</text>
+          <div class="flex flex-col md:flex-row gap-12 items-start">
+
+            <!-- LEFT: Skyline comparison -->
+            <div class="flex-1 w-full">
+              <p class="text-xs font-medium tracking-widest uppercase text-slate-400 mb-5">Height comparison</p>
+              <svg
+                viewBox="0 0 400 260" class="w-full cursor-crosshair"
+                role="img" aria-label="Tower height comparison skyline"
+                @mouseleave="hoveredLandmark = null"
+              >
+                <!-- Ground line -->
+                <line x1="0" y1="230" x2="400" y2="230" stroke="#e2e8f0" stroke-width="1" />
+
+                <!-- Landmark bars -->
+                <g v-for="(lm, i) in landmarks" :key="lm.name">
+                  <!-- Bar -->
+                  <rect
+                    :x="lm.x" :y="230 - lm.barH" :width="lm.w" :height="lm.barH"
+                    :rx="lm.isHB01 ? 4 : 2"
+                    :fill="hoveredLandmark?.name === lm.name ? (lm.isHB01 ? '#059669' : '#94a3b8') : lm.color"
+                    :opacity="hoveredLandmark && hoveredLandmark.name !== lm.name ? 0.35 : 1"
+                    class="landmark-bar"
+                    @mouseenter="hoveredLandmark = lm"
+                  />
+                  <!-- Height label on top -->
+                  <text
+                    :x="lm.x + lm.w / 2" :y="230 - lm.barH - 6"
+                    text-anchor="middle" font-size="9" font-weight="600"
+                    :fill="hoveredLandmark?.name === lm.name ? (lm.isHB01 ? '#059669' : '#64748b') : '#94a3b8'"
+                    font-family="system-ui, sans-serif"
+                    class="landmark-bar"
+                  >{{ lm.heightLabel }}</text>
+                  <!-- Name label below ground -->
+                  <text
+                    :x="lm.x + lm.w / 2" :y="245"
+                    text-anchor="middle" font-size="7.5"
+                    :fill="hoveredLandmark?.name === lm.name ? '#334155' : '#cbd5e1'"
+                    font-family="system-ui, sans-serif"
+                    class="landmark-bar"
+                  >{{ lm.shortName }}</text>
+                  <!-- HB01 marker dot -->
+                  <circle
+                    v-if="lm.isHB01"
+                    :cx="lm.x + lm.w / 2" :cy="255"
+                    r="2.5"
+                    :fill="hoveredLandmark?.name === lm.name ? '#059669' : '#10b981'"
+                    :opacity="hoveredLandmark && hoveredLandmark.name !== lm.name ? 0.3 : 1"
+                    class="landmark-bar"
+                  />
+                </g>
+
+                <!-- Hover tooltip -->
+                <g v-if="hoveredLandmark">
+                  <rect
+                    :x="Math.min(Math.max(hoveredLandmark.x + hoveredLandmark.w / 2 - 55, 2), 290)"
+                    y="2" width="110" height="22" rx="4"
+                    :fill="hoveredLandmark.isHB01 ? '#f0fdf4' : '#f8fafc'"
+                    :stroke="hoveredLandmark.isHB01 ? '#10b981' : '#e2e8f0'"
+                    stroke-width="1"
+                  />
+                  <text
+                    :x="Math.min(Math.max(hoveredLandmark.x + hoveredLandmark.w / 2, 57), 345)"
+                    y="17" text-anchor="middle" font-size="9" font-weight="600"
+                    :fill="hoveredLandmark.isHB01 ? '#059669' : '#475569'"
+                    font-family="system-ui, sans-serif"
+                  >{{ hoveredLandmark.name }} — {{ hoveredLandmark.height }}m</text>
+                </g>
               </svg>
-              <p class="text-xs font-semibold text-slate-700 leading-tight">{{ ring.label }}</p>
-              <p class="text-xs text-slate-400">{{ ring.unit }}</p>
-              <p class="text-xs text-emerald-500">{{ ring.trend }}</p>
+              <!-- Legend -->
+              <div class="flex items-center gap-4 mt-3">
+                <div class="flex items-center gap-1.5">
+                  <span class="w-2.5 h-2.5 rounded-sm bg-emerald-400"></span>
+                  <span class="text-[10px] text-slate-400">HB01 Towers</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <span class="w-2.5 h-2.5 rounded-sm bg-slate-200"></span>
+                  <span class="text-[10px] text-slate-400">Global &amp; Local Landmarks</span>
+                </div>
+              </div>
             </div>
-          </div>
 
-          <!-- Live indicator -->
-          <div class="flex items-center justify-center gap-2 mt-12">
-            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse flex-shrink-0"></span>
-            <span class="text-xs text-slate-400">Based on latest computational models</span>
+            <!-- RIGHT: Headlines + Sustainability -->
+            <div class="flex-1 w-full min-w-[220px]">
+              <!-- Headline numbers -->
+              <p class="text-xs font-medium tracking-widest uppercase text-slate-400 mb-5">Tower vitals</p>
+              <div class="grid grid-cols-2 gap-4 mb-8">
+                <div v-for="stat in headlineStats" :key="stat.label" class="headline-stat p-3 rounded-xl bg-slate-50 border border-slate-100">
+                  <p class="text-2xl font-bold text-slate-800 leading-none">{{ stat.value }}</p>
+                  <p class="text-[10px] text-slate-400 uppercase tracking-widest mt-1.5">{{ stat.label }}</p>
+                </div>
+              </div>
+
+              <!-- Sustainability -->
+              <p class="text-xs font-medium tracking-widest uppercase text-slate-400 mb-5">Environmental performance</p>
+              <div class="flex flex-col gap-5">
+                <!-- Air filtration ring -->
+                <div class="flex items-center gap-4">
+                  <svg viewBox="0 0 60 60" class="w-14 h-14 flex-shrink-0" role="img" aria-label="Air filtration">
+                    <circle cx="30" cy="30" r="24" fill="none" stroke="#f1f5f9" stroke-width="5" />
+                    <circle
+                      cx="30" cy="30" r="24" fill="none"
+                      stroke="#10b981" stroke-width="5"
+                      stroke-linecap="round"
+                      transform="rotate(-90, 30, 30)"
+                      stroke-dasharray="150.80"
+                      :stroke-dashoffset="ringsVisible ? '22.62' : '150.80'"
+                      class="ring-fill"
+                    />
+                    <text x="30" y="33" text-anchor="middle" font-size="10" font-weight="700" fill="#1e293b" font-family="system-ui, sans-serif">12M</text>
+                  </svg>
+                  <div>
+                    <p class="text-sm font-bold text-slate-800">12,000,000 m³ / year</p>
+                    <p class="text-xs text-slate-400">Air filtered through porous cores</p>
+                    <p class="text-xs text-emerald-500 mt-0.5">≈ 4,800 mature trees equivalent</p>
+                  </div>
+                </div>
+
+                <!-- Certification badges -->
+                <div class="flex flex-wrap gap-2">
+                  <span class="badge-pill inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                    <span class="text-xs font-semibold text-emerald-700">Net Zero 2040</span>
+                  </span>
+                  <span class="badge-pill inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-50 border border-blue-200">
+                    <span class="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
+                    <span class="text-xs font-semibold text-blue-700">LEED Platinum</span>
+                  </span>
+                  <span class="badge-pill inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-50 border border-amber-200">
+                    <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+                    <span class="text-xs font-semibold text-amber-700">&lt; 350 kgCO₂e / m²</span>
+                  </span>
+                </div>
+              </div>
+
+              <!-- Live indicator -->
+              <div class="flex items-center gap-2 mt-8">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse flex-shrink-0"></span>
+                <span class="text-xs text-slate-400">Based on latest computational models</span>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -534,6 +638,7 @@ onUnmounted(() => window.removeEventListener('scroll', onScroll))
 const hoveredSeg = ref(null)
 const hoveredBar = ref(null)
 const hoveredStep = ref(null)
+const hoveredLandmark = ref(null)
 
 // ── KPI ring IntersectionObserver ────────────────────────────
 const ringsVisible = ref(false)
@@ -591,14 +696,40 @@ const programStats = [
   { label: 'Occupancy Capacity',   value: '42,000',    bar: 88,  color: '#2dd4bf' },
 ]
 
-// ── KPI rings ─────────────────────────────────────────────────
-const kpiRings = [
-  { label: 'Embodied Carbon',       value: '342',  unit: 'kgCO₂e / m²',   fill: 85, color: '#10b981', trend: '↓ 14.5% below target' },
-  { label: 'Daylight Factor',       value: '4.2%', unit: 'of occupied area', fill: 95, color: '#3b82f6', trend: '↑ 40% above target'  },
-  { label: 'Energy Intensity',      value: '87',   unit: 'kWh / m² / yr',  fill: 78, color: '#10b981', trend: '↓ 13% below target'   },
-  { label: 'Structural Efficiency', value: '92%',  unit: 'material use',   fill: 92, color: '#10b981', trend: '↑ 8% above target'    },
-  { label: 'Natural Ventilation',   value: '42.5', unit: 'm³ / min',       fill: 88, color: '#3b82f6', trend: '↑ 21% above target'   },
-  { label: 'Facade / Floor Ratio',  value: '0.28', unit: 'net / gross',    fill: 72, color: '#10b981', trend: '— within target'      },
+// ── Skyline landmarks ───────────────────────────────────────
+const MAX_HEIGHT = 828 // Burj Khalifa
+const BAR_AREA_H = 200 // max pixel height for tallest bar
+const rawLandmarks = [
+  { name: 'Gran Torre Santiago', shortName: 'Gran Torre',   height: 300, isHB01: false },
+  { name: 'Eiffel Tower',       shortName: 'Eiffel',       height: 330, isHB01: false },
+  { name: 'HB01 Tower A',       shortName: 'HB01-A',       height: 400, isHB01: true  },
+  { name: 'Empire State',       shortName: 'Empire St.',   height: 443, isHB01: false },
+  { name: 'HB01 Tower B',       shortName: 'HB01-B',       height: 500, isHB01: true  },
+  { name: 'HB01 Tower C',       shortName: 'HB01-C',       height: 600, isHB01: true  },
+  { name: 'Shanghai Tower',     shortName: 'Shanghai',     height: 632, isHB01: false },
+  { name: 'Burj Khalifa',       shortName: 'Burj Khalifa', height: 828, isHB01: false },
+]
+const landmarks = rawLandmarks.map((lm, i) => {
+  const barH = Math.round((lm.height / MAX_HEIGHT) * BAR_AREA_H)
+  const w = lm.isHB01 ? 34 : 26
+  const gap = (400 - rawLandmarks.length * 40) / (rawLandmarks.length + 1)
+  const x = gap + i * (40 + gap) + (40 - w) / 2
+  return {
+    ...lm,
+    barH,
+    w,
+    x: Math.round(x),
+    heightLabel: `${lm.height}m`,
+    color: lm.isHB01 ? '#10b981' : '#e2e8f0',
+  }
+})
+
+// ── Headline stats ───────────────────────────────────────────
+const headlineStats = [
+  { label: 'Tallest Tower',    value: '600m' },
+  { label: 'Total Floors',     value: '210' },
+  { label: 'Gross Floor Area', value: '1M m²' },
+  { label: 'Peak Occupancy',   value: '42,000' },
 ]
 </script>
 
@@ -657,11 +788,28 @@ const kpiRings = [
 .ring-fill {
   transition: stroke-dashoffset 1.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
-.kpi-ring-item {
+
+/* ── Landmark skyline bars ────────────────────────────── */
+.landmark-bar {
+  transition: fill 0.2s ease, opacity 0.2s ease;
+  cursor: pointer;
+}
+
+/* ── Headline stat hover ─────────────────────────────── */
+.headline-stat {
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+.headline-stat:hover {
+  border-color: #10b981;
+  transform: translateY(-2px);
+}
+
+/* ── Badge pill ─────────────────────────────────────── */
+.badge-pill {
   transition: transform 0.2s ease;
 }
-.kpi-ring-item:hover {
-  transform: scale(1.04);
+.badge-pill:hover {
+  transform: scale(1.05);
 }
 
 /* ── Blob morph keyframes ────────────────────────────────── */
