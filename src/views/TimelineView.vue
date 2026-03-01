@@ -1,7 +1,7 @@
 <template>
   <main class="py-10 px-8">
-      <div ref="exportEl" class="max-w-none mx-auto space-y-8">
-        <div class="flex items-start justify-between gap-6 flex-wrap">
+      <div class="max-w-none mx-auto space-y-8">
+        <div v-show="!isExporting" class="flex items-start justify-between gap-6 flex-wrap">
           <div>
             <h1 class="text-4xl font-bold text-slate-900">Timeline</h1>
             <p class="text-base text-slate-600 mt-2">Weekly milestones and team deliverables</p>
@@ -43,13 +43,13 @@
           </div>
         </div>
 
-        <div class="relative overflow-x-hidden overflow-visible">
+        <div ref="exportEl" class="relative overflow-x-hidden overflow-visible">
           <div class="w-full mt-8 pt-12">
             <div class="relative h-28 overflow-visible isolate">
               <svg class="absolute inset-0 w-full h-full z-0 pointer-events-none" viewBox="0 0 100 96" preserveAspectRatio="none">
-                <polyline :points="teamPoints.structure" :class="trackStrokeClass('structure')" class="fill-none stroke-[3]" />
-                <polyline :points="teamPoints.program" :class="trackStrokeClass('program')" class="fill-none stroke-[3]" />
-                <polyline :points="teamPoints.data" :class="trackStrokeClass('data')" class="fill-none stroke-[3]" />
+                <polyline :points="teamPoints.structure" :style="trackStrokeStyle('structure')" class="fill-none" stroke-width="3" />
+                <polyline :points="teamPoints.program" :style="trackStrokeStyle('program')" class="fill-none" stroke-width="3" />
+                <polyline :points="teamPoints.data" :style="trackStrokeStyle('data')" class="fill-none" stroke-width="3" />
               </svg>
               <div class="absolute inset-0 grid grid-cols-10 gap-2 z-20">
                 <div v-for="week in courseTimeline" :key="week.week" class="relative">
@@ -167,7 +167,7 @@
                     </div>
                   </div>
                 </div>
-                <p v-else class="mt-2 text-[11px] text-slate-500">Click the dots to toggle team deliverables.</p>
+                <p v-else v-show="!isExporting" class="mt-2 text-[11px] text-slate-500">Click the dots to toggle team deliverables.</p>
               </div>
             </div>
           </div>
@@ -326,7 +326,7 @@ async function downloadTimelinePng() {
   await nextTick() // allow DOM to hide edit/delete icons before capture
   try {
     const dataUrl = await toPng(exportEl.value, {
-      backgroundColor: '#f8fafc', // slate-50, matches the app background
+      backgroundColor: 'transparent',
       pixelRatio: 2,
     })
     const link = document.createElement('a')
@@ -624,13 +624,18 @@ function milestoneSummary(deliverable) {
   ]
 }
 
-function trackStrokeClass(team) {
+// Inline stroke style for SVG polylines — ensures colors render correctly in PNG export
+// (Tailwind stroke-* classes are not resolved by html-to-image).
+function trackStrokeStyle(team) {
   const colorMap = {
-    structure: 'stroke-green-400',
-    program: 'stroke-blue-400',
-    data: 'stroke-red-400'
+    structure: '#4ade80', // green-400
+    program: '#60a5fa',  // blue-400
+    data: '#f87171',     // red-400
   }
-  return filters[team] ? colorMap[team] : `${colorMap[team]} opacity-0`
+  return {
+    stroke: colorMap[team] || '#94a3b8',
+    opacity: filters[team] ? 1 : 0,
+  }
 }
 
 function teamDotClass(team) {
