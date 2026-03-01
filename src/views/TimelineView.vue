@@ -43,13 +43,13 @@
           </div>
         </div>
 
-        <div ref="exportEl" class="relative overflow-x-hidden overflow-visible">
+        <div ref="exportEl" class="relative overflow-visible">
           <div class="w-full mt-8 pt-12">
             <div class="relative h-28 overflow-visible isolate">
               <svg class="absolute inset-0 w-full h-full z-0 pointer-events-none" viewBox="0 0 100 96" preserveAspectRatio="none">
-                <polyline :points="teamPoints.structure" :style="trackStrokeStyle('structure')" class="fill-none" stroke-width="3" />
-                <polyline :points="teamPoints.program" :style="trackStrokeStyle('program')" class="fill-none" stroke-width="3" />
-                <polyline :points="teamPoints.data" :style="trackStrokeStyle('data')" class="fill-none" stroke-width="3" />
+                <polyline :points="teamPoints.structure" :style="trackStrokeStyle('structure')" fill="none" vector-effect="non-scaling-stroke" />
+                <polyline :points="teamPoints.program" :style="trackStrokeStyle('program')" fill="none" vector-effect="non-scaling-stroke" />
+                <polyline :points="teamPoints.data" :style="trackStrokeStyle('data')" fill="none" vector-effect="non-scaling-stroke" />
               </svg>
               <div class="absolute inset-0 grid grid-cols-10 gap-2 z-20">
                 <div v-for="week in courseTimeline" :key="week.week" class="relative">
@@ -328,6 +328,7 @@ async function downloadTimelinePng() {
     const dataUrl = await toPng(exportEl.value, {
       backgroundColor: 'transparent',
       pixelRatio: 2,
+      style: { overflow: 'visible' },
     })
     const link = document.createElement('a')
     link.download = `timeline-week${currentWeekMarker.value}.png`
@@ -634,6 +635,7 @@ function trackStrokeStyle(team) {
   }
   return {
     stroke: colorMap[team] || '#94a3b8',
+    strokeWidth: '3px',
     opacity: filters[team] ? 1 : 0,
   }
 }
