@@ -376,13 +376,7 @@ const currentWeekFraction = computed(() => {
 // Math.round would incorrectly advance to the next week past the midpoint.
 const currentWeekMarker = computed(() => Math.min(10, Math.floor(currentWeekFraction.value)))
 
-// Fraction 0–1 of how far through week N a given ISO timestamp falls.
-// Clamped so pre- or post-week creation dates land at the column edges.
-function weekFraction(weekNum, isoString) {
-  const weekStart = WEEK_START_DATES[weekNum - 1].getTime()
-  const msPerWeek = 7 * 24 * 60 * 60 * 1000
-  return Math.max(0, Math.min(1, (new Date(isoString).getTime() - weekStart) / msPerWeek))
-}
+
 
 // How far through the current week today is (0–1), used to position the
 // Today chip inside its column. Clamped to 98 so the chip never overflows the right edge.
@@ -551,53 +545,31 @@ function nodeStyle(week, team) {
   }
 }
 
-// Return all visible (filtered) deliverables for a week, sorted by creation date.
-// Used by selectedDeliverables and other non-dot logic.
-function weekVisibleDeliverables(week) {
-  return week.deliverables
-    .filter((d) => d.team !== 'general' && filters[d.team])
-    .sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0))
-}
-
-// Minimum horizontal gap (% of column width) between same-team dots.
-// A week column is ~110px wide; 20% ≈ 22px which is wider than one dot (16px),
-// giving a clear visual gap between adjacent dots on the same team line.
-const MIN_DOT_GAP = 20
-
-// Returns visible deliverables with a pre-computed `.leftPct` that is both
-// date-accurate and guaranteed overlap-free within each team row.
+// Returns visible deliverables with a pre-computed `.leftPct`.
+// Same-team dots within a week are evenly spaced so they never overlap.
 function resolvedDeliverables(week) {
   const items = week.deliverables
     .filter((d) => d.team !== 'general' && filters[d.team])
     .sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0))
 
-  // Compute raw left position for every item from its creation date
-  const withRaw = items.map((d) => ({
-    ...d,
-    _rawLeft: d.createdAt ? weekFraction(week.week, d.createdAt) * 100 : 50,
-  }))
-
-  // Group by team — dots on the same team share a Y row and can visually overlap
+  // Group by team — only same-team dots share a Y row and can overlap
   const byTeam = {}
-  for (const d of withRaw) {
+  for (const d of items) {
     if (!byTeam[d.team]) byTeam[d.team] = []
     byTeam[d.team].push(d)
   }
 
-  // Forward sweep per team: push later dots right if they're too close
-  const leftMap = new Map()
+  // Evenly space dots per team: 1 dot → center, multiple → spread 10%–90%
+  const result = []
   for (const teamItems of Object.values(byTeam)) {
-    for (let i = 0; i < teamItems.length; i++) {
-      let left = teamItems[i]._rawLeft
-      if (i > 0) {
-        const prevLeft = leftMap.get(teamItems[i - 1].id)
-        left = Math.max(left, prevLeft + MIN_DOT_GAP)
-      }
-      leftMap.set(teamItems[i].id, Math.min(98, left))
+    const count = teamItems.length
+    for (let i = 0; i < count; i++) {
+      const leftPct = count === 1 ? 50 : 10 + (i / (count - 1)) * 80
+      result.push({ ...teamItems[i], leftPct })
     }
   }
 
-  return withRaw.map((d) => ({ ...d, leftPct: leftMap.get(d.id) }))
+  return result
 }
 
 // Position a milestone dot: vertical position on its team's SVG line,
