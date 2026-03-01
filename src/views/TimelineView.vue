@@ -23,24 +23,33 @@
             </div>
             <div class="flex items-center">
               <select
-                v-model="exportQuality"
+                v-model="exportFormat"
                 class="h-[34px] rounded-l-full border border-r-0 border-slate-200 bg-slate-50 text-xs font-semibold text-slate-600 pl-3 pr-1 focus:outline-none"
-                title="Export quality"
+                title="Export format"
               >
-                <option :value="1">1x</option>
+                <option value="svg">SVG</option>
+                <option value="png">PNG</option>
+              </select>
+              <select
+                v-if="exportFormat === 'png'"
+                v-model="exportQuality"
+                class="h-[34px] border border-r-0 border-slate-200 bg-slate-50 text-xs font-semibold text-slate-600 pl-2 pr-1 focus:outline-none"
+                title="Pixel ratio"
+              >
                 <option :value="2">2x</option>
                 <option :value="3">3x</option>
                 <option :value="4">4x</option>
+                <option :value="6">6x</option>
               </select>
               <button
-                @click="downloadTimelinePng"
+                @click="downloadTimeline"
                 class="flex items-center gap-1.5 px-4 py-1.5 rounded-r-full text-sm font-semibold bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200 transition-colors shadow-sm"
-                title="Download timeline as PNG"
+                title="Download timeline"
               >
                 <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
                   <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
                 </svg>
-                Export PNG
+                Export
               </button>
             </div>
             <button
@@ -199,7 +208,7 @@
 
 <script setup>
 import { computed, reactive, ref, onMounted, nextTick } from 'vue'
-import { toPng } from 'html-to-image'
+import { toPng, toSvg } from 'html-to-image'
 import { courseTimeline as baseTimeline } from '@/data/sampleData'
 import { useUserStore } from '@/stores/userStore'
 import AddMilestoneModal from '@/components/AddMilestoneModal.vue'
@@ -218,7 +227,8 @@ const selectedKeys = ref(new Set())
 const showAddModal = ref(false)
 const editingMilestone = ref(null)
 const dbMilestones = ref([])
-const exportQuality = ref(2)
+const exportQuality = ref(3)
+const exportFormat = ref('svg')
 
 // Load milestones from the database on mount
 async function fetchMilestones() {
@@ -333,7 +343,7 @@ async function deleteMilestone(id) {
   }
 }
 
-async function downloadTimelinePng() {
+async function downloadTimeline() {
   if (!exportEl.value) return
   isExporting.value = true
   await nextTick()
@@ -341,9 +351,6 @@ async function downloadTimelinePng() {
     const el = exportEl.value
     const elRect = el.getBoundingClientRect()
 
-    // Walk every descendant to find the true content extent.
-    // Cards with variable height (expanded milestones) can extend past
-    // the element's own offsetHeight, causing bottom clipping.
     let maxBottom = elRect.bottom
     let maxRight = elRect.right
     el.querySelectorAll('*').forEach((child) => {
@@ -355,11 +362,10 @@ async function downloadTimelinePng() {
     })
 
     const captureWidth = Math.ceil(maxRight - elRect.left)
-    const captureHeight = Math.ceil(maxBottom - elRect.top) + 32 // breathing room
+    const captureHeight = Math.ceil(maxBottom - elRect.top) + 32
 
-    const dataUrl = await toPng(el, {
+    const exportOpts = {
       backgroundColor: 'transparent',
-      pixelRatio: exportQuality.value,
       width: captureWidth,
       height: captureHeight,
       style: {
@@ -367,13 +373,24 @@ async function downloadTimelinePng() {
         minHeight: captureHeight + 'px',
         minWidth: captureWidth + 'px',
       },
-    })
+    }
+
     const link = document.createElement('a')
-    link.download = `timeline-week${currentWeekMarker.value}.png`
-    link.href = dataUrl
+    const weekLabel = `timeline-week${currentWeekMarker.value}`
+
+    if (exportFormat.value === 'svg') {
+      const svgDataUrl = await toSvg(el, exportOpts)
+      link.download = `${weekLabel}.svg`
+      link.href = svgDataUrl
+    } else {
+      const pngDataUrl = await toPng(el, { ...exportOpts, pixelRatio: exportQuality.value })
+      link.download = `${weekLabel}.png`
+      link.href = pngDataUrl
+    }
+
     link.click()
   } catch (err) {
-    console.error('PNG export failed:', err)
+    console.error('Export failed:', err)
   } finally {
     isExporting.value = false
   }
