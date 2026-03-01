@@ -307,7 +307,7 @@ const structureSummaryCards = computed(() => {
       withinMargin,
       bulletValuePct: Math.min((value / max) * 100, 100),
       bulletTargetPct: Math.min((target / max) * 100, 100),
-      color: withinMargin ? '#10b981' : '#ef4444',
+      color: '#10b981',
     }
   })
 })
@@ -387,7 +387,7 @@ const dataSummaryCards = computed(() => {
       withinMargin,
       bulletValuePct: Math.min((value / max) * 100, 100),
       bulletTargetPct: Math.min((target / max) * 100, 100),
-      color: withinMargin ? '#10b981' : '#ef4444',
+      color: '#ef4444',
     }
   })
 })

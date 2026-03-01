@@ -44,7 +44,7 @@
             </span>
           </div>
           <div class="relative h-2 rounded-full bg-slate-200 overflow-visible">
-            <div class="absolute left-0 top-0 h-full rounded-full" :style="{ width: `${summaryCards[index].bulletValuePct}%`, backgroundColor: summaryCards[index].withinMargin ? '#10b981' : '#ef4444' }"></div>
+            <div class="absolute left-0 top-0 h-full rounded-full" :style="{ width: `${summaryCards[index].bulletValuePct}%`, backgroundColor: '#3b82f6' }"></div>
             <div class="absolute top-0 h-full w-0.5 bg-slate-500" :style="{ left: `${summaryCards[index].bulletTargetPct}%` }"></div>
             <div class="absolute top-0 h-2 w-2 bg-yellow-400 shadow-sm" :style="{ left: `calc(${summaryCards[index].bulletTargetPct}% - 4px)`, transform: 'rotate(45deg)' }"></div>
             <div class="absolute -top-5 text-[10px] text-slate-600" :style="{ left: `calc(${summaryCards[index].bulletTargetPct}% - 8px)` }">{{ formatValue(summaryCards[index].visual?.target) }}</div>
