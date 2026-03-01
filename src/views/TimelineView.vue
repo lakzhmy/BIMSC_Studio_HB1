@@ -329,9 +329,9 @@ const currentWeekFraction = computed(() => {
   return Math.max(1, Math.min(10.99, fraction))
 })
 
-// Round to nearest week: past the midpoint of week N → display week N+1
-// (matches the academic convention where Feb 21 = "week 7" when >50% through week 6)
-const currentWeekMarker = computed(() => Math.min(10, Math.round(currentWeekFraction.value)))
+// Floor to current week: fraction 7.x means we are in week 7, not week 8.
+// Math.round would incorrectly advance to the next week past the midpoint.
+const currentWeekMarker = computed(() => Math.min(10, Math.floor(currentWeekFraction.value)))
 
 // Formatted date/time string for the tooltip
 const currentDateTimeString = computed(() => {
@@ -351,9 +351,9 @@ const currentWeekMarkerStyle = computed(() => {
   if (total <= 1) {
     return { left: '0%' }
   }
-  // Snap to the integer current week so the marker aligns with the correct
-  // column dot — matches isPastWeek() and the dashboard "Timeline Progress" widget
-  const pos = (currentWeekMarker.value - 1) / (total - 1)
+  // Use the precise fractional position so the marker tracks exactly where
+  // today falls within the week (e.g. end of week 7 → near right edge of col 7)
+  const pos = (currentWeekFraction.value - 1) / (total - 1)
   return { left: `${Math.max(0, Math.min(100, pos * 100))}%` }
 })
 
