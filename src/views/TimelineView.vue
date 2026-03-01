@@ -43,7 +43,7 @@
               </svg>
               <div class="group absolute -translate-x-1/2 top-0 -translate-y-8 z-10" :style="currentWeekMarkerStyle">
                 <div class="text-xs font-semibold text-slate-700 bg-white/95 border border-slate-200 rounded-full px-3.5 py-1.5 shadow-sm cursor-default">
-                  Week {{ currentWeekMarker }} — now
+                  Today
                 </div>
                 <div class="absolute left-1/2 -translate-x-1/2 bottom-full mb-1 w-52 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600 shadow-lg opacity-0 pointer-events-none transition-opacity group-hover:opacity-100 group-hover:pointer-events-auto z-[100] text-center">
                   {{ currentDateTimeString }}
@@ -351,9 +351,10 @@ const currentWeekMarkerStyle = computed(() => {
   if (total <= 1) {
     return { left: '0%' }
   }
-  // Use the precise fractional position so the marker tracks exactly where
-  // today falls within the week (e.g. end of week 7 → near right edge of col 7)
-  const pos = (currentWeekFraction.value - 1) / (total - 1)
+  // Snap to the integer current week column so the dashed line aligns with
+  // the correct week. Using the fractional value causes the line to land
+  // visually between columns (e.g. 76% left falls on Week 8, not Week 7).
+  const pos = (currentWeekMarker.value - 1) / (total - 1)
   return { left: `${Math.max(0, Math.min(100, pos * 100))}%` }
 })
 

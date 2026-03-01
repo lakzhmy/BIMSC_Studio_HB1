@@ -110,8 +110,8 @@ const currentWeekFraction = computed(() => {
   return Math.max(1, Math.min(10.99, fraction))
 })
 
-// Round to nearest week to match the timeline tab convention
-const currentWeekNumber = computed(() => Math.min(10, Math.round(currentWeekFraction.value)))
+// Floor to current week — week N spans Mon–Sun (fraction N.0–N.999), Math.round is wrong past midpoint
+const currentWeekNumber = computed(() => Math.min(10, Math.floor(currentWeekFraction.value)))
 
 const todayString = computed(() => {
   return new Date().toLocaleDateString('en-GB', {

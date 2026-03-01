@@ -147,7 +147,7 @@ export const useUserStore = defineStore('user', () => {
 
       const msPerWeek = 7 * 24 * 60 * 60 * 1000
       const currentWeek = Math.max(1, Math.min(10,
-        Math.round((Date.now() - new Date(2026, 0, 12).getTime()) / msPerWeek) + 1
+        Math.floor((Date.now() - new Date(2026, 0, 12).getTime()) / msPerWeek) + 1
       ))
 
       const bestWeekRow = (sheetData) => {

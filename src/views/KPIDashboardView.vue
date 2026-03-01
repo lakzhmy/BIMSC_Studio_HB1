@@ -203,7 +203,7 @@ const userStore = useUserStore()
 const currentWeekNumber = computed(() => {
   const msPerWeek = 7 * 24 * 60 * 60 * 1000
   const week1Start = new Date(2026, 0, 12).getTime()
-  const week = Math.round((Date.now() - week1Start) / msPerWeek) + 1
+  const week = Math.floor((Date.now() - week1Start) / msPerWeek) + 1
   return Math.max(1, Math.min(10, week))
 })
 
