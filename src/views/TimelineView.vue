@@ -323,12 +323,37 @@ async function deleteMilestone(id) {
 async function downloadTimelinePng() {
   if (!exportEl.value) return
   isExporting.value = true
-  await nextTick() // allow DOM to hide edit/delete icons before capture
+  await nextTick()
   try {
-    const dataUrl = await toPng(exportEl.value, {
+    const el = exportEl.value
+    const elRect = el.getBoundingClientRect()
+
+    // Walk every descendant to find the true content extent.
+    // Cards with variable height (expanded milestones) can extend past
+    // the element's own offsetHeight, causing bottom clipping.
+    let maxBottom = elRect.bottom
+    let maxRight = elRect.right
+    el.querySelectorAll('*').forEach((child) => {
+      const r = child.getBoundingClientRect()
+      if (r.width > 0 && r.height > 0) {
+        maxBottom = Math.max(maxBottom, r.bottom)
+        maxRight = Math.max(maxRight, r.right)
+      }
+    })
+
+    const captureWidth = Math.ceil(maxRight - elRect.left)
+    const captureHeight = Math.ceil(maxBottom - elRect.top) + 32 // breathing room
+
+    const dataUrl = await toPng(el, {
       backgroundColor: 'transparent',
       pixelRatio: 2,
-      style: { overflow: 'visible' },
+      width: captureWidth,
+      height: captureHeight,
+      style: {
+        overflow: 'visible',
+        minHeight: captureHeight + 'px',
+        minWidth: captureWidth + 'px',
+      },
     })
     const link = document.createElement('a')
     link.download = `timeline-week${currentWeekMarker.value}.png`
