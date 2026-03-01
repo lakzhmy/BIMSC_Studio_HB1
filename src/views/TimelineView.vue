@@ -30,17 +30,6 @@
                 <option value="svg">SVG</option>
                 <option value="png">PNG</option>
               </select>
-              <select
-                v-if="exportFormat === 'png'"
-                v-model="exportQuality"
-                class="h-[34px] border border-r-0 border-slate-200 bg-slate-50 text-xs font-semibold text-slate-600 pl-2 pr-1 focus:outline-none"
-                title="Pixel ratio"
-              >
-                <option :value="2">2x</option>
-                <option :value="3">3x</option>
-                <option :value="4">4x</option>
-                <option :value="6">6x</option>
-              </select>
               <button
                 @click="downloadTimeline"
                 class="flex items-center gap-1.5 px-4 py-1.5 rounded-r-full text-sm font-semibold bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200 transition-colors shadow-sm"
@@ -227,7 +216,6 @@ const selectedKeys = ref(new Set())
 const showAddModal = ref(false)
 const editingMilestone = ref(null)
 const dbMilestones = ref([])
-const exportQuality = ref(3)
 const exportFormat = ref('svg')
 
 // Load milestones from the database on mount
@@ -383,7 +371,7 @@ async function downloadTimeline() {
       link.download = `${weekLabel}.svg`
       link.href = svgDataUrl
     } else {
-      const pngDataUrl = await toPng(el, { ...exportOpts, pixelRatio: exportQuality.value })
+      const pngDataUrl = await toPng(el, { ...exportOpts, pixelRatio: 2 })
       link.download = `${weekLabel}.png`
       link.href = pngDataUrl
     }
