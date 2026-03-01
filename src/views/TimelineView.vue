@@ -22,6 +22,16 @@
               </label>
             </div>
             <button
+              @click="downloadTimelinePng"
+              class="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-semibold bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200 transition-colors shadow-sm"
+              title="Download timeline as PNG"
+            >
+              <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
+              </svg>
+              Export PNG
+            </button>
+            <button
               @click="showAddModal = true"
               class="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-semibold bg-slate-900 text-white hover:bg-slate-800 transition-colors shadow-sm"
             >
@@ -33,7 +43,7 @@
           </div>
         </div>
 
-        <div class="relative overflow-x-hidden overflow-visible">
+        <div ref="timelineEl" class="relative overflow-x-hidden overflow-visible">
           <div class="w-full mt-8 pt-12">
             <div class="relative h-28 overflow-visible isolate">
               <svg class="absolute inset-0 w-full h-full z-0 pointer-events-none" viewBox="0 0 100 96" preserveAspectRatio="none">
@@ -41,22 +51,31 @@
                 <polyline :points="teamPoints.program" :class="trackStrokeClass('program')" class="fill-none stroke-[3]" />
                 <polyline :points="teamPoints.data" :class="trackStrokeClass('data')" class="fill-none stroke-[3]" />
               </svg>
-              <div class="group absolute -translate-x-1/2 top-0 -translate-y-8 z-10" :style="currentWeekMarkerStyle">
-                <div class="text-xs font-semibold text-slate-700 bg-white/95 border border-slate-200 rounded-full px-3.5 py-1.5 shadow-sm cursor-default">
-                  Today
-                </div>
-                <div class="absolute left-1/2 -translate-x-1/2 bottom-full mb-1 w-52 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600 shadow-lg opacity-0 pointer-events-none transition-opacity group-hover:opacity-100 group-hover:pointer-events-auto z-[100] text-center">
-                  {{ currentDateTimeString }}
-                </div>
-              </div>
-              <div class="absolute -translate-x-1/2 -top-[24px] z-10 flex flex-col items-center pointer-events-none" :style="currentWeekMarkerStyle">
-                <svg class="mt-1 w-3.5 h-40 text-slate-600" viewBox="0 0 16 144" aria-hidden="true">
-                  <line x1="8" y1="2" x2="8" y2="124" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-dasharray="3 3" />
-                  <polygon points="8,140 4,124 12,124" fill="currentColor" />
-                </svg>
-              </div>
               <div class="absolute inset-0 grid grid-cols-10 gap-2 z-20">
                 <div v-for="week in courseTimeline" :key="week.week" class="relative">
+                  <!-- Today chip + dashed line — rendered inside the correct week's column -->
+                  <template v-if="week.week === currentWeekMarker">
+                    <div
+                      class="group absolute -translate-x-1/2 top-0 -translate-y-8 z-[50] pointer-events-auto"
+                      :style="{ left: todayColumnLeft + '%' }"
+                    >
+                      <div class="text-xs font-semibold text-slate-700 bg-white/95 border border-slate-200 rounded-full px-3.5 py-1.5 shadow-sm cursor-default">
+                        Today
+                      </div>
+                      <div class="absolute left-1/2 -translate-x-1/2 bottom-full mb-1 w-52 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600 shadow-lg opacity-0 pointer-events-none transition-opacity group-hover:opacity-100 group-hover:pointer-events-auto z-[100] text-center">
+                        {{ currentDateTimeString }}
+                      </div>
+                    </div>
+                    <div
+                      class="absolute -translate-x-1/2 -top-[24px] z-[50] flex flex-col items-center pointer-events-none"
+                      :style="{ left: todayColumnLeft + '%' }"
+                    >
+                      <svg class="mt-1 w-3.5 h-40 text-slate-600" viewBox="0 0 16 144" aria-hidden="true">
+                        <line x1="8" y1="2" x2="8" y2="124" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-dasharray="3 3" />
+                        <polygon points="8,140 4,124 12,124" fill="currentColor" />
+                      </svg>
+                    </div>
+                  </template>
                   <template v-for="(deliverable, dIdx) in weekVisibleDeliverables(week)" :key="deliverable.id">
                     <div
                       class="group absolute z-30 hover:z-[90] cursor-pointer"
@@ -168,6 +187,7 @@
 
 <script setup>
 import { computed, reactive, ref, onMounted } from 'vue'
+import { toPng } from 'html-to-image'
 import { courseTimeline as baseTimeline } from '@/data/sampleData'
 import { useUserStore } from '@/stores/userStore'
 import AddMilestoneModal from '@/components/AddMilestoneModal.vue'
@@ -180,6 +200,7 @@ const filters = reactive({
   data: true
 })
 
+const timelineEl = ref(null)
 const selectedKeys = ref(new Set())
 const showAddModal = ref(false)
 const editingMilestone = ref(null)
@@ -213,6 +234,7 @@ const courseTimeline = computed(() => {
         summary: m.summary || [],
         connections: m.connections || {},
         authorName: m.author_name,
+        createdAt: m.created_at,
       }))
     return {
       ...week,
@@ -297,6 +319,22 @@ async function deleteMilestone(id) {
   }
 }
 
+async function downloadTimelinePng() {
+  if (!timelineEl.value) return
+  try {
+    const dataUrl = await toPng(timelineEl.value, {
+      backgroundColor: '#ffffff',
+      pixelRatio: 2,
+    })
+    const link = document.createElement('a')
+    link.download = `timeline-week${currentWeekMarker.value}.png`
+    link.href = dataUrl
+    link.click()
+  } catch (err) {
+    console.error('PNG export failed:', err)
+  }
+}
+
 const teamClasses = {
   general: 'bg-slate-100 text-slate-700 border-slate-200',
   structure: 'bg-green-50 text-green-700 border-green-200',
@@ -333,6 +371,21 @@ const currentWeekFraction = computed(() => {
 // Math.round would incorrectly advance to the next week past the midpoint.
 const currentWeekMarker = computed(() => Math.min(10, Math.floor(currentWeekFraction.value)))
 
+// Fraction 0–1 of how far through week N a given ISO timestamp falls.
+// Clamped so pre- or post-week creation dates land at the column edges.
+function weekFraction(weekNum, isoString) {
+  const weekStart = WEEK_START_DATES[weekNum - 1].getTime()
+  const msPerWeek = 7 * 24 * 60 * 60 * 1000
+  return Math.max(0, Math.min(1, (new Date(isoString).getTime() - weekStart) / msPerWeek))
+}
+
+// How far through the current week today is (0–1), used to position the
+// Today chip inside its column. Clamped to 98 so the chip never overflows the right edge.
+const todayColumnLeft = computed(() => {
+  const frac = currentWeekFraction.value - currentWeekMarker.value
+  return Math.max(0, Math.min(98, frac * 100))
+})
+
 // Formatted date/time string for the tooltip
 const currentDateTimeString = computed(() => {
   const now = new Date()
@@ -344,18 +397,6 @@ const currentDateTimeString = computed(() => {
     hour: '2-digit',
     minute: '2-digit',
   })
-})
-
-const currentWeekMarkerStyle = computed(() => {
-  const total = courseTimeline.value.length
-  if (total <= 1) {
-    return { left: '0%' }
-  }
-  // Snap to the integer current week column so the dashed line aligns with
-  // the correct week. Using the fractional value causes the line to land
-  // visually between columns (e.g. 76% left falls on Week 8, not Week 7).
-  const pos = (currentWeekMarker.value - 1) / (total - 1)
-  return { left: `${Math.max(0, Math.min(100, pos * 100))}%` }
 })
 
 function filteredDeliverables(items) {
@@ -505,21 +546,27 @@ function nodeStyle(week, team) {
   }
 }
 
-// Return all visible (filtered) deliverables for a week, sorted by creation order
+// Return all visible (filtered) deliverables for a week, sorted by creation date
 function weekVisibleDeliverables(week) {
-  return week.deliverables.filter((d) => d.team !== 'general' && filters[d.team])
+  return week.deliverables
+    .filter((d) => d.team !== 'general' && filters[d.team])
+    .sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0))
 }
 
-// Position each milestone dot: vertically on its team's line, horizontally spread by creation order
+// Position each milestone dot: vertically on its team's line, horizontally by creation date.
+// A milestone created Monday sits near the left edge of its week column;
+// one created Sunday sits near the right — using the same 0–100% column coordinate
+// system as the Today chip, so "before Today" visually means left of the Today line.
 function milestoneNodeStyle(week, deliverable, index, total) {
   const svgY = weekTeamYSeparated(week, deliverable.team)
   const pct = (svgY / 96) * 100
-  // Spread dots horizontally within the column: evenly from 15% to 85%
-  let leftPct = 50
-  if (total === 1) {
-    leftPct = 50
+  let leftPct
+  if (deliverable.createdAt) {
+    // Date-accurate: fraction 0–1 within the week maps to 0–100% of the column width
+    leftPct = weekFraction(week.week, deliverable.createdAt) * 100
   } else {
-    leftPct = 15 + (index / (total - 1)) * 70
+    // Fallback for any item without a timestamp: spread evenly
+    leftPct = total === 1 ? 50 : 15 + (index / (total - 1)) * 70
   }
   return {
     top: `calc(${pct}% - 8px)`,
