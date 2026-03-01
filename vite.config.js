@@ -22,6 +22,7 @@ export default defineConfig(({ mode }) => {
     target: speckleServerUrl,
     changeOrigin: true,
     secure: true,
+    timeout: 30000,
     configure: (proxy) => {
       proxy.on('proxyReq', (proxyReq) => {
         if (speckleToken) {
@@ -30,6 +31,9 @@ export default defineConfig(({ mode }) => {
       })
       proxy.on('proxyRes', (proxyRes, req) => {
         console.log(`[speckle] ${req.method} ${req.url} -> ${proxyRes.statusCode}`)
+      })
+      proxy.on('error', (err, req) => {
+        console.error(`[speckle] proxy error for ${req.method} ${req.url}:`, err.message)
       })
     }
   }

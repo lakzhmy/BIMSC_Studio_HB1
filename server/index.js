@@ -13,11 +13,41 @@ dotenv.config({ path: path.resolve(__dirname, '../.env') })
 dotenv.config({ path: path.resolve(__dirname, '../.env.local') })
 
 const app = express()
-app.use(express.json())
 const port = Number(process.env.PORT || 5174)
 const speckleServerUrl = process.env.SPECKLE_SERVER_URL || 'https://app.speckle.systems'
 const speckleToken = process.env.SPECKLE_TOKEN || ''
 const hasSpeckleToken = Boolean(speckleToken)
+
+if (!hasSpeckleToken) {
+  console.warn('Warning: SPECKLE_TOKEN is not set. Private streams will fail to load.')
+} else {
+  console.log('Speckle proxy auth enabled.')
+}
+
+// --- Speckle passthrough proxies (registered BEFORE express.json() to preserve POST body) ---
+const specklePassthroughPaths = ['/graphql', '/objects', '/streams']
+
+function makeSpeckleProxy(mountPath) {
+  return createProxyMiddleware({
+    target: speckleServerUrl,
+    changeOrigin: true,
+    secure: true,
+    pathRewrite: (reqPath) => mountPath + reqPath,
+    onProxyReq: (proxyReq) => {
+      if (hasSpeckleToken) {
+        proxyReq.setHeader('Authorization', `Bearer ${speckleToken}`)
+      }
+    },
+    onProxyRes: (proxyRes, req) => {
+      console.log(`[speckle] ${req.method} ${req.url} -> ${proxyRes.statusCode}`)
+    },
+  })
+}
+
+specklePassthroughPaths.forEach((p) => app.use(p, makeSpeckleProxy(p)))
+
+// --- Body parser (after Speckle proxies so POST bodies aren't consumed) ---
+app.use(express.json())
 
 const proxyPaths = ['/api', '/objects', '/streams', '/graphql']
 
@@ -346,34 +376,8 @@ app.delete('/api/kpi-map/edges/:id', async (req, res) => {
   }
 })
 
-if (!hasSpeckleToken) {
-  console.warn('Warning: SPECKLE_TOKEN is not set. Private streams will fail to load.')
-} else {
-  console.log('Speckle proxy auth enabled.')
-}
-
-proxyPaths.forEach((proxyPath) => {
-  app.use(
-    proxyPath,
-    createProxyMiddleware({
-      target: speckleServerUrl,
-      changeOrigin: true,
-      secure: true,
-      pathRewrite: (reqPath, req) => {
-        // Express strips the mount path, so we must prepend it back
-        return proxyPath + reqPath
-      },
-      onProxyReq: (proxyReq) => {
-        if (hasSpeckleToken) {
-          proxyReq.setHeader('Authorization', `Bearer ${speckleToken}`)
-        }
-      },
-      onProxyRes: (proxyRes, req) => {
-        console.log(`[speckle] ${req.method} ${req.url} -> ${proxyRes.statusCode}`)
-      }
-    })
-  )
-})
+// --- Speckle /api catch-all proxy (after Express API routes so they take priority) ---
+app.use('/api', makeSpeckleProxy('/api'))
 
 // --- Google OAuth2 Routes ---
 

@@ -1,231 +1,146 @@
 <template>
   <main class="py-8 px-6">
-      <div class="max-w-7xl mx-auto">
-        <div class="mb-6">
-          <h1 class="text-3xl font-bold text-slate-900">3D Building Viewer</h1>
-          <p class="text-slate-600 mt-1">Live Speckle model loaded from stream object links</p>
-        </div>
+    <div class="max-w-7xl mx-auto">
 
-        <!-- Main Viewer Area -->
-        <div class="bg-white rounded-lg border border-slate-200 overflow-hidden flex flex-col" style="height: 700px;">
-          <div ref="viewerContainer" class="flex-1 relative">
-            <div v-if="isLoading" class="absolute inset-0 flex items-center justify-center text-slate-600 text-sm">
-              Loading Speckle model...
-            </div>
-            <div v-else-if="errorMessage" class="absolute inset-0 flex items-center justify-center text-red-600 text-sm px-6 text-center">
-              {{ errorMessage }}
-            </div>
-            <div v-else-if="infoMessage" class="absolute inset-0 flex items-center justify-center gap-2 text-red-600 text-sm px-6 text-center">
-              <span class="spinner" aria-hidden="true"></span>
-              <span>{{ infoMessage }}</span>
-            </div>
+      <!-- Viewer widget -->
+      <div class="bg-white rounded-lg border border-slate-200 overflow-hidden flex flex-col" style="height: 700px;">
+        <div ref="viewerContainer" class="flex-1 relative">
+
+          <!-- Loading / Error overlays -->
+          <div v-if="isFetchingModels" class="absolute inset-0 flex items-center justify-center gap-2 text-slate-600 text-sm">
+            <span class="spinner" aria-hidden="true"></span>
+            <span>Fetching models from Speckle...</span>
           </div>
-        </div>
+          <div v-else-if="isLoading && loadingProgress" class="absolute inset-0 flex items-center justify-center gap-2 text-slate-600 text-sm pointer-events-none" style="z-index: 10;">
+            <span class="spinner" aria-hidden="true"></span>
+            <span>{{ loadingProgress }}</span>
+          </div>
+          <div v-else-if="errorMessage" class="absolute inset-0 flex items-center justify-center text-red-600 text-sm px-6 text-center">
+            {{ errorMessage }}
+          </div>
 
-        <!-- Timeline Control -->
-        <div class="bg-white rounded-lg border border-slate-200 p-6 mt-6">
-          <div class="flex flex-col gap-4">
-            <div class="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
-              <span class="text-sm font-medium text-slate-700 whitespace-nowrap">Project Timeline:</span>
-              <div class="flex-1 relative">
+          <!-- Top-left header overlay -->
+          <div class="absolute top-4 left-4 z-10 pointer-events-none">
+            <h1 class="text-lg font-semibold text-slate-900 leading-tight">3D Building Viewer</h1>
+            <p v-if="streamName" class="text-xs text-slate-500 mt-0.5">{{ streamName }}</p>
+          </div>
+
+          <!-- Bottom controls overlay -->
+          <div class="absolute bottom-0 left-0 right-0 z-10 p-3 bg-gradient-to-t from-white/90 to-white/0">
+            <div class="flex items-center gap-3 bg-white/80 backdrop-blur rounded-lg border border-slate-200 px-4 py-2.5">
+              <!-- Mode toggle -->
+              <div class="flex items-center gap-1">
+                <button
+                  @click="switchToCurrentMode"
+                  class="px-3 py-1 text-xs font-medium rounded-md transition-colors"
+                  :class="viewMode === 'current'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'"
+                >Current</button>
+                <button
+                  @click="switchToHistoryMode"
+                  class="px-3 py-1 text-xs font-medium rounded-md transition-colors"
+                  :class="viewMode === 'history'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'"
+                >History</button>
+              </div>
+
+              <!-- Current mode label -->
+              <div v-if="viewMode === 'current'" class="flex-1 text-xs text-slate-500 text-center">
+                Latest version of {{ modelCount }} models
+              </div>
+
+              <!-- History slider -->
+              <div v-if="viewMode === 'history'" class="flex-1 flex items-center gap-3 min-w-0">
+                <span class="text-[10px] text-slate-400 whitespace-nowrap">{{ formatDate(dateRange.min) }}</span>
                 <input
-                  v-model.number="currentWeek"
+                  :value="sliderValue"
+                  @input="onSliderInput"
                   type="range"
-                  min="1"
-                  max="10"
-                  class="w-full h-2 bg-slate-300 rounded-lg appearance-none cursor-pointer"
+                  min="0"
+                  max="1000"
+                  step="1"
+                  class="flex-1 h-1.5 bg-slate-200 rounded-full appearance-none cursor-pointer"
                 />
-                <div class="range-thumb" :style="{ left: `${thumbPosition}%` }">
-                  {{ currentWeek }}
-                </div>
-              </div>
-              <div class="text-sm font-semibold text-slate-900 bg-slate-100 px-4 py-2 rounded-lg min-w-fit text-center">
-                Week {{ currentWeek }} / 10
+                <span class="text-xs font-medium text-slate-900 bg-slate-100 px-2 py-1 rounded whitespace-nowrap">{{ historyDateLabel }}</span>
               </div>
             </div>
-            <div class="text-sm text-slate-700">
-              <span class="font-medium block mb-1">Current Phase:</span>
-              <span class="font-semibold text-slate-900 text-base">{{ weekLabels[currentWeek - 1] }}</span>
-            </div>
           </div>
-        </div>
 
-        <!-- Model Info -->
-        <div class="bg-white rounded-lg border border-slate-200 p-6 mt-6">
-          <div class="flex flex-col gap-2 text-sm text-slate-700">
-            <div>
-              <span class="font-medium">Week:</span>
-              <span class="font-semibold text-slate-900">{{ currentWeek }}</span>
-            </div>
-            <div>
-              <span class="font-medium">Model:</span>
-              <span class="font-semibold text-slate-900">{{ activeModelLabel }}</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Info Panel -->
-        <div class="grid grid-cols-2 gap-4 mt-6">
-          <div class="bg-white p-4 rounded-lg border border-slate-200">
-            <h4 class="font-semibold text-slate-900 mb-2">Status</h4>
-            <p class="text-sm text-slate-600">
-              Viewer: <span class="font-semibold" :class="statusClass">{{ statusLabel }}</span>
-            </p>
-          </div>
-          <div class="bg-white p-4 rounded-lg border border-slate-200">
-            <h4 class="font-semibold text-slate-900 mb-2">Access</h4>
-            <p class="text-sm text-slate-600">
-              Proxy: <span class="font-semibold text-slate-900">Enabled</span>
-            </p>
-          </div>
         </div>
       </div>
-    </main>
+
+    </div>
+  </main>
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
-import { Viewer, DefaultViewerParams, SpeckleLoader, UrlHelper, CameraController } from '@speckle/viewer'
+import { ref, onMounted, onUnmounted } from 'vue'
+import { useSpeckleModels } from '@/composables/useSpeckleModels'
 
 const viewerContainer = ref(null)
-const isLoading = ref(true)
-const errorMessage = ref('')
-const infoMessage = ref('')
-const currentWeek = ref(5)
-const minWeek = 1
-const maxWeek = 10
 
-// Requests are routed through the server proxy, which injects the Speckle token.
-const statusLabel = computed(() => {
-  if (errorMessage.value) return 'Error'
-  if (infoMessage.value) return 'No model found'
-  return 'Ready'
-})
-const statusClass = computed(() => {
-  if (errorMessage.value) return 'text-red-600'
-  if (infoMessage.value) return 'text-amber-600'
-  return 'text-green-600'
-})
-const thumbPosition = computed(() => {
-  const ratio = (currentWeek.value - minWeek) / (maxWeek - minWeek)
-  return Math.min(100, Math.max(0, ratio * 100))
-})
+const {
+  isLoading,
+  isFetchingModels,
+  errorMessage,
+  loadingProgress,
+  streamName,
+  dateRange,
+  viewMode,
+  historyDateLabel,
+  modelCount,
+  fetchModels,
+  initViewer,
+  showCurrentModels,
+  showHistoryAtPosition,
+  dispose,
+  models,
+} = useSpeckleModels(viewerContainer)
 
-const weekLabels = [
-  'Week 1',
-  'Week 2',
-  'Week 3',
-  'Week 4',
-  'Week 5',
-  'Week 6',
-  'Week 7',
-  'Week 8',
-  'Week 9',
-  'Week 10'
-]
+const sliderValue = ref(1000)
+let debounceTimer = null
 
-// Update these URLs per week; leave empty strings to show "In progress".
-const weekModelUrls = [
-  'https://app.speckle.systems/streams/3d70848e9c/objects/5593e21947',
-  'https://app.speckle.systems/streams/3d70848e9c/objects/36a4e51e7cae20342d94f875861779cf',
-  'https://app.speckle.systems/streams/3d70848e9c/objects/cce6171d59e3e80e5cfc3eec9c212e5a',
-  'https://app.speckle.systems/streams/3d70848e9c/objects/e03549b39607cb8052cf9a67170900a5',
-  'https://app.speckle.systems/streams/3d70848e9c/objects/d159e83c2b2c550b930437d2e5707993',
-  '',
-  '',
-  '',
-  '',
-  ''
-]
-
-const activeModelLabel = computed(() => {
-  const url = weekModelUrls[currentWeek.value - 1]
-  return url ? `Speckle Object ${currentWeek.value}` : 'In progress'
-})
-
-let viewer = null
-
-// Loads the selected week and clears any previously loaded model.
-async function loadWeekModel(weekIndex) {
-  if (!viewerContainer.value) return
-
-  try {
-    isLoading.value = true
-    errorMessage.value = ''
-    infoMessage.value = ''
-
-    const streamObjectUrl = weekModelUrls[weekIndex]
-    if (!streamObjectUrl) {
-      infoMessage.value = 'In progress'
-      if (viewer) {
-        await viewer.unloadAll()
-      }
-      return
-    }
-
-    if (!viewer) {
-      viewer = new Viewer(viewerContainer.value, DefaultViewerParams)
-      await viewer.init()
-      viewer.createExtension(CameraController)
-    } else {
-      await viewer.unloadAll()
-    }
-
-    const proxyStreamObjectUrl = toProxyStreamObjectUrl(streamObjectUrl)
-    const urls = await UrlHelper.getResourceUrls(proxyStreamObjectUrl)
-    let shouldZoom = true
-
-    for (const url of urls) {
-      const loader = new SpeckleLoader(viewer.getWorldTree(), url)
-      await viewer.loadObject(loader, shouldZoom)
-      shouldZoom = false
-    }
-  } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : 'Failed to load Speckle model.'
-  } finally {
-    isLoading.value = false
-  }
+function onSliderInput(event) {
+  sliderValue.value = Number(event.target.value)
+  clearTimeout(debounceTimer)
+  debounceTimer = setTimeout(() => {
+    showHistoryAtPosition(sliderValue.value / 1000)
+  }, 300)
 }
 
-onMounted(() => {
-  loadWeekModel(currentWeek.value - 1)
-})
+function switchToCurrentMode() {
+  if (viewMode.value === 'current') return
+  showCurrentModels()
+}
 
-watch(currentWeek, (newWeek) => {
-  loadWeekModel(newWeek - 1)
+function switchToHistoryMode() {
+  if (viewMode.value === 'history') return
+  showHistoryAtPosition(sliderValue.value / 1000)
+}
+
+function formatDate(date) {
+  if (!(date instanceof Date) || isNaN(date)) return ''
+  return date.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  })
+}
+
+onMounted(async () => {
+  await fetchModels()
+  if (!errorMessage.value && models.value.length > 0) {
+    await initViewer()
+    await showCurrentModels()
+  }
 })
 
 onUnmounted(() => {
-  if (viewer && typeof viewer.dispose === 'function') {
-    viewer.dispose()
-  }
+  clearTimeout(debounceTimer)
+  dispose()
 })
-
-function toProxyStreamObjectUrl(streamObjectUrl) {
-  try {
-    const parsed = new URL(streamObjectUrl)
-    const segments = parsed.pathname.split('/').filter(Boolean)
-    const streamsIndex = segments.indexOf('streams')
-    const objectsIndex = segments.indexOf('objects')
-
-    if (streamsIndex === -1 || objectsIndex === -1) {
-      return streamObjectUrl
-    }
-
-    const streamId = segments[streamsIndex + 1]
-    const objectId = segments[objectsIndex + 1]
-
-    if (!streamId || !objectId) {
-      return streamObjectUrl
-    }
-
-    const proxyUrl = new URL(`/streams/${streamId}/objects/${objectId}`, window.location.origin)
-    proxyUrl.search = parsed.search
-    return proxyUrl.toString()
-  } catch (error) {
-    return streamObjectUrl
-  }
-}
 </script>
 
 <style scoped>
@@ -243,48 +158,29 @@ input[type='range'] {
 input[type='range']::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 18px;
-  height: 18px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
-  background: transparent;
+  background: #3b82f6;
   cursor: pointer;
-  box-shadow: none;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.2);
 }
 
 input[type='range']::-moz-range-thumb {
-  width: 18px;
-  height: 18px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
-  background: transparent;
-  cursor: pointer;
-  box-shadow: none;
-  border: none;
-}
-
-.range-thumb {
-  position: absolute;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  width: 24px;
-  height: 24px;
-  border-radius: 9999px;
   background: #3b82f6;
-  color: #ffffff;
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.2);
-  pointer-events: none;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.2);
+  border: none;
 }
 
 .spinner {
   width: 18px;
   height: 18px;
-  border: 2px solid rgba(220, 38, 38, 0.2);
-  border-top-color: rgba(220, 38, 38, 0.9);
+  border: 2px solid rgba(100, 116, 139, 0.2);
+  border-top-color: rgba(100, 116, 139, 0.9);
   border-radius: 50%;
   animation: spin 0.9s linear infinite;
 }
