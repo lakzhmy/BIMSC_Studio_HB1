@@ -1,6 +1,6 @@
 <template>
   <main class="py-10 px-8">
-      <div class="max-w-none mx-auto space-y-8">
+      <div ref="exportEl" class="max-w-none mx-auto space-y-8">
         <div class="flex items-start justify-between gap-6 flex-wrap">
           <div>
             <h1 class="text-4xl font-bold text-slate-900">Timeline</h1>
@@ -43,7 +43,7 @@
           </div>
         </div>
 
-        <div ref="timelineEl" class="relative overflow-x-hidden overflow-visible">
+        <div class="relative overflow-x-hidden overflow-visible">
           <div class="w-full mt-8 pt-12">
             <div class="relative h-28 overflow-visible isolate">
               <svg class="absolute inset-0 w-full h-full z-0 pointer-events-none" viewBox="0 0 100 96" preserveAspectRatio="none">
@@ -76,10 +76,10 @@
                       </svg>
                     </div>
                   </template>
-                  <template v-for="(deliverable, dIdx) in weekVisibleDeliverables(week)" :key="deliverable.id">
+                  <template v-for="deliverable in resolvedDeliverables(week)" :key="deliverable.id">
                     <div
                       class="group absolute z-30 hover:z-[90] cursor-pointer"
-                      :style="milestoneNodeStyle(week, deliverable, dIdx, weekVisibleDeliverables(week).length)"
+                      :style="milestoneNodeStyle(week, deliverable)"
                       @click="toggleSelection(week, deliverable.team)"
                     >
                       <div
@@ -124,7 +124,7 @@
                     <div class="text-[11px] font-semibold text-slate-700 flex items-center gap-1.5 mb-1">
                       <span :class="teamDotClass(deliverable.team)"></span>
                       {{ deliverable.text }}
-                      <div v-if="deliverable.dbId" class="ml-auto flex items-center gap-1">
+                      <div v-if="deliverable.dbId" v-show="!isExporting" class="ml-auto flex items-center gap-1">
                         <button
                           @click.stop="editMilestone(deliverable)"
                           class="text-slate-400 hover:text-blue-500 transition-colors"
@@ -186,7 +186,7 @@
 </template>
 
 <script setup>
-import { computed, reactive, ref, onMounted } from 'vue'
+import { computed, reactive, ref, onMounted, nextTick } from 'vue'
 import { toPng } from 'html-to-image'
 import { courseTimeline as baseTimeline } from '@/data/sampleData'
 import { useUserStore } from '@/stores/userStore'
@@ -200,7 +200,8 @@ const filters = reactive({
   data: true
 })
 
-const timelineEl = ref(null)
+const exportEl = ref(null)
+const isExporting = ref(false)
 const selectedKeys = ref(new Set())
 const showAddModal = ref(false)
 const editingMilestone = ref(null)
@@ -320,10 +321,12 @@ async function deleteMilestone(id) {
 }
 
 async function downloadTimelinePng() {
-  if (!timelineEl.value) return
+  if (!exportEl.value) return
+  isExporting.value = true
+  await nextTick() // allow DOM to hide edit/delete icons before capture
   try {
-    const dataUrl = await toPng(timelineEl.value, {
-      backgroundColor: '#ffffff',
+    const dataUrl = await toPng(exportEl.value, {
+      backgroundColor: '#f8fafc', // slate-50, matches the app background
       pixelRatio: 2,
     })
     const link = document.createElement('a')
@@ -332,6 +335,8 @@ async function downloadTimelinePng() {
     link.click()
   } catch (err) {
     console.error('PNG export failed:', err)
+  } finally {
+    isExporting.value = false
   }
 }
 
@@ -546,31 +551,63 @@ function nodeStyle(week, team) {
   }
 }
 
-// Return all visible (filtered) deliverables for a week, sorted by creation date
+// Return all visible (filtered) deliverables for a week, sorted by creation date.
+// Used by selectedDeliverables and other non-dot logic.
 function weekVisibleDeliverables(week) {
   return week.deliverables
     .filter((d) => d.team !== 'general' && filters[d.team])
     .sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0))
 }
 
-// Position each milestone dot: vertically on its team's line, horizontally by creation date.
-// A milestone created Monday sits near the left edge of its week column;
-// one created Sunday sits near the right — using the same 0–100% column coordinate
-// system as the Today chip, so "before Today" visually means left of the Today line.
-function milestoneNodeStyle(week, deliverable, index, total) {
+// Minimum horizontal gap (% of column width) between same-team dots.
+// A week column is ~110px wide; 20% ≈ 22px which is wider than one dot (16px),
+// giving a clear visual gap between adjacent dots on the same team line.
+const MIN_DOT_GAP = 20
+
+// Returns visible deliverables with a pre-computed `.leftPct` that is both
+// date-accurate and guaranteed overlap-free within each team row.
+function resolvedDeliverables(week) {
+  const items = week.deliverables
+    .filter((d) => d.team !== 'general' && filters[d.team])
+    .sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0))
+
+  // Compute raw left position for every item from its creation date
+  const withRaw = items.map((d) => ({
+    ...d,
+    _rawLeft: d.createdAt ? weekFraction(week.week, d.createdAt) * 100 : 50,
+  }))
+
+  // Group by team — dots on the same team share a Y row and can visually overlap
+  const byTeam = {}
+  for (const d of withRaw) {
+    if (!byTeam[d.team]) byTeam[d.team] = []
+    byTeam[d.team].push(d)
+  }
+
+  // Forward sweep per team: push later dots right if they're too close
+  const leftMap = new Map()
+  for (const teamItems of Object.values(byTeam)) {
+    for (let i = 0; i < teamItems.length; i++) {
+      let left = teamItems[i]._rawLeft
+      if (i > 0) {
+        const prevLeft = leftMap.get(teamItems[i - 1].id)
+        left = Math.max(left, prevLeft + MIN_DOT_GAP)
+      }
+      leftMap.set(teamItems[i].id, Math.min(98, left))
+    }
+  }
+
+  return withRaw.map((d) => ({ ...d, leftPct: leftMap.get(d.id) }))
+}
+
+// Position a milestone dot: vertical position on its team's SVG line,
+// horizontal position from the pre-computed leftPct (date-accurate, overlap-free).
+function milestoneNodeStyle(week, deliverable) {
   const svgY = weekTeamYSeparated(week, deliverable.team)
   const pct = (svgY / 96) * 100
-  let leftPct
-  if (deliverable.createdAt) {
-    // Date-accurate: fraction 0–1 within the week maps to 0–100% of the column width
-    leftPct = weekFraction(week.week, deliverable.createdAt) * 100
-  } else {
-    // Fallback for any item without a timestamp: spread evenly
-    leftPct = total === 1 ? 50 : 15 + (index / (total - 1)) * 70
-  }
   return {
     top: `calc(${pct}% - 8px)`,
-    left: `${leftPct}%`,
+    left: `${deliverable.leftPct}%`,
     transform: 'translateX(-50%)',
   }
 }
