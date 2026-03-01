@@ -43,13 +43,13 @@
           </div>
         </div>
 
-        <div ref="exportEl" class="relative overflow-visible">
-          <div class="w-full mt-8 pt-12">
+        <div ref="exportEl" class="relative overflow-visible pt-8">
+          <div class="w-full pt-12">
             <div class="relative h-28 overflow-visible isolate">
               <svg class="absolute inset-0 w-full h-full z-0 pointer-events-none" viewBox="0 0 100 96" preserveAspectRatio="none">
-                <polyline :points="teamPoints.structure" :style="trackStrokeStyle('structure')" fill="none" vector-effect="non-scaling-stroke" />
-                <polyline :points="teamPoints.program" :style="trackStrokeStyle('program')" fill="none" vector-effect="non-scaling-stroke" />
-                <polyline :points="teamPoints.data" :style="trackStrokeStyle('data')" fill="none" vector-effect="non-scaling-stroke" />
+                <polyline :points="teamPoints.structure" :style="trackStrokeStyle('structure')" :stroke="trackStrokeColor('structure')" stroke-width="3" fill="none" vector-effect="non-scaling-stroke" />
+                <polyline :points="teamPoints.program" :style="trackStrokeStyle('program')" :stroke="trackStrokeColor('program')" stroke-width="3" fill="none" vector-effect="non-scaling-stroke" />
+                <polyline :points="teamPoints.data" :style="trackStrokeStyle('data')" :stroke="trackStrokeColor('data')" stroke-width="3" fill="none" vector-effect="non-scaling-stroke" />
               </svg>
               <div class="absolute inset-0 grid grid-cols-10 gap-2 z-20">
                 <div v-for="week in courseTimeline" :key="week.week" class="relative">
@@ -627,14 +627,19 @@ function milestoneSummary(deliverable) {
 
 // Inline stroke style for SVG polylines — ensures colors render correctly in PNG export
 // (Tailwind stroke-* classes are not resolved by html-to-image).
+const TEAM_STROKE_COLORS = {
+  structure: '#4ade80', // green-400
+  program: '#60a5fa',  // blue-400
+  data: '#f87171',     // red-400
+}
+
+function trackStrokeColor(team) {
+  return filters[team] ? (TEAM_STROKE_COLORS[team] || '#94a3b8') : 'transparent'
+}
+
 function trackStrokeStyle(team) {
-  const colorMap = {
-    structure: '#4ade80', // green-400
-    program: '#60a5fa',  // blue-400
-    data: '#f87171',     // red-400
-  }
   return {
-    stroke: colorMap[team] || '#94a3b8',
+    stroke: trackStrokeColor(team),
     strokeWidth: '3px',
     opacity: filters[team] ? 1 : 0,
   }
