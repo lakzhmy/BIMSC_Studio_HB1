@@ -100,7 +100,7 @@
                       >
                         <div v-if="isPastWeek(week.week)" :class="tickContainerClass(deliverable.team)">
                           <svg class="w-2.5 h-2.5" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                            <path d="M3.5 8.5l2.5 2.5 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white" />
+                            <path d="M3.5 8.5l2.5 2.5 6-6" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                           </svg>
                         </div>
                         <div v-else :class="teamDotNodeClass(deliverable.team)"></div>
