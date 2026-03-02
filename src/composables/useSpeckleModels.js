@@ -14,17 +14,7 @@ import {
 } from '@/services/speckleService'
 
 const STREAM_ID = '3d70848e9c'
-
-/**
- * Fetches the Speckle auth token and server URL from our backend.
- * The viewer uses these to authenticate directly with Speckle,
- * bypassing the proxy for heavy object streaming.
- */
-async function fetchSpeckleConfig() {
-  const res = await fetch('/api/speckle-config')
-  if (!res.ok) throw new Error('Failed to fetch Speckle config')
-  return res.json() // { token, serverUrl }
-}
+const SPECKLE_SERVER = 'https://app.speckle.systems'
 
 export function useSpeckleModels(viewerContainerRef) {
   // --- State ---
@@ -44,8 +34,6 @@ export function useSpeckleModels(viewerContainerRef) {
   const hiddenModelIds = ref(new Set())
 
   let viewer = null
-  let speckleToken = ''
-  let speckleServerUrl = 'https://app.speckle.systems'
 
   // --- Computed ---
   const historyDate = computed(() => {
@@ -94,13 +82,13 @@ export function useSpeckleModels(viewerContainerRef) {
         loadingProgress.value = `Loading ${i + 1}/${visibleEntries.length}: ${entry.model.name}`
 
         try {
-          // Build the full Speckle URL and pass the auth token directly
-          // so the viewer authenticates with Speckle without needing the proxy
-          const speckleUrl = `${speckleServerUrl}/streams/${STREAM_ID}/objects/${entry.version.referencedObject}`
-          const urls = await UrlHelper.getResourceUrls(speckleUrl, speckleToken)
+          // Point directly at Speckle (public project — no auth token needed).
+          // This bypasses the Express proxy entirely, avoiding body-consumption issues.
+          const speckleUrl = `${SPECKLE_SERVER}/streams/${STREAM_ID}/objects/${entry.version.referencedObject}`
+          const urls = await UrlHelper.getResourceUrls(speckleUrl)
 
           for (const url of urls) {
-            const loader = new SpeckleLoader(viewer.getWorldTree(), url, speckleToken)
+            const loader = new SpeckleLoader(viewer.getWorldTree(), url)
             await viewer.loadObject(loader, shouldZoom)
             shouldZoom = false
           }
@@ -158,12 +146,7 @@ export function useSpeckleModels(viewerContainerRef) {
     try {
       isFetchingModels.value = true
       errorMessage.value = ''
-
-      // Fetch the Speckle token so the viewer can auth directly
-      const config = await fetchSpeckleConfig()
-      speckleToken = config.token || ''
-      speckleServerUrl = config.serverUrl || 'https://app.speckle.systems'
-
+      // Model discovery still uses the /graphql proxy (lightweight, token injected server-side)
       const stream = await fetchAllModelsAndVersions()
       const data = transformModelsData(stream)
       streamName.value = data.streamName
