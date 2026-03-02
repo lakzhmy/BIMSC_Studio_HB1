@@ -6,29 +6,34 @@
       <div class="bg-white rounded-lg border border-slate-200 overflow-hidden flex flex-col" style="height: 700px;">
         <div ref="viewerContainer" class="flex-1 relative">
 
-          <!-- Loading / Error overlays -->
-          <div v-if="isFetchingModels" class="absolute inset-0 flex items-center justify-center gap-2 text-slate-600 text-sm">
+          <!-- Full overlay: only shown before viewer is ready -->
+          <div v-if="isFetchingModels" class="absolute inset-0 flex items-center justify-center gap-2 text-slate-600 text-sm z-10">
             <span class="spinner" aria-hidden="true"></span>
             <span>Fetching models from Speckle...</span>
           </div>
-          <div v-else-if="isLoading && loadingProgress" class="absolute inset-0 flex items-center justify-center gap-2 text-slate-600 text-sm pointer-events-none" style="z-index: 10;">
+          <div v-else-if="!hasLoadedOnce && loadingProgress" class="absolute inset-0 flex items-center justify-center gap-2 text-slate-600 text-sm z-10">
             <span class="spinner" aria-hidden="true"></span>
             <span>{{ loadingProgress }}</span>
           </div>
-          <div v-else-if="errorMessage" class="absolute inset-0 flex items-center justify-center text-red-600 text-sm px-6 text-center">
+          <div v-else-if="errorMessage && !loadingProgress" class="absolute inset-0 flex items-center justify-center text-red-600 text-sm px-6 text-center z-10">
             {{ errorMessage }}
           </div>
 
-          <!-- Top-left header overlay -->
+          <!-- Top-left header -->
           <div class="absolute top-4 left-4 z-10 pointer-events-none">
             <h1 class="text-lg font-semibold text-slate-900 leading-tight">3D Building Viewer</h1>
             <p v-if="streamName" class="text-xs text-slate-500 mt-0.5">{{ streamName }}</p>
           </div>
 
-          <!-- Bottom controls overlay -->
+          <!-- Top-right: non-blocking loading indicator (after first load) -->
+          <div v-if="hasLoadedOnce && loadingProgress" class="absolute top-4 right-4 z-10 flex items-center gap-2 bg-white/90 backdrop-blur rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-600">
+            <span class="spinner-sm" aria-hidden="true"></span>
+            <span>{{ loadingProgress }}</span>
+          </div>
+
+          <!-- Bottom controls -->
           <div class="absolute bottom-0 left-0 right-0 z-10 p-3 bg-gradient-to-t from-white/90 to-white/0">
             <div class="flex items-center gap-3 bg-white/80 backdrop-blur rounded-lg border border-slate-200 px-4 py-2.5">
-              <!-- Mode toggle -->
               <div class="flex items-center gap-1">
                 <button
                   @click="switchToCurrentMode"
@@ -46,12 +51,10 @@
                 >History</button>
               </div>
 
-              <!-- Current mode label -->
               <div v-if="viewMode === 'current'" class="flex-1 text-xs text-slate-500 text-center">
                 Latest version of {{ modelCount }} models
               </div>
 
-              <!-- History slider -->
               <div v-if="viewMode === 'history'" class="flex-1 flex items-center gap-3 min-w-0">
                 <span class="text-[10px] text-slate-400 whitespace-nowrap">{{ formatDate(dateRange.min) }}</span>
                 <input
@@ -80,9 +83,9 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import { useSpeckleModels } from '@/composables/useSpeckleModels'
 
 const viewerContainer = ref(null)
+const hasLoadedOnce = ref(false)
 
 const {
-  isLoading,
   isFetchingModels,
   errorMessage,
   loadingProgress,
@@ -134,6 +137,7 @@ onMounted(async () => {
   if (!errorMessage.value && models.value.length > 0) {
     await initViewer()
     await showCurrentModels()
+    hasLoadedOnce.value = true
   }
 })
 
@@ -179,6 +183,15 @@ input[type='range']::-moz-range-thumb {
 .spinner {
   width: 18px;
   height: 18px;
+  border: 2px solid rgba(100, 116, 139, 0.2);
+  border-top-color: rgba(100, 116, 139, 0.9);
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+}
+
+.spinner-sm {
+  width: 12px;
+  height: 12px;
   border: 2px solid rgba(100, 116, 139, 0.2);
   border-top-color: rgba(100, 116, 139, 0.9);
   border-radius: 50%;

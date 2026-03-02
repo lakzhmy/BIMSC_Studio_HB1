@@ -13,9 +13,21 @@ import {
   getLatestModels,
 } from '@/services/speckleService'
 
+const STREAM_ID = '3d70848e9c'
+
+/**
+ * Fetches the Speckle auth token and server URL from our backend.
+ * The viewer uses these to authenticate directly with Speckle,
+ * bypassing the proxy for heavy object streaming.
+ */
+async function fetchSpeckleConfig() {
+  const res = await fetch('/api/speckle-config')
+  if (!res.ok) throw new Error('Failed to fetch Speckle config')
+  return res.json() // { token, serverUrl }
+}
+
 export function useSpeckleModels(viewerContainerRef) {
   // --- State ---
-  const isLoading = ref(false)
   const isFetchingModels = ref(false)
   const errorMessage = ref('')
   const loadingProgress = ref('')
@@ -25,17 +37,15 @@ export function useSpeckleModels(viewerContainerRef) {
   const dateRange = ref({ min: new Date(), max: new Date() })
   const timeline = ref([])
 
-  const viewMode = ref('current') // 'current' | 'history'
-  const historyPosition = ref(1.0) // 0.0 to 1.0 across dateRange
+  const viewMode = ref('current')
+  const historyPosition = ref(1.0)
 
-  // { model, version }[] — entries currently targeted for display
   const loadedModels = ref([])
-  // Set of model IDs that the user has toggled OFF
   const hiddenModelIds = ref(new Set())
-  // Map of model ID -> loaded SpeckleLoader urls (for unload tracking)
-  const loadedObjectUrls = ref(new Map())
 
   let viewer = null
+  let speckleToken = ''
+  let speckleServerUrl = 'https://app.speckle.systems'
 
   // --- Computed ---
   const historyDate = computed(() => {
@@ -54,23 +64,6 @@ export function useSpeckleModels(viewerContainerRef) {
 
   const modelCount = computed(() => models.value.length)
 
-  const visibleModelCount = computed(
-    () => loadedModels.value.filter(e => !hiddenModelIds.value.has(e.model.id)).length,
-  )
-
-  const statusLabel = computed(() => {
-    if (errorMessage.value) return 'Error'
-    if (isFetchingModels.value) return 'Fetching models...'
-    if (isLoading.value) return 'Loading geometry...'
-    return 'Ready'
-  })
-
-  const statusClass = computed(() => {
-    if (errorMessage.value) return 'text-red-600'
-    if (isFetchingModels.value || isLoading.value) return 'text-amber-600'
-    return 'text-green-600'
-  })
-
   // --- Viewer Management ---
   async function initViewer() {
     if (!viewerContainerRef.value || viewer) return
@@ -79,54 +72,53 @@ export function useSpeckleModels(viewerContainerRef) {
     viewer.createExtension(CameraController)
   }
 
-  /**
-   * Loads the given model entries into the viewer.
-   * Respects hiddenModelIds — hidden models are skipped.
-   */
   async function loadModelsIntoViewer(modelEntries) {
     if (!viewer) await initViewer()
     if (!viewer) return
 
-    isLoading.value = true
-    loadingProgress.value = ''
     errorMessage.value = ''
+    loadedModels.value = modelEntries
 
     try {
       await viewer.unloadAll()
-      loadedObjectUrls.value = new Map()
 
       const visibleEntries = modelEntries.filter(
         e => !hiddenModelIds.value.has(e.model.id),
       )
 
       let shouldZoom = true
+      let failedModels = []
+
       for (let i = 0; i < visibleEntries.length; i++) {
         const entry = visibleEntries[i]
-        loadingProgress.value = `Loading model ${i + 1} of ${visibleEntries.length}: ${entry.model.name}`
+        loadingProgress.value = `Loading ${i + 1}/${visibleEntries.length}: ${entry.model.name}`
 
         try {
-          const proxyUrl = `${window.location.origin}${entry.version.objectUrl}`
-          const urls = await UrlHelper.getResourceUrls(proxyUrl)
+          // Build the full Speckle URL and pass the auth token directly
+          // so the viewer authenticates with Speckle without needing the proxy
+          const speckleUrl = `${speckleServerUrl}/streams/${STREAM_ID}/objects/${entry.version.referencedObject}`
+          const urls = await UrlHelper.getResourceUrls(speckleUrl, speckleToken)
 
-          const loadedUrls = []
           for (const url of urls) {
-            const loader = new SpeckleLoader(viewer.getWorldTree(), url)
+            const loader = new SpeckleLoader(viewer.getWorldTree(), url, speckleToken)
             await viewer.loadObject(loader, shouldZoom)
             shouldZoom = false
-            loadedUrls.push(url)
           }
-          loadedObjectUrls.value.set(entry.model.id, loadedUrls)
         } catch (err) {
           console.warn(`Failed to load model "${entry.model.name}":`, err)
+          failedModels.push(entry.model.name)
         }
       }
 
-      loadedModels.value = modelEntries
+      if (failedModels.length > 0 && failedModels.length === visibleEntries.length) {
+        errorMessage.value = 'Failed to load all models. Check browser console for details.'
+      } else if (failedModels.length > 0) {
+        errorMessage.value = `Could not load: ${failedModels.join(', ')}`
+      }
     } catch (error) {
       errorMessage.value =
         error instanceof Error ? error.message : 'Failed to load models'
     } finally {
-      isLoading.value = false
       loadingProgress.value = ''
     }
   }
@@ -154,8 +146,6 @@ export function useSpeckleModels(viewerContainerRef) {
       newHidden.add(modelId)
     }
     hiddenModelIds.value = newHidden
-
-    // Reload all visible models (simplest approach — avoids partial unload complexity)
     await loadModelsIntoViewer(loadedModels.value)
   }
 
@@ -168,6 +158,12 @@ export function useSpeckleModels(viewerContainerRef) {
     try {
       isFetchingModels.value = true
       errorMessage.value = ''
+
+      // Fetch the Speckle token so the viewer can auth directly
+      const config = await fetchSpeckleConfig()
+      speckleToken = config.token || ''
+      speckleServerUrl = config.serverUrl || 'https://app.speckle.systems'
+
       const stream = await fetchAllModelsAndVersions()
       const data = transformModelsData(stream)
       streamName.value = data.streamName
@@ -192,8 +188,6 @@ export function useSpeckleModels(viewerContainerRef) {
   }
 
   return {
-    // State
-    isLoading,
     isFetchingModels,
     errorMessage,
     loadingProgress,
@@ -205,16 +199,9 @@ export function useSpeckleModels(viewerContainerRef) {
     historyPosition,
     loadedModels,
     hiddenModelIds,
-
-    // Computed
     historyDate,
     historyDateLabel,
     modelCount,
-    visibleModelCount,
-    statusLabel,
-    statusClass,
-
-    // Actions
     fetchModels,
     initViewer,
     showCurrentModels,

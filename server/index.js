@@ -51,6 +51,14 @@ app.use(express.json())
 
 const proxyPaths = ['/api', '/objects', '/streams', '/graphql']
 
+// --- Speckle config endpoint (serves token to authenticated frontend) ---
+app.get('/api/speckle-config', (req, res) => {
+  res.json({
+    token: speckleToken,
+    serverUrl: speckleServerUrl,
+  })
+})
+
 // --- User Profile Update (registered before Speckle proxy) ---
 
 app.post('/api/users/profile', async (req, res) => {

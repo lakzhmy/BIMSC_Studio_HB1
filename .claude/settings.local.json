@@ -21,7 +21,13 @@
       "Bash(convert --version)",
       "Bash(python -c \"from PIL import Image; print\\(''Pillow available''\\)\")",
       "Bash(pip install Pillow)",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Bash(curl -s -w \"\\\\n%{http_code}\" --max-time 15 -X POST \"https://app.speckle.systems/graphql\" -H \"Content-Type: application/json\" -H \"Authorization: Bearer f0deee84fe551eab83ddb6d24e2b83d947b45827d7\" -d '{\"\"query\"\":\"\"{ stream\\(id: \\\\\"\"3d70848e9c\\\\\"\"\\) { name } }\"\"}')",
+      "Bash(curl -s -w \"\\\\n%{http_code}\" --max-time 30 -X POST \"https://app.speckle.systems/graphql\" -H \"Content-Type: application/json\" -H \"Authorization: Bearer f0deee84fe551eab83ddb6d24e2b83d947b45827d7\" -d '{\"\"query\"\":\"\"{ stream\\(id: \\\\\"\"3d70848e9c\\\\\"\"\\) { name branches\\(limit: 100\\) { items { id name commits\\(limit: 100\\) { items { id referencedObject message createdAt } } } } } }\"\"}')",
+      "Bash(netstat -ano)",
+      "Bash(curl -s -w \"\\\\nHTTP %{http_code}, Size: %{size_download} bytes, Time: %{time_total}s\\\\n\" --max-time 15 -o /dev/null \"https://app.speckle.systems/objects/3d70848e9c/6b27d4ab5def9218cdc19845776be693\" -H \"Authorization: Bearer f0deee84fe551eab83ddb6d24e2b83d947b45827d7\")",
+      "Bash(curl -s --max-time 20 \"https://app.speckle.systems/graphql\" -H \"Content-Type: application/json\" -H \"Authorization: Bearer f0deee84fe551eab83ddb6d24e2b83d947b45827d7\" -d '{\"\"query\"\":\"\"{ stream\\(id: \\\\\"\"3d70848e9c\\\\\"\"\\) { branches\\(limit: 100\\) { items { name commits\\(limit: 1\\) { totalCount items { id referencedObject createdAt } } } } } }\"\"}')",
+      "WebFetch(domain:speckle.community)"
     ]
   }
 }
