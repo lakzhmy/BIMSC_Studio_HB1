@@ -20,6 +20,9 @@ const FORMULA_GID = '0';
 /** GID for the raw STR_PAR_* parameters sheet */
 const STRUCTURE_PARAMS_GID = '227623084';
 
+/** GID for the raw PRG_PAR_* parameters sheet */
+const PROGRAM_PARAMS_GID = '486267241';
+
 interface SheetData {
   values: string[][];
 }
@@ -429,6 +432,41 @@ export async function fetchStructureParams(): Promise<{
   return {
     weeks: Array.from(weeks),
     scenarios: Array.from(scenarios),
+    rows,
+  };
+}
+
+/**
+ * Fetch the raw PRG_PAR_* parameters sheet and return typed rows.
+ * Sheet layout: Week | Scenario | PRG_PAR_Area | ... | PRG_PAR_GeometryWeight
+ */
+export async function fetchProgramParams(): Promise<{
+  rows: ParamValues[];
+}> {
+  const csvRows = await fetchSheetByGid(PROGRAM_PARAMS_GID);
+  if (csvRows.length < 2) return { rows: [] };
+
+  const headerRow = csvRows[0];
+  // Column names from C onward are the PRG_PAR_* parameter names
+  const paramNames = headerRow.slice(2).map(h => h?.trim() || '');
+
+  const rows: ParamValues[] = [];
+
+  for (let i = 1; i < csvRows.length; i++) {
+    const row = csvRows[i];
+    if (!row || row.length < 3) continue;
+
+    const raw: Record<string, number | string> = {};
+    for (let j = 0; j < paramNames.length; j++) {
+      const name = paramNames[j];
+      const val = row[2 + j]?.trim() || '';
+      if (name) raw[name] = val;
+    }
+
+    rows.push(toParamValues(raw));
+  }
+
+  return {
     rows,
   };
 }

@@ -242,7 +242,7 @@ import ProgramKPISelector from '@/components/ProgramKPISelector.vue'
 import BreathingChart from '@/components/BreathingChart.vue'
 import PorousVisualization from '@/components/PorousVisualization.vue'
 import ProjectComplexity from '@/components/ProjectComplexity.vue'
-import { fetchKPIsByCategory, fetchStructureParams, fetchFormulaTargets, extractParamValues } from '@/services/googleSheetsService'
+import { fetchKPIsByCategory, fetchStructureParams, fetchProgramParams, fetchFormulaTargets, extractParamValues } from '@/services/googleSheetsService'
 import { KPI_BY_CATEGORY, computeKPI, updateKPITargets, evaluateKPIStatus } from '@/services/kpiFormulas'
 import { useUserStore } from '@/stores/userStore'
 
@@ -363,6 +363,9 @@ const sheetDataByCategory = ref({
 // --- Structure raw params store ---
 const structureParamsData = ref({ weeks: [], scenarios: [], rows: [] })
 
+// --- Program raw params store ---
+const programParamsData = ref({ rows: [] })
+
 // --- Per-category sheet data ---
 const programSheetData = computed(() => sheetDataByCategory.value.program)
 const structureSheetData = computed(() => sheetDataByCategory.value.structure)
@@ -390,10 +393,27 @@ const structureScenarios = computed(() => {
 
 // Compute structure KPIs from raw params using the formula engine
 const structureFilteredKPIs = computed(() => {
-  if (!structureWeek.value || !structureScenario.value) return []
   const rows = structureParamsData.value.rows || []
-  const row = rows.find(r => r.week === structureWeek.value && r.scenario === structureScenario.value)
-  if (!row) return []
+  if (!rows.length) return []
+
+  // Calculate average parameters across all structure data rows
+  const avgParams = {}
+  if (rows.length > 0) {
+    const firstRowParams = rows[0]?.params || {}
+    const paramNames = Object.keys(firstRowParams)
+    
+    for (const param of paramNames) {
+      let sum = 0
+      let count = 0
+      for (const row of rows) {
+        if (row.params && row.params[param] !== undefined) {
+          sum += row.params[param]
+          count++
+        }
+      }
+      avgParams[param] = count > 0 ? sum / count : 0
+    }
+  }
 
   const defs = KPI_BY_CATEGORY['structure']
   const descriptions = {
@@ -404,7 +424,7 @@ const structureFilteredKPIs = computed(() => {
   return defs.map(def => ({
     id: def.id,
     name: def.name,
-    value: Math.round(computeKPI(def, row.params) * 100) / 100,
+    value: Math.round(computeKPI(def, avgParams) * 100) / 100,
     unit: def.unit,
     target: def.target,
     logic: def.logic,
@@ -484,38 +504,52 @@ const programSummaryCards = computed(() => {
 
 // --- Data widget state (uses structure week/scenario, no separate selectors) ---
 
-// Average PRG param values across all program data rows (for Ar, Ur, Wr)
+// Average PRG param values across all program param rows
 const averagePrgParams = computed(() => {
-  const data = programSheetData.value?.data || []
-  const kpiNames = programSheetData.value?.kpiNames || []
-  if (!data.length || !kpiNames.length) return {}
+  const rows = programParamsData.value?.rows || []
+  if (!rows.length) return {}
 
-  const prgVars = ['Ar', 'Ur', 'Wr']
-  const sums = {}
-  let count = 0
-
-  for (const row of data) {
-    const params = extractParamValues(kpiNames, row.kpis || [])
-    for (const v of prgVars) {
-      if (params[v] !== undefined) {
-        sums[v] = (sums[v] || 0) + params[v]
+  const avgParams = {}
+  if (rows.length > 0) {
+    const paramNames = Object.keys(rows[0])
+    
+    for (const param of paramNames) {
+      let sum = 0
+      let count = 0
+      for (const row of rows) {
+        if (row[param] !== undefined && row[param] !== null) {
+          sum += Number(row[param])
+          count++
+        }
       }
+      avgParams[param] = count > 0 ? sum / count : 0
     }
-    count++
   }
-
-  const avg = {}
-  for (const v of prgVars) {
-    avg[v] = count > 0 ? (sums[v] || 0) / count : 0
-  }
-  return avg
+  return avgParams
 })
 
-// Compute program KPIs from program data
+// Compute program KPIs from average program parameters
 const programFilteredKPIs = computed(() => {
-  const data = programSheetData.value?.data || []
-  const kpiNames = programSheetData.value?.kpiNames || []
-  if (!data.length || !kpiNames.length) return []
+  const rows = programParamsData.value?.rows || []
+  if (!rows.length) return []
+
+  // Calculate average parameters across all program data rows
+  const avgParams = {}
+  if (rows.length > 0) {
+    const paramNames = Object.keys(rows[0])
+    
+    for (const param of paramNames) {
+      let sum = 0
+      let count = 0
+      for (const row of rows) {
+        if (row[param] !== undefined && row[param] !== null) {
+          sum += Number(row[param])
+          count++
+        }
+      }
+      avgParams[param] = count > 0 ? sum / count : 0
+    }
+  }
 
   const descriptions = {
     'effective-programmatic-area': 'The EPA (Effective Programmatic Area) is used to calculate operating costs based on actual usage. It defines how well-utilized (high EPA) or under-utilized (low EPA) spaces are in relation to the total area of the building.',
@@ -525,7 +559,7 @@ const programFilteredKPIs = computed(() => {
 
   const defs = KPI_BY_CATEGORY['program']
   return defs.map(def => {
-    const value = computeKPI(def, extractParamValues(kpiNames, data[0]?.kpis || []))
+    const value = computeKPI(def, avgParams)
     return {
       id: def.id,
       name: def.name,
@@ -539,15 +573,40 @@ const programFilteredKPIs = computed(() => {
   })
 })
 
-// Compute environment KPIs from STR params + avg PRG params + ENV defaults
-const dataFilteredKPIs = computed(() => {
-  if (!structureWeek.value || !structureScenario.value) return []
+// Calculate average structure parameters across all structure data rows
+const averageStructureParams = computed(() => {
   const rows = structureParamsData.value.rows || []
-  const row = rows.find(r => r.week === structureWeek.value && r.scenario === structureScenario.value)
-  if (!row) return []
+  if (!rows.length) return {}
 
-  // Merge STR params with averaged PRG params (ENV defaults handled by computeKPI)
-  const mergedParams = { ...row.params, ...averagePrgParams.value }
+  const avgParams = {}
+  if (rows.length > 0) {
+    const firstRowParams = rows[0]?.params || {}
+    const paramNames = Object.keys(firstRowParams)
+    
+    for (const param of paramNames) {
+      let sum = 0
+      let count = 0
+      for (const row of rows) {
+        if (row.params && row.params[param] !== undefined) {
+          sum += row.params[param]
+          count++
+        }
+      }
+      avgParams[param] = count > 0 ? sum / count : 0
+    }
+  }
+  return avgParams
+})
+
+// Compute environment KPIs from averaged STR params + averaged PRG params + ENV defaults
+const dataFilteredKPIs = computed(() => {
+  const structParams = averageStructureParams.value
+  const prgParams = averagePrgParams.value
+  
+  if (Object.keys(structParams).length === 0 || Object.keys(prgParams).length === 0) return []
+
+  // Merge averaged STR params with averaged PRG params (ENV defaults handled by computeKPI)
+  const mergedParams = { ...structParams, ...prgParams }
 
   const defs = KPI_BY_CATEGORY['environment']
   const descriptions = {
@@ -682,10 +741,11 @@ async function loadData() {
   isLoading.value = true
   loadError.value = ''
   try {
-    const [programData, structureData, strParamsResult, formulaTargets] = await Promise.all([
+    const [programData, structureData, strParamsResult, prgParamsResult, formulaTargets] = await Promise.all([
       fetchKPIsByCategory('program'),
       fetchKPIsByCategory('structure'),
       fetchStructureParams(),
+      fetchProgramParams(),
       fetchFormulaTargets(),
     ])
     
@@ -700,6 +760,7 @@ async function loadData() {
       data: null,
     }
     structureParamsData.value = strParamsResult
+    programParamsData.value = prgParamsResult
   } catch (error) {
     console.error('Failed to load KPI data:', error)
     loadError.value = `Error: ${error instanceof Error ? error.message : String(error)}`
