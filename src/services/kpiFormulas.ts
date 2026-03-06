@@ -400,3 +400,32 @@ export function toParamValues(raw: Record<string, number | string>): ParamValues
 
   return result;
 }
+
+/**
+ * Update KPI target values from the FORMULA sheet.
+ * Matches KPI names from the sheet with KPI definitions and updates their targets.
+ */
+export function updateKPITargets(formulaTargets: Record<string, number>): void {
+  for (const def of KPI_FORMULAS) {
+    // Try to match by exact name
+    if (formulaTargets[def.name] !== undefined) {
+      def.target = formulaTargets[def.name];
+      continue;
+    }
+
+    // Try to match by normalized name (lowercase, replace hyphens with spaces)
+    const normalizedName = def.name.toLowerCase();
+    for (const [sheetName, value] of Object.entries(formulaTargets)) {
+      if (sheetName.toLowerCase() === normalizedName) {
+        def.target = value;
+        break;
+      }
+    }
+  }
+
+  // Rebuild KPI_BY_CATEGORY to reflect updated targets
+  KPI_BY_CATEGORY.program     = KPI_FORMULAS.filter(k => k.category === 'program');
+  KPI_BY_CATEGORY.structure   = KPI_FORMULAS.filter(k => k.category === 'structure');
+  KPI_BY_CATEGORY.environment = KPI_FORMULAS.filter(k => k.category === 'environment');
+}
+

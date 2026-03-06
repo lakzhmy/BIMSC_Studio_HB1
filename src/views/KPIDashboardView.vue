@@ -45,22 +45,7 @@
             <p class="text-xs text-slate-500">Structural performance KPIs</p>
           </div>
 
-          <!-- Structure Selectors -->
-          <div class="flex flex-wrap gap-3">
-            <div class="flex flex-col gap-1">
-              <label class="text-xs font-medium text-slate-700">Scenario</label>
-              <select v-model="structureScenario" class="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-sm">
-                <option value="">Select Scenario</option>
-                <option v-for="scenario in structureScenarios" :key="scenario" :value="scenario">{{ scenario }}</option>
-              </select>
-            </div>
-          </div>
 
-          <!-- Spacer matching Program's Space Name row -->
-          <div class="flex flex-col gap-1 invisible" aria-hidden="true">
-            <label class="text-xs font-medium text-slate-700">Space Name</label>
-            <div class="px-3 py-1.5 bg-slate-100 border border-slate-200 rounded-lg text-sm">&nbsp;</div>
-          </div>
 
           <!-- Structure KPI Cards with inline bullet charts -->
           <div v-if="structureFilteredKPIs.length > 0" class="space-y-3">
@@ -96,7 +81,7 @@
             </div>
           </div>
 
-          <p v-else-if="!structureWeek || !structureScenario" class="text-slate-400 text-sm">Select a week and scenario to view data</p>
+          <p v-else-if="!structureWeek" class="text-slate-400 text-sm">Select a week to view data</p>
         </div>
 
         <!-- Data Widget -->
@@ -106,22 +91,7 @@
             <p class="text-xs text-slate-500">Environment KPIs (from structure params + env defaults)</p>
           </div>
 
-          <!-- Data Selectors -->
-          <div class="flex flex-wrap gap-3">
-            <div class="flex flex-col gap-1">
-              <label class="text-xs font-medium text-slate-700">Scenario</label>
-              <select v-model="structureScenario" class="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-sm">
-                <option value="">Select Scenario</option>
-                <option v-for="scenario in structureScenarios" :key="scenario" :value="scenario">{{ scenario }}</option>
-              </select>
-            </div>
-          </div>
 
-          <!-- Spacer matching Program's Space Name row -->
-          <div class="flex flex-col gap-1 invisible" aria-hidden="true">
-            <label class="text-xs font-medium text-slate-700">Space Name</label>
-            <div class="px-3 py-1.5 bg-slate-100 border border-slate-200 rounded-lg text-sm">&nbsp;</div>
-          </div>
 
           <!-- Data KPI Cards with inline bullet charts -->
           <div v-if="dataFilteredKPIs.length > 0" class="space-y-3">
@@ -157,7 +127,7 @@
             </div>
           </div>
 
-          <p v-else-if="!structureWeek || !structureScenario" class="text-slate-400 text-sm">Select a week and scenario to view data</p>
+          <p v-else-if="!structureWeek" class="text-slate-400 text-sm">Select a week to view data</p>
         </div>
 
       </div>
@@ -193,8 +163,8 @@ import ProgramKPISelector from '@/components/ProgramKPISelector.vue'
 import BreathingChart from '@/components/BreathingChart.vue'
 import PorousVisualization from '@/components/PorousVisualization.vue'
 import ProjectComplexity from '@/components/ProjectComplexity.vue'
-import { fetchKPIsByCategory, fetchStructureParams, extractParamValues } from '@/services/googleSheetsService'
-import { KPI_BY_CATEGORY, computeKPI } from '@/services/kpiFormulas'
+import { fetchKPIsByCategory, fetchStructureParams, fetchFormulaTargets, extractParamValues } from '@/services/googleSheetsService'
+import { KPI_BY_CATEGORY, computeKPI, updateKPITargets } from '@/services/kpiFormulas'
 import { useUserStore } from '@/stores/userStore'
 
 const userStore = useUserStore()
@@ -476,11 +446,18 @@ async function loadData() {
   isLoading.value = true
   loadError.value = ''
   try {
-    const [programData, structureData, strParamsResult] = await Promise.all([
+    const [programData, structureData, strParamsResult, formulaTargets] = await Promise.all([
       fetchKPIsByCategory('program'),
       fetchKPIsByCategory('structure'),
       fetchStructureParams(),
+      fetchFormulaTargets(),
     ])
+    
+    // Update KPI targets from the FORMULA sheet
+    if (formulaTargets && Object.keys(formulaTargets).length > 0) {
+      updateKPITargets(formulaTargets)
+    }
+    
     sheetDataByCategory.value = {
       program: programData,
       structure: structureData,

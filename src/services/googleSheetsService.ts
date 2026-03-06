@@ -14,6 +14,9 @@ const SHEET_GIDS: Record<'data' | 'structure' | 'program', string> = {
   program: '631520491',
 };
 
+/** GID for the FORMULA sheet with target values */
+const FORMULA_GID = '0';
+
 /** GID for the raw STR_PAR_* parameters sheet */
 const STRUCTURE_PARAMS_GID = '227623084';
 
@@ -429,3 +432,34 @@ export async function fetchStructureParams(): Promise<{
     rows,
   };
 }
+
+/**
+ * Fetch KPI target values from the FORMULA sheet
+ * Column B contains KPI names, Column F contains target values (starting from row 3)
+ * Returns a mapping of KPI name -> target value
+ */
+export async function fetchFormulaTargets(): Promise<Record<string, number>> {
+  const csvRows = await fetchSheetByGid(FORMULA_GID);
+  if (csvRows.length < 3) return {};
+
+  const targets: Record<string, number> = {};
+
+  // Start from row 3 (index 2), read until we hit an empty KPI name
+  for (let i = 2; i < csvRows.length; i++) {
+    const row = csvRows[i];
+    if (!row || row.length < 6) continue;
+
+    const kpiName = row[1]?.trim() || ''; // Column B
+    const targetStr = row[5]?.trim() || ''; // Column F (index 5)
+
+    if (!kpiName) break; // Stop at first empty KPI name
+
+    const targetValue = Number(targetStr.replace(/,/g, ''));
+    if (!Number.isNaN(targetValue)) {
+      targets[kpiName] = targetValue;
+    }
+  }
+
+  return targets;
+}
+
