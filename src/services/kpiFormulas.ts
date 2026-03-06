@@ -78,6 +78,9 @@ export type ParamValues = Record<string, number>;
 /** Which dashboard tab a KPI should appear under. */
 export type KPICategory = 'program' | 'structure' | 'environment';
 
+/** Logic for evaluating if a KPI is within acceptable range. */
+export type KPILogic = 'MAX' | 'MIN' | 'STRICT';
+
 export interface KPIFormulaDef {
   /** Stable kebab-case id */
   id: string;
@@ -93,6 +96,8 @@ export interface KPIFormulaDef {
   unit: string;
   /** Target value from the FORMULAS sheet */
   target: number;
+  /** Logic for evaluating acceptable range: MAX (higher better), MIN (lower better), STRICT (±10%) */
+  logic: KPILogic;
   /**
    * Compute the KPI value from a single row of parameters.
    * For aggregate KPIs (like PPI) use `computeAggregate` instead.
@@ -115,6 +120,7 @@ const effectiveProgrammaticArea: KPIFormulaDef = {
   params: ['Ur', 'Ar'],
   unit: 'm²',
   target: 1000000,
+  logic: 'STRICT',
   compute: (p) => p.Ur * p.Ar,
 };
 
@@ -126,6 +132,7 @@ const programmaticProximityIndex: KPIFormulaDef = {
   params: ['Da', 'Di'],
   unit: 'unitless [0.0-1.0]',
   target: 0.7,
+  logic: 'STRICT',
   // Da is pre-computed as Σ(1/d) per row, Di as 1/d per row
   compute: (p) => (p.Di !== 0 ? p.Da / p.Di : 0),
   computeAggregate: (rows) => {
@@ -147,6 +154,7 @@ const resourceConsumptionIntensityRatio: KPIFormulaDef = {
   params: ['Ur', 'Wr'],
   unit: 'unitless [0.0-1.0]',
   target: 0.6,
+  logic: 'STRICT',
   compute: (p) => p.Ur * p.Wr,
 };
 
@@ -160,6 +168,7 @@ const thermalComfortComplianceRate: KPIFormulaDef = {
   params: ['Hr', 'Ae', 'Sse', 'Ir', 'Sl'],
   unit: '%',
   target: 85,
+  logic: 'STRICT',
   compute: (p) =>
     (100 * ((p.Hr / 100) + (p.Ae / 100) + (p.Sse / 100))) /
     (1 + (p.Ir / 100) + (p.Sl / 100)),
@@ -173,6 +182,7 @@ const structuralEfficiencyPerformance: KPIFormulaDef = {
   params: ['De', 'Sl', 'Wl'],
   unit: '%',
   target: 70,
+  logic: 'STRICT',
   compute: (p) => p.De / (1 + (p.Sl / p.Wl)),
 };
 
@@ -184,6 +194,7 @@ const solarControlPerformance: KPIFormulaDef = {
   params: ['De', 'Ir'],
   unit: '%',
   target: 65,
+  logic: 'STRICT',
   compute: (p) => p.De / (1 + (p.Ir / 100)),
 };
 
@@ -195,6 +206,7 @@ const airPurificationEffectiveness: KPIFormulaDef = {
   params: ['Ep', 'Ar', 'Ur', 'Ae', 'Wr'],
   unit: 'kg/day',
   target: 250,
+  logic: 'STRICT',
   compute: (p) => (p.Ep * p.Ar * p.Ur * (p.Ae / 100) * (p.Wr / 100)) / 1000,
 };
 
@@ -206,6 +218,7 @@ const acousticComfortNoiseImpactIndex: KPIFormulaDef = {
   params: ['Ne', 'Se', 'Ni'],
   unit: 'dB',
   target: 35,
+  logic: 'STRICT',
   compute: (p) => p.Ne * (1 - p.Se / 100) + p.Ni * (p.Se / 100),
 };
 
@@ -217,6 +230,7 @@ const filtrationEfficiency: KPIFormulaDef = {
   params: ['Fe', 'Ep'],
   unit: '%',
   target: 80,
+  logic: 'STRICT',
   compute: (p) => p.Fe / (1 + (p.Ep / 100)),
 };
 
@@ -402,30 +416,79 @@ export function toParamValues(raw: Record<string, number | string>): ParamValues
 }
 
 /**
- * Update KPI target values from the FORMULA sheet.
- * Matches KPI names from the sheet with KPI definitions and updates their targets.
+ * Update KPI target values and logic from the FORMULA sheet.
+ * Matches KPI names from the sheet with KPI definitions and updates their targets and logic.
  */
-export function updateKPITargets(formulaTargets: Record<string, number>): void {
+export function updateKPITargets(formulaData: Record<string, { target: number; logic: 'MAX' | 'MIN' | 'STRICT' }>): void {
   for (const def of KPI_FORMULAS) {
     // Try to match by exact name
-    if (formulaTargets[def.name] !== undefined) {
-      def.target = formulaTargets[def.name];
+    if (formulaData[def.name] !== undefined) {
+      def.target = formulaData[def.name].target;
+      def.logic = formulaData[def.name].logic;
       continue;
     }
 
     // Try to match by normalized name (lowercase, replace hyphens with spaces)
     const normalizedName = def.name.toLowerCase();
-    for (const [sheetName, value] of Object.entries(formulaTargets)) {
+    for (const [sheetName, data] of Object.entries(formulaData)) {
       if (sheetName.toLowerCase() === normalizedName) {
-        def.target = value;
+        def.target = data.target;
+        def.logic = data.logic;
         break;
       }
     }
   }
 
-  // Rebuild KPI_BY_CATEGORY to reflect updated targets
+  // Rebuild KPI_BY_CATEGORY to reflect updated targets and logic
   KPI_BY_CATEGORY.program     = KPI_FORMULAS.filter(k => k.category === 'program');
   KPI_BY_CATEGORY.structure   = KPI_FORMULAS.filter(k => k.category === 'structure');
   KPI_BY_CATEGORY.environment = KPI_FORMULAS.filter(k => k.category === 'environment');
+}
+
+/**
+ * Evaluate if a KPI value is within acceptable range based on its logic type.
+ * Returns { withinMargin, acceptable }
+ * - withinMargin: true if within ±10% of target (used for visual styling)
+ * - acceptable: true if the value meets the logic criteria (green status)
+ */
+export function evaluateKPIStatus(
+  value: number,
+  target: number,
+  logic: KPILogic,
+): { withinMargin: boolean; acceptable: boolean } {
+  if (target === 0) {
+    return { withinMargin: value === 0, acceptable: value === 0 };
+  }
+
+  if (logic === 'STRICT') {
+    // Within ±10% of target
+    const margin = Math.abs(target) * 0.1;
+    const withinMargin = Math.abs(value - target) <= margin;
+    return { withinMargin, acceptable: withinMargin };
+  }
+
+  if (logic === 'MAX') {
+    // Higher is better
+    // - If value >= target: green (within or exceeded)
+    // - If value is within 10% below target: still acceptable (withinMargin)
+    // - If value is > 10% below target: red
+    const margin = Math.abs(target) * 0.1;
+    const withinMargin = value >= target - margin;
+    const acceptable = value >= target || (value >= target - margin);
+    return { withinMargin, acceptable };
+  }
+
+  if (logic === 'MIN') {
+    // Lower is better
+    // - If value <= target: green (within or below)
+    // - If value is within 10% above target: still acceptable (withinMargin)
+    // - If value is > 10% above target: red
+    const margin = Math.abs(target) * 0.1;
+    const withinMargin = value <= target + margin;
+    const acceptable = value <= target || (value <= target + margin);
+    return { withinMargin, acceptable };
+  }
+
+  return { withinMargin: false, acceptable: false };
 }
 

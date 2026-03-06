@@ -435,28 +435,31 @@ export async function fetchStructureParams(): Promise<{
 
 /**
  * Fetch KPI target values from the FORMULA sheet
- * Column B contains KPI names, Column F contains target values (starting from row 3)
- * Returns a mapping of KPI name -> target value
+ * Column B contains KPI names, Column F contains target values, Column G contains logic type
+ * Logic types: MAX (higher is better), MIN (lower is better), STRICT (within ±10%)
+ * Returns a mapping of KPI name -> { target, logic }
  */
-export async function fetchFormulaTargets(): Promise<Record<string, number>> {
+export async function fetchFormulaTargets(): Promise<Record<string, { target: number; logic: 'MAX' | 'MIN' | 'STRICT' }>> {
   const csvRows = await fetchSheetByGid(FORMULA_GID);
   if (csvRows.length < 3) return {};
 
-  const targets: Record<string, number> = {};
+  const targets: Record<string, { target: number; logic: 'MAX' | 'MIN' | 'STRICT' }> = {};
 
   // Start from row 3 (index 2), read until we hit an empty KPI name
   for (let i = 2; i < csvRows.length; i++) {
     const row = csvRows[i];
-    if (!row || row.length < 6) continue;
+    if (!row || row.length < 7) continue;
 
     const kpiName = row[1]?.trim() || ''; // Column B
     const targetStr = row[5]?.trim() || ''; // Column F (index 5)
+    const logicStr = row[6]?.trim().toUpperCase() || 'STRICT'; // Column G (index 6)
 
     if (!kpiName) break; // Stop at first empty KPI name
 
     const targetValue = Number(targetStr.replace(/,/g, ''));
     if (!Number.isNaN(targetValue)) {
-      targets[kpiName] = targetValue;
+      const logic = (['MAX', 'MIN', 'STRICT'].includes(logicStr) ? logicStr : 'STRICT') as 'MAX' | 'MIN' | 'STRICT';
+      targets[kpiName] = { target: targetValue, logic };
     }
   }
 

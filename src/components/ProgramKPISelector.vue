@@ -39,7 +39,7 @@
 
 <script setup>
 import { ref, computed } from 'vue'
-import { KPI_BY_CATEGORY, computeKPI } from '@/services/kpiFormulas'
+import { KPI_BY_CATEGORY, computeKPI, evaluateKPIStatus } from '@/services/kpiFormulas'
 import { extractParamValues } from '@/services/googleSheetsService'
 
 const props = defineProps({
@@ -114,12 +114,12 @@ const summaryData = computed(() => {
   const ppiTarget = ppiDef?.target ?? 0.7
   const rcirTarget = rcirDef?.target ?? 0.6
 
-  const bulletConfig = (value, target) => {
+  const bulletConfig = (value, target, logic = 'STRICT') => {
     const max = Math.max(value, target) * 1.2 || 1
-    const withinMargin = target === 0 ? value === 0 : Math.abs(value - target) <= Math.abs(target) * 0.1
+    const status = evaluateKPIStatus(value, target, logic)
     return {
       delta: value - target,
-      withinMargin,
+      withinMargin: status.acceptable,
       bulletValuePct: Math.min((value / max) * 100, 100),
       bulletTargetPct: Math.min((target / max) * 100, 100),
     }
@@ -129,17 +129,17 @@ const summaryData = computed(() => {
     epa: {
       value: epaValue,
       target: epaTarget,
-      ...bulletConfig(epaValue, epaTarget),
+      ...bulletConfig(epaValue, epaTarget, epaDef?.logic || 'STRICT'),
     },
     ppi: {
       value: Math.round(ppiValue * 100) / 100,
       target: ppiTarget,
-      ...bulletConfig(ppiValue, ppiTarget),
+      ...bulletConfig(ppiValue, ppiTarget, ppiDef?.logic || 'STRICT'),
     },
     rcir: {
       value: Math.round(rcirValue * 100) / 100,
       target: rcirTarget,
-      ...bulletConfig(rcirValue, rcirTarget),
+      ...bulletConfig(rcirValue, rcirTarget, rcirDef?.logic || 'STRICT'),
     },
   }
 })

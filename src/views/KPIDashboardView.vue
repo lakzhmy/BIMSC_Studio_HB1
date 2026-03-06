@@ -34,7 +34,56 @@
             <h2 class="text-lg font-bold text-slate-900" style="color: #3b82f6;">Program</h2>
             <p class="text-xs text-slate-500">Space usage and program KPIs</p>
           </div>
-          <ProgramKPISelector v-if="programSheetData" :sheetData="programSheetData" :currentWeek="currentWeekNumber" />
+
+          <!-- Program KPI Cards with inline bullet charts -->
+          <div v-if="programFilteredKPIs.length > 0" class="space-y-3">
+            <div
+              v-for="(kpi, index) in programFilteredKPIs"
+              :key="kpi.id"
+              class="bg-slate-50 rounded-lg border border-slate-100 hover:shadow-md transition-shadow cursor-pointer relative"
+              @mouseenter="handleProgramKPIMouseEnter(kpi.id)"
+              @mouseleave="handleProgramKPIMouseLeave(kpi.id)"
+            >
+              <!-- Hover tooltip -->
+              <div v-if="showProgramKPITooltip === kpi.id" class="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white text-xs px-2 py-1 rounded whitespace-nowrap z-10">
+                Click on card to display KPI description
+              </div>
+              <div class="p-4" @click="toggleExpandProgramKPI(kpi.id)">
+                <div class="flex items-start justify-between mb-2">
+                  <div class="flex-1">
+                    <h3 class="text-xs font-semibold text-slate-700">{{ kpi.name }}</h3>
+                    <p class="text-[11px] text-slate-500">{{ kpi.unit }}</p>
+                  </div>
+                  <div class="flex items-center gap-2 flex-shrink-0">
+                    <div class="w-2 h-2 rounded-full bg-slate-300"></div>
+                    <svg :class="['w-4 h-4 text-slate-500 transition-transform', expandedProgramKPIs.has(kpi.id) ? 'rotate-180' : '']" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
+                    </svg>
+                  </div>
+                </div>
+                <!-- Expandable description section -->
+                <div v-if="expandedProgramKPIs.has(kpi.id)" class="bg-slate-100 -mx-4 px-4 py-2 mb-3 border-t border-b border-slate-200">
+                  <p class="text-xs text-slate-600 leading-relaxed">{{ kpi.description }}</p>
+                </div>
+                <div class="text-2xl font-bold text-slate-900 mb-3">{{ typeof kpi.value === 'number' ? kpi.value.toFixed(2) : kpi.value }}</div>
+                <template v-if="programSummaryCards[index]">
+                  <div class="text-[11px] text-slate-500">Target: {{ programSummaryCards[index].displayTarget }}</div>
+                  <div class="flex items-center gap-2 mt-1 mb-3">
+                    <span :class="['text-[10px] px-2 py-0.5 rounded-full border', programSummaryCards[index].withinMargin ? 'bg-green-100 text-green-700 border-green-200' : 'bg-red-100 text-red-700 border-red-200']">
+                      {{ programSummaryCards[index].delta > 0 ? '+' : '' }}{{ programSummaryCards[index].displayDelta }}
+                    </span>
+                  </div>
+                  <div class="relative h-2 rounded-full bg-slate-200 overflow-visible">
+                    <div class="absolute left-0 top-0 h-full rounded-full" :style="{ width: `${programSummaryCards[index].bulletValuePct}%`, backgroundColor: programSummaryCards[index].color }"></div>
+                    <div class="absolute top-0 h-full w-0.5 bg-slate-500" :style="{ left: `${programSummaryCards[index].bulletTargetPct}%` }"></div>
+                    <div class="absolute top-0 h-2 w-2 bg-yellow-400 shadow-sm" :style="{ left: `calc(${programSummaryCards[index].bulletTargetPct}% - 4px)`, transform: 'rotate(45deg)' }"></div>
+                    <div class="absolute -top-5 text-[10px] text-slate-600" :style="{ left: `calc(${programSummaryCards[index].bulletTargetPct}% - 8px)` }">{{ programSummaryCards[index].displayTarget }}</div>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </div>
+
           <p v-else class="text-slate-400 text-sm">No program data available</p>
         </div>
 
@@ -52,32 +101,47 @@
             <div
               v-for="(kpi, index) in structureFilteredKPIs"
               :key="kpi.id"
-              class="bg-slate-50 p-4 rounded-lg border border-slate-100 hover:shadow-md transition-shadow cursor-pointer"
-              @mouseenter="hoveredStructureIndex = index"
-              @mouseleave="hoveredStructureIndex = null"
+              class="bg-slate-50 rounded-lg border border-slate-100 hover:shadow-md transition-shadow cursor-pointer relative"
+              @mouseenter="hoveredStructureIndex = index; handleStructureKPIMouseEnter(kpi.id)"
+              @mouseleave="hoveredStructureIndex = null; handleStructureKPIMouseLeave(kpi.id)"
             >
-              <div class="flex items-start justify-between mb-2">
-                <div class="flex-1">
-                  <h3 class="text-xs font-semibold text-slate-700">{{ kpi.name }}</h3>
-                  <p class="text-[11px] text-slate-500">{{ kpi.unit }}</p>
-                </div>
-                <div :class="['w-2 h-2 rounded-full flex-shrink-0 mt-0.5', structureSummaryCards[index] ? (structureSummaryCards[index].withinMargin ? 'bg-green-500' : 'bg-red-500') : 'bg-slate-300']"></div>
+              <!-- Hover tooltip -->
+              <div v-if="showStructureKPITooltip === kpi.id" class="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white text-xs px-2 py-1 rounded whitespace-nowrap z-10">
+                Click on card to display KPI description
               </div>
-              <div class="text-2xl font-bold text-slate-900 mb-3">{{ typeof kpi.value === 'number' ? kpi.value.toFixed(2) : kpi.value }}</div>
-              <template v-if="structureSummaryCards[index]">
-                <div class="text-[11px] text-slate-500">Target: {{ structureSummaryCards[index].displayTarget }}</div>
-                <div class="flex items-center gap-2 mt-1 mb-3">
-                  <span :class="['text-[10px] px-2 py-0.5 rounded-full border', structureSummaryCards[index].withinMargin ? 'bg-green-100 text-green-700 border-green-200' : 'bg-red-100 text-red-700 border-red-200']">
-                    {{ structureSummaryCards[index].delta > 0 ? '+' : '' }}{{ structureSummaryCards[index].displayDelta }}
-                  </span>
+              <div class="p-4" @click="toggleExpandStructureKPI(kpi.id)">
+                <div class="flex items-start justify-between mb-2">
+                  <div class="flex-1">
+                    <h3 class="text-xs font-semibold text-slate-700">{{ kpi.name }}</h3>
+                    <p class="text-[11px] text-slate-500">{{ kpi.unit }}</p>
+                  </div>
+                  <div class="flex items-center gap-2 flex-shrink-0">
+                    <div :class="['w-2 h-2 rounded-full', structureSummaryCards[index] ? (structureSummaryCards[index].withinMargin ? 'bg-green-500' : 'bg-red-500') : 'bg-slate-300']"></div>
+                    <svg :class="['w-4 h-4 text-slate-500 transition-transform', expandedStructureKPIs.has(kpi.id) ? 'rotate-180' : '']" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
+                    </svg>
+                  </div>
                 </div>
-                <div class="relative h-2 rounded-full bg-slate-200 overflow-visible">
-                  <div class="absolute left-0 top-0 h-full rounded-full" :style="{ width: `${structureSummaryCards[index].bulletValuePct}%`, backgroundColor: structureSummaryCards[index].color }"></div>
-                  <div class="absolute top-0 h-full w-0.5 bg-slate-500" :style="{ left: `${structureSummaryCards[index].bulletTargetPct}%` }"></div>
-                  <div class="absolute top-0 h-2 w-2 bg-yellow-400 shadow-sm" :style="{ left: `calc(${structureSummaryCards[index].bulletTargetPct}% - 4px)`, transform: 'rotate(45deg)' }"></div>
-                  <div class="absolute -top-5 text-[10px] text-slate-600" :style="{ left: `calc(${structureSummaryCards[index].bulletTargetPct}% - 8px)` }">{{ structureSummaryCards[index].displayTarget }}</div>
+                <!-- Expandable description section -->
+                <div v-if="expandedStructureKPIs.has(kpi.id)" class="bg-slate-100 -mx-4 px-4 py-2 mb-3 border-t border-b border-slate-200">
+                  <p class="text-xs text-slate-600 leading-relaxed">{{ kpi.description }}</p>
                 </div>
-              </template>
+                <div class="text-2xl font-bold text-slate-900 mb-3">{{ typeof kpi.value === 'number' ? kpi.value.toFixed(2) : kpi.value }}</div>
+                <template v-if="structureSummaryCards[index]">
+                  <div class="text-[11px] text-slate-500">Target: {{ structureSummaryCards[index].displayTarget }}</div>
+                  <div class="flex items-center gap-2 mt-1 mb-3">
+                    <span :class="['text-[10px] px-2 py-0.5 rounded-full border', structureSummaryCards[index].withinMargin ? 'bg-green-100 text-green-700 border-green-200' : 'bg-red-100 text-red-700 border-red-200']">
+                      {{ structureSummaryCards[index].delta > 0 ? '+' : '' }}{{ structureSummaryCards[index].displayDelta }}
+                    </span>
+                  </div>
+                  <div class="relative h-2 rounded-full bg-slate-200 overflow-visible">
+                    <div class="absolute left-0 top-0 h-full rounded-full" :style="{ width: `${structureSummaryCards[index].bulletValuePct}%`, backgroundColor: structureSummaryCards[index].color }"></div>
+                    <div class="absolute top-0 h-full w-0.5 bg-slate-500" :style="{ left: `${structureSummaryCards[index].bulletTargetPct}%` }"></div>
+                    <div class="absolute top-0 h-2 w-2 bg-yellow-400 shadow-sm" :style="{ left: `calc(${structureSummaryCards[index].bulletTargetPct}% - 4px)`, transform: 'rotate(45deg)' }"></div>
+                    <div class="absolute -top-5 text-[10px] text-slate-600" :style="{ left: `calc(${structureSummaryCards[index].bulletTargetPct}% - 8px)` }">{{ structureSummaryCards[index].displayTarget }}</div>
+                  </div>
+                </template>
+              </div>
             </div>
           </div>
 
@@ -88,7 +152,7 @@
         <div class="bg-white rounded-lg border border-slate-200 p-6 space-y-4">
           <div>
             <h2 class="text-lg font-bold" style="color: #ef4444;">Data</h2>
-            <p class="text-xs text-slate-500">Environment KPIs (from structure params + env defaults)</p>
+            <p class="text-xs text-slate-500">Full building KPIs</p>
           </div>
 
 
@@ -98,32 +162,47 @@
             <div
               v-for="(kpi, index) in dataFilteredKPIs"
               :key="kpi.id"
-              class="bg-slate-50 p-4 rounded-lg border border-slate-100 hover:shadow-md transition-shadow cursor-pointer"
-              @mouseenter="hoveredDataIndex = index"
-              @mouseleave="hoveredDataIndex = null"
+              class="bg-slate-50 rounded-lg border border-slate-100 hover:shadow-md transition-shadow cursor-pointer relative"
+              @mouseenter="hoveredDataIndex = index; handleDataKPIMouseEnter(kpi.id)"
+              @mouseleave="hoveredDataIndex = null; handleDataKPIMouseLeave(kpi.id)"
             >
-              <div class="flex items-start justify-between mb-2">
-                <div class="flex-1">
-                  <h3 class="text-xs font-semibold text-slate-700">{{ kpi.name }}</h3>
-                  <p class="text-[11px] text-slate-500">{{ kpi.unit }}</p>
-                </div>
-                <div :class="['w-2 h-2 rounded-full flex-shrink-0 mt-0.5', dataSummaryCards[index] ? (dataSummaryCards[index].withinMargin ? 'bg-green-500' : 'bg-red-500') : 'bg-slate-300']"></div>
+              <!-- Hover tooltip -->
+              <div v-if="showDataKPITooltip === kpi.id" class="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white text-xs px-2 py-1 rounded whitespace-nowrap z-10">
+                Click on card to display KPI description
               </div>
-              <div class="text-2xl font-bold text-slate-900 mb-3">{{ typeof kpi.value === 'number' ? kpi.value.toFixed(2) : kpi.value }}</div>
-              <template v-if="dataSummaryCards[index]">
-                <div class="text-[11px] text-slate-500">Target: {{ dataSummaryCards[index].displayTarget }}</div>
-                <div class="flex items-center gap-2 mt-1 mb-3">
-                  <span :class="['text-[10px] px-2 py-0.5 rounded-full border', dataSummaryCards[index].withinMargin ? 'bg-green-100 text-green-700 border-green-200' : 'bg-red-100 text-red-700 border-red-200']">
-                    {{ dataSummaryCards[index].delta > 0 ? '+' : '' }}{{ dataSummaryCards[index].displayDelta }}
-                  </span>
+              <div class="p-4" @click="toggleExpandDataKPI(kpi.id)">
+                <div class="flex items-start justify-between mb-2">
+                  <div class="flex-1">
+                    <h3 class="text-xs font-semibold text-slate-700">{{ kpi.name }}</h3>
+                    <p class="text-[11px] text-slate-500">{{ kpi.unit }}</p>
+                  </div>
+                  <div class="flex items-center gap-2 flex-shrink-0">
+                    <div :class="['w-2 h-2 rounded-full', dataSummaryCards[index] ? (dataSummaryCards[index].withinMargin ? 'bg-green-500' : 'bg-red-500') : 'bg-slate-300']"></div>
+                    <svg :class="['w-4 h-4 text-slate-500 transition-transform', expandedDataKPIs.has(kpi.id) ? 'rotate-180' : '']" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
+                    </svg>
+                  </div>
                 </div>
-                <div class="relative h-2 rounded-full bg-slate-200 overflow-visible">
-                  <div class="absolute left-0 top-0 h-full rounded-full" :style="{ width: `${dataSummaryCards[index].bulletValuePct}%`, backgroundColor: dataSummaryCards[index].color }"></div>
-                  <div class="absolute top-0 h-full w-0.5 bg-slate-500" :style="{ left: `${dataSummaryCards[index].bulletTargetPct}%` }"></div>
-                  <div class="absolute top-0 h-2 w-2 bg-yellow-400 shadow-sm" :style="{ left: `calc(${dataSummaryCards[index].bulletTargetPct}% - 4px)`, transform: 'rotate(45deg)' }"></div>
-                  <div class="absolute -top-5 text-[10px] text-slate-600" :style="{ left: `calc(${dataSummaryCards[index].bulletTargetPct}% - 8px)` }">{{ dataSummaryCards[index].displayTarget }}</div>
+                <!-- Expandable description section -->
+                <div v-if="expandedDataKPIs.has(kpi.id)" class="bg-slate-100 -mx-4 px-4 py-2 mb-3 border-t border-b border-slate-200">
+                  <p class="text-xs text-slate-600 leading-relaxed">{{ kpi.description }}</p>
                 </div>
-              </template>
+                <div class="text-2xl font-bold text-slate-900 mb-3">{{ typeof kpi.value === 'number' ? kpi.value.toFixed(2) : kpi.value }}</div>
+                <template v-if="dataSummaryCards[index]">
+                  <div class="text-[11px] text-slate-500">Target: {{ dataSummaryCards[index].displayTarget }}</div>
+                  <div class="flex items-center gap-2 mt-1 mb-3">
+                    <span :class="['text-[10px] px-2 py-0.5 rounded-full border', dataSummaryCards[index].withinMargin ? 'bg-green-100 text-green-700 border-green-200' : 'bg-red-100 text-red-700 border-red-200']">
+                      {{ dataSummaryCards[index].delta > 0 ? '+' : '' }}{{ dataSummaryCards[index].displayDelta }}
+                    </span>
+                  </div>
+                  <div class="relative h-2 rounded-full bg-slate-200 overflow-visible">
+                    <div class="absolute left-0 top-0 h-full rounded-full" :style="{ width: `${dataSummaryCards[index].bulletValuePct}%`, backgroundColor: dataSummaryCards[index].color }"></div>
+                    <div class="absolute top-0 h-full w-0.5 bg-slate-500" :style="{ left: `${dataSummaryCards[index].bulletTargetPct}%` }"></div>
+                    <div class="absolute top-0 h-2 w-2 bg-yellow-400 shadow-sm" :style="{ left: `calc(${dataSummaryCards[index].bulletTargetPct}% - 4px)`, transform: 'rotate(45deg)' }"></div>
+                    <div class="absolute -top-5 text-[10px] text-slate-600" :style="{ left: `calc(${dataSummaryCards[index].bulletTargetPct}% - 8px)` }">{{ dataSummaryCards[index].displayTarget }}</div>
+                  </div>
+                </template>
+              </div>
             </div>
           </div>
 
@@ -164,7 +243,7 @@ import BreathingChart from '@/components/BreathingChart.vue'
 import PorousVisualization from '@/components/PorousVisualization.vue'
 import ProjectComplexity from '@/components/ProjectComplexity.vue'
 import { fetchKPIsByCategory, fetchStructureParams, fetchFormulaTargets, extractParamValues } from '@/services/googleSheetsService'
-import { KPI_BY_CATEGORY, computeKPI, updateKPITargets } from '@/services/kpiFormulas'
+import { KPI_BY_CATEGORY, computeKPI, updateKPITargets, evaluateKPIStatus } from '@/services/kpiFormulas'
 import { useUserStore } from '@/stores/userStore'
 
 const userStore = useUserStore()
@@ -191,6 +270,88 @@ const loadError = ref('')
 // --- Per-widget hover state ---
 const hoveredStructureIndex = ref(null)
 const hoveredDataIndex = ref(null)
+
+// --- Expandable KPI cards state ---
+const expandedStructureKPIs = ref(new Set())
+const showStructureKPITooltip = ref(null)
+const structureKPITooltipTimeouts = ref({})
+
+const toggleExpandStructureKPI = (id) => {
+  if (expandedStructureKPIs.value.has(id)) {
+    expandedStructureKPIs.value.delete(id)
+  } else {
+    expandedStructureKPIs.value.add(id)
+  }
+  expandedStructureKPIs.value = new Set(expandedStructureKPIs.value)
+}
+
+const handleStructureKPIMouseEnter = (id) => {
+  structureKPITooltipTimeouts.value[id] = setTimeout(() => {
+    showStructureKPITooltip.value = id
+  }, 1000)
+}
+
+const handleStructureKPIMouseLeave = (id) => {
+  clearTimeout(structureKPITooltipTimeouts.value[id])
+  delete structureKPITooltipTimeouts.value[id]
+  if (showStructureKPITooltip.value === id) {
+    showStructureKPITooltip.value = null
+  }
+}
+
+const expandedProgramKPIs = ref(new Set())
+const showProgramKPITooltip = ref(null)
+const programKPITooltipTimeouts = ref({})
+
+const toggleExpandProgramKPI = (id) => {
+  if (expandedProgramKPIs.value.has(id)) {
+    expandedProgramKPIs.value.delete(id)
+  } else {
+    expandedProgramKPIs.value.add(id)
+  }
+  expandedProgramKPIs.value = new Set(expandedProgramKPIs.value)
+}
+
+const handleProgramKPIMouseEnter = (id) => {
+  programKPITooltipTimeouts.value[id] = setTimeout(() => {
+    showProgramKPITooltip.value = id
+  }, 1000)
+}
+
+const handleProgramKPIMouseLeave = (id) => {
+  clearTimeout(programKPITooltipTimeouts.value[id])
+  delete programKPITooltipTimeouts.value[id]
+  if (showProgramKPITooltip.value === id) {
+    showProgramKPITooltip.value = null
+  }
+}
+
+const expandedDataKPIs = ref(new Set())
+const showDataKPITooltip = ref(null)
+const dataKPITooltipTimeouts = ref({})
+
+const toggleExpandDataKPI = (id) => {
+  if (expandedDataKPIs.value.has(id)) {
+    expandedDataKPIs.value.delete(id)
+  } else {
+    expandedDataKPIs.value.add(id)
+  }
+  expandedDataKPIs.value = new Set(expandedDataKPIs.value)
+}
+
+const handleDataKPIMouseEnter = (id) => {
+  dataKPITooltipTimeouts.value[id] = setTimeout(() => {
+    showDataKPITooltip.value = id
+  }, 1000)
+}
+
+const handleDataKPIMouseLeave = (id) => {
+  clearTimeout(dataKPITooltipTimeouts.value[id])
+  delete dataKPITooltipTimeouts.value[id]
+  if (showDataKPITooltip.value === id) {
+    showDataKPITooltip.value = null
+  }
+}
 
 // --- Sheet data store ---
 const sheetDataByCategory = ref({
@@ -235,20 +396,27 @@ const structureFilteredKPIs = computed(() => {
   if (!row) return []
 
   const defs = KPI_BY_CATEGORY['structure']
+  const descriptions = {
+    'structural-efficiency-performance': 'Evaluates how effectively the structural system resists environmental loads while maintaining material stability. By comparing structural density with stress loads and external wind pressure, it reflects the balance between structural capacity and environmental demand. Higher values indicate a more resilient and efficient structural configuration.',
+    'solar-control-performance': 'Measures how effectively the building\'s structural configuration moderates solar exposure. By relating structural density to incident solar radiation, it reflects the capacity of the structure to contribute to passive shading and solar mitigation. Higher values indicate improved control of solar gains and more stable interior conditions.',
+    'filtration-efficiency': 'Quantifies the building\'s ability to mitigate external pollution through filtration systems. By comparing filtration capacity with environmental pollution intensity, it reflects how effectively airborne contaminants are reduced. Higher values indicate stronger filtration performance and improved indoor air quality.',
+  }
   return defs.map(def => ({
     id: def.id,
     name: def.name,
     value: Math.round(computeKPI(def, row.params) * 100) / 100,
     unit: def.unit,
     target: def.target,
+    logic: def.logic,
     status: 'good',
+    description: descriptions[def.id] || 'No description available.',
   }))
 })
 
 // Returns true when value is within ±10% of the target
-const isWithinMargin = (value, target) => {
-  if (target === 0) return value === 0
-  return Math.abs(value - target) <= Math.abs(target) * 0.1
+const isWithinMargin = (value, target, logic = 'STRICT') => {
+  const status = evaluateKPIStatus(value, target, logic)
+  return status.acceptable
 }
 
 const structureSummaryCards = computed(() => {
@@ -266,7 +434,8 @@ const structureSummaryCards = computed(() => {
     const value = parseNumber(kpi.value)
     const target = kpi.target ?? 0
     const delta = value - target
-    const withinMargin = isWithinMargin(value, target)
+    const status = evaluateKPIStatus(value, target, structureFilteredKPIs.value[index]?.logic || 'STRICT')
+    const withinMargin = status.acceptable
     const max = Math.max(value, target) * 1.2 || 1
     return {
       id: `structure-summary-${kpi.id}`,
@@ -278,6 +447,37 @@ const structureSummaryCards = computed(() => {
       bulletValuePct: Math.min((value / max) * 100, 100),
       bulletTargetPct: Math.min((target / max) * 100, 100),
       color: '#10b981',
+    }
+  })
+})
+
+const programSummaryCards = computed(() => {
+  const formatValue = (value) => Number(value).toLocaleString(undefined, { maximumFractionDigits: 2 })
+  const parseNumber = (value) => {
+    if (typeof value === 'number') return value
+    const sanitized = String(value || '').replace(/,/g, '')
+    const match = sanitized.match(/-?\d*\.?\d+/)
+    if (!match) return 0
+    const parsed = Number(match[0])
+    return Number.isNaN(parsed) ? 0 : parsed
+  }
+  return programFilteredKPIs.value.map((kpi, index) => {
+    const value = parseNumber(kpi.value)
+    const target = kpi.target ?? 0
+    const delta = value - target
+    const status = evaluateKPIStatus(value, target, programFilteredKPIs.value[index]?.logic || 'STRICT')
+    const withinMargin = status.acceptable
+    const max = Math.max(value, target) * 1.2 || 1
+    return {
+      id: `program-summary-${kpi.id}`,
+      displayValue: formatValue(value),
+      displayTarget: formatValue(target),
+      displayDelta: formatValue(Math.abs(delta)),
+      delta,
+      withinMargin,
+      bulletValuePct: Math.min((value / max) * 100, 100),
+      bulletTargetPct: Math.min((target / max) * 100, 100),
+      color: '#3b82f6',
     }
   })
 })
@@ -311,6 +511,34 @@ const averagePrgParams = computed(() => {
   return avg
 })
 
+// Compute program KPIs from program data
+const programFilteredKPIs = computed(() => {
+  const data = programSheetData.value?.data || []
+  const kpiNames = programSheetData.value?.kpiNames || []
+  if (!data.length || !kpiNames.length) return []
+
+  const descriptions = {
+    'effective-programmatic-area': 'The EPA (Effective Programmatic Area) is used to calculate operating costs based on actual usage. It defines how well-utilized (high EPA) or under-utilized (low EPA) spaces are in relation to the total area of the building.',
+    'programmatic-proximity-index': 'The PPI (Programmatic Proximity Index) evaluates a space\'s location based strictly on its functional dependencies. High values (1.0) indicate optimal connectivity to critical zones, while low values (0.0) signify operational isolation.',
+    'resource-consumption-intensity-ratio': 'The RCIR (Resource Consumption Intensity Ratio) is a performance metric (0.0 – 1.0) that quantifies the estimated demand for energy, water, and data services per program. By weighting the density of equipment and occupancy (the use_ratio) against specific technical requirements, the RCIR identifies high-intensity infrastructure cores versus low-impact, passive public zones.',
+  }
+
+  const defs = KPI_BY_CATEGORY['program']
+  return defs.map(def => {
+    const value = computeKPI(def, extractParamValues(kpiNames, data[0]?.kpis || []))
+    return {
+      id: def.id,
+      name: def.name,
+      value: Math.round(value * 100) / 100,
+      unit: def.unit,
+      target: def.target,
+      logic: def.logic,
+      status: 'good',
+      description: descriptions[def.id] || 'No description available.',
+    }
+  })
+})
+
 // Compute environment KPIs from STR params + avg PRG params + ENV defaults
 const dataFilteredKPIs = computed(() => {
   if (!structureWeek.value || !structureScenario.value) return []
@@ -322,6 +550,11 @@ const dataFilteredKPIs = computed(() => {
   const mergedParams = { ...row.params, ...averagePrgParams.value }
 
   const defs = KPI_BY_CATEGORY['environment']
+  const descriptions = {
+    'thermal-comfort-compliance-rate': 'Estimates the percentage of conditions that remain within acceptable thermal comfort ranges. By comparing structural buffering capacity with environmental pressures such as solar radiation and wind exposure, it approximates the building\'s ability to moderate external climate effects. Higher values indicate more thermally stable environments.',
+    'air-purification-effectiveness': 'Estimates the mass of airborne pollutants removed by the building each day (kg/day). By combining pollution levels, program intensity, and filtration performance, it reflects the system\'s capacity to process contaminated air. Higher values indicate stronger air purification capability.',
+    'acoustic-comfort-noise-impact-index': 'Estimates the level of acoustic disturbance transmitted through the building envelope. By relating environmental pressures and structural stress to the damping effect of structural density, it approximates internal noise impact. Lower values indicate improved acoustic comfort.',
+  }
   return defs.map(def => ({
     id: def.id,
     name: def.name,
@@ -329,6 +562,8 @@ const dataFilteredKPIs = computed(() => {
     unit: def.unit,
     target: def.target,
     status: 'good',
+    logic: def.logic,
+    description: descriptions[def.id] || 'No description available.',
   }))
 })
 
@@ -347,7 +582,8 @@ const dataSummaryCards = computed(() => {
     const target = kpi.target ?? 0
     const max = Math.max(value, target) * 1.2 || 1
     const delta = value - target
-    const withinMargin = isWithinMargin(value, target)
+    const status = evaluateKPIStatus(value, target, kpi.logic || 'STRICT')
+    const withinMargin = status.acceptable
     return {
       id: `data-summary-${kpi.id}`,
       displayValue: formatValue(value),
