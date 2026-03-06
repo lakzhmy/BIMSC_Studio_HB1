@@ -32,19 +32,21 @@ export const PARAMETERS: ParameterDef[] = [
   // ── Program ──────────────────────────────────────────────────────────────
   { name: 'PRG_PAR_Area',                    variable: 'Ar',  domain: 'PRG', label: 'Area' },
   { name: 'PRG_PAR_UseRatio',                variable: 'Ur',  domain: 'PRG', label: 'Use Ratio' },
-  { name: 'PRG_PAR_ResourceWeight',          variable: 'Wr',  domain: 'PRG', label: 'Resource Weight' },
-  { name: 'PRG_PAR_DependenciesDistance',    variable: 'Da',  domain: 'PRG', label: 'Dependencies Distance' },
-  { name: 'PRG_PAR_IdealDependenciesDistance', variable: 'Di', domain: 'PRG', label: 'Ideal Dependencies Distance' },
+  { name: 'PRG_PAR_GeometryWeight',          variable: 'Wr',  domain: 'PRG', label: 'Geometry Weight' },
+  { name: 'PRG_PAR_MeanDistToExit',          variable: 'Da',  domain: 'PRG', label: 'Mean Distance to Exit' },
+  { name: 'PRG_PAR_IdealDistToExit',         variable: 'Di',  domain: 'PRG', label: 'Ideal Distance to Exit' },
 
   // ── Structure ────────────────────────────────────────────────────────────
   { name: 'STR_PAR_HeatReduction',           variable: 'Hr',  domain: 'STR', label: 'Heat Reduction' },
   { name: 'STR_PAR_SolarShadingEfficiency',  variable: 'Sse', domain: 'STR', label: 'Solar Shading Efficiency' },
-  { name: 'STR_PAR_WindLoadReduction',        variable: 'Wlr', domain: 'STR', label: 'Wind Load Reduction' },
+  { name: 'STR_PAR_WindLoadReduction',       variable: 'Wlr', domain: 'STR', label: 'Wind Load Reduction' },
   { name: 'STR_PAR_DaylightFactor',          variable: 'Df',  domain: 'STR', label: 'Daylight Factor' },
   { name: 'STR_PAR_AirflowEfficiency',       variable: 'Ae',  domain: 'STR', label: 'Airflow Efficiency' },
   { name: 'STR_PAR_EnergyOptimization',      variable: 'Eo',  domain: 'STR', label: 'Energy Optimization' },
   { name: 'STR_PAR_WaterReuseEfficiency',    variable: 'Wre', domain: 'STR', label: 'Water Reuse Efficiency' },
-  { name: 'STR_PAR_SystemLoss',              variable: 'Sl',  domain: 'STR', label: 'System Loss' },
+  { name: 'STR_PAR_Density',                 variable: 'De',  domain: 'STR', label: 'Density' },
+  { name: 'STR_PAR_StressLoad',              variable: 'Sl',  domain: 'STR', label: 'Stress Load' },
+  { name: 'STR_PAR_FiltrationEfficiency',    variable: 'Fe',  domain: 'STR', label: 'Filtration Efficiency' },
   { name: 'STR_PAR_ShadingEfficiency',       variable: 'Se',  domain: 'STR', label: 'Shading Efficiency' },
   { name: 'STR_PAR_NoiseInterior',           variable: 'Ni',  domain: 'STR', label: 'Noise Interior' },
 
@@ -52,7 +54,7 @@ export const PARAMETERS: ParameterDef[] = [
   { name: 'ENV_PAR_IncidentRadiation',       variable: 'Ir',  domain: 'ENV', label: 'Incident Radiation' },
   { name: 'ENV_PAR_ExternalPollution',       variable: 'Ep',  domain: 'ENV', label: 'External Pollution' },
   { name: 'ENV_PAR_NoiseExterior',           variable: 'Ne',  domain: 'ENV', label: 'Noise Exterior' },
-  { name: 'ENV_PAR_WindLoad',                variable: 'Wl',  domain: 'ENV', label: 'Wind Load' },
+  { name: 'ENV_PAR_WindPressure',            variable: 'Wl',  domain: 'ENV', label: 'Wind Pressure' },
 ];
 
 /** Lookup helpers */
@@ -163,31 +165,27 @@ const thermalComfortComplianceRate: KPIFormulaDef = {
     (1 + (p.Ir / 100) + (p.Sl / 100)),
 };
 
-const daylightSolarControlPerformance: KPIFormulaDef = {
-  id: 'daylight-solar-control-performance',
-  name: 'Daylight & Solar Control Performance',
+const structuralEfficiencyPerformance: KPIFormulaDef = {
+  id: 'structural-efficiency-performance',
+  name: 'Structural Efficiency',
   category: 'structure',
-  formula: '(Df × Se) / (1 + (Ir / 100))',
-  params: ['Df', 'Se', 'Ir'],
+  formula: 'De / (1 + (Sl / Wl))',
+  params: ['De', 'Sl', 'Wl'],
   unit: '%',
   target: 70,
-  compute: (p) => (p.Df * p.Se) / (1 + p.Ir / 100),
+  compute: (p) => p.De / (1 + (p.Sl / p.Wl)),
 };
 
-const systemResponsivenessResourceEfficiency: KPIFormulaDef = {
-  id: 'system-responsiveness-resource-efficiency',
-  name: 'System Responsiveness & Resource Efficiency',
+const solarControlPerformance: KPIFormulaDef = {
+  id: 'solar-control-performance',
+  name: 'Solar Control Performance',
   category: 'structure',
-  formula: '120 × (1 + (Sl/100)) / (1 + (Eo/100) + (Ae/100) + (Wre/100) + (Hr/100))',
-  params: ['Sl', 'Eo', 'Ae', 'Wre', 'Hr'],
-  unit: 'kWh/m²',
-  target: 60,
-  compute: (p) =>
-    (120 * (1 + p.Sl / 100)) /
-    (1 + p.Eo / 100 + p.Ae / 100 + p.Wre / 100 + p.Hr / 100),
+  formula: 'De / (1 + (Ir / 100))',
+  params: ['De', 'Ir'],
+  unit: '%',
+  target: 65,
+  compute: (p) => p.De / (1 + (p.Ir / 100)),
 };
-
-// ── Environment KPIs ───────────────────────────────────────────────────────
 
 const airPurificationEffectiveness: KPIFormulaDef = {
   id: 'air-purification-effectiveness',
@@ -211,17 +209,15 @@ const acousticComfortNoiseImpactIndex: KPIFormulaDef = {
   compute: (p) => p.Ne * (1 - p.Se / 100) + p.Ni * (p.Se / 100),
 };
 
-const environmentalEnvelopePerformance: KPIFormulaDef = {
-  id: 'environmental-envelope-performance',
-  name: 'Environmental Envelope Performance',
+const filtrationEfficiency: KPIFormulaDef = {
+  id: 'filtration-efficiency',
+  name: 'Filtration Efficiency',
   category: 'structure',
-  formula: '((Ir/200) + (Wl/2) + (Ep/50) + (Ne/80)) / (1 + (Hr/100) + (Wlr/100) + (Sse/100) + (Ae/100))',
-  params: ['Ir', 'Wl', 'Ep', 'Ne', 'Hr', 'Wlr', 'Sse', 'Ae'],
-  unit: 'ΔC',
-  target: 2,
-  compute: (p) =>
-    ((p.Ir / 200) + (p.Wl / 2) + (p.Ep / 50) + (p.Ne / 80)) /
-    (1 + p.Hr / 100 + p.Wlr / 100 + p.Sse / 100 + p.Ae / 100),
+  formula: 'Fe / (1 + (Ep / 100))',
+  params: ['Fe', 'Ep'],
+  unit: '%',
+  target: 80,
+  compute: (p) => p.Fe / (1 + (p.Ep / 100)),
 };
 
 // ---------------------------------------------------------------------------
@@ -234,10 +230,10 @@ export const KPI_FORMULAS: KPIFormulaDef[] = [
   effectiveProgrammaticArea,
   programmaticProximityIndex,
   resourceConsumptionIntensityRatio,
-  // Structure
-  daylightSolarControlPerformance,
-  systemResponsivenessResourceEfficiency,
-  environmentalEnvelopePerformance,
+  // Structure (updated)
+  structuralEfficiencyPerformance,
+  solarControlPerformance,
+  filtrationEfficiency,
   // Environment
   thermalComfortComplianceRate,
   airPurificationEffectiveness,

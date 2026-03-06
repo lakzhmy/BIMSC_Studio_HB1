@@ -13,7 +13,7 @@ dotenv.config({ path: path.resolve(__dirname, '../.env') })
 dotenv.config({ path: path.resolve(__dirname, '../.env.local') })
 
 const app = express()
-const port = Number(process.env.PORT || 5174)
+const port = Number(process.env.BACKEND_PORT || process.env.PORT || 3001)
 const speckleServerUrl = process.env.SPECKLE_SERVER_URL || 'https://app.speckle.systems'
 const speckleToken = process.env.SPECKLE_TOKEN || ''
 const hasSpeckleToken = Boolean(speckleToken)

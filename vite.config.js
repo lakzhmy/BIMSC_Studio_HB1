@@ -5,8 +5,8 @@ import vue from '@vitejs/plugin-vue'
 export default defineConfig(({ mode }) => {
   // Load all env vars (including SPECKLE_TOKEN) from .env / .env.local
   const env = loadEnv(mode, process.cwd(), '')
-  const port = env.PORT || '5174'
-  const backendUrl = `http://localhost:${port}`
+  const backendPort = env.BACKEND_PORT || '3001'
+  const backendUrl = `http://localhost:${backendPort}`
   const speckleServerUrl = env.SPECKLE_SERVER_URL || 'https://app.speckle.systems'
   const speckleToken = env.SPECKLE_TOKEN || ''
 
