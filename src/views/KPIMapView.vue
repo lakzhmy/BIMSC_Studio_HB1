@@ -420,7 +420,7 @@
 </template>
 
 <script setup>
-import { ref, computed, reactive, onMounted } from 'vue'
+import { ref, computed, reactive, onMounted, onUnmounted } from 'vue'
 import AppShell from '@/components/AppShell.vue'
 import { Pencil, X, Plus, Link2 } from 'lucide-vue-next'
 
@@ -464,9 +464,16 @@ const saving        = ref(false)
 const svgRef       = ref(null)
 const containerRef = ref(null)
 
+// ─── Lifecycle ────────────────────────────────────────────────────────────────
+
+onUnmounted(() => {
+  document.documentElement.style.overflowY = ''
+})
+
 // ─── Fetch on mount ───────────────────────────────────────────────────────────
 
 onMounted(async () => {
+  document.documentElement.style.overflowY = 'hidden'
   try {
     const res = await fetch('/api/kpi-map')
     const data = await res.json()
