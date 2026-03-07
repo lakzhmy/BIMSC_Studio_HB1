@@ -1,10 +1,24 @@
 // Annotation configs per route name.
-// arrowPath: cubic bezier as viewport fractions [0..1] → [[x1,y1], [cx1,cy1], [cx2,cy2], [x2,y2]]
-//   index 0 = arrow start (near label box), index 3 = arrowhead tip (on the UI element)
-// labelAnchor: top-left corner of the label box, viewport fraction
-// All coordinates assume a typical 1440×900 viewport. They scale proportionally.
-// To tune: open the page, press Space, then use DevTools getBoundingClientRect() on
-// elements to compute fractions (e.g. rect.left / window.innerWidth).
+//
+// COORDINATE SYSTEM
+//   x  →  fraction of window.innerWidth           (0 = left edge, 1 = right edge)
+//   y  →  fraction of document.documentElement.scrollHeight  (0 = page top, 1 = page bottom)
+//
+// Because y is relative to the full document height (not the viewport height),
+// annotations stay anchored to their UI elements even when you scroll.
+// Annotations below the fold simply aren't visible until you scroll down to them.
+//
+// arrowPath: [[x1,y1], [cx1,cy1], [cx2,cy2], [x2,y2]]
+//   cubic bezier — index 0 = arrow tail (near label), index 3 = arrowhead tip (on UI element)
+// labelAnchor: { x, y } — top-left corner of the label box
+//
+// TUNING
+//   Open the page, press Space, open DevTools console and run:
+//     el = document.querySelector('.some-selector')
+//     r  = el.getBoundingClientRect()
+//     xFrac = r.left / window.innerWidth
+//     yFrac = (r.top + window.scrollY) / document.documentElement.scrollHeight
+//   Use xFrac / yFrac as the arrowhead tip coordinates (index 3 of arrowPath).
 
 export const annotations = {
   dashboard: [
