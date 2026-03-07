@@ -101,36 +101,44 @@ export async function initDb() {
   `)
   console.log('[db] kpi_edges table ready')
 
-  // Seed default KPI map data if tables are empty
-  const { rows: nodeCount } = await query('SELECT COUNT(*) FROM kpi_nodes')
-  if (parseInt(nodeCount[0].count) === 0) {
-    await query(`
-      INSERT INTO kpi_nodes (id, team, label, sublabel, description, cx, cy) VALUES
-        ('P1','program','Occupancy Density','m² / use','Building occupancy capacity, modifying square footage (m²), and the dimensions of the architectural program.',450,140),
-        ('P2','program','Circulation-to-Program Ratio','Net / Gross','Dimensions and positioning of circulation routes based on the location of the program throughout the building.',450,268),
-        ('P3','program','Resource Consumption Intensity','','Consumption and distribution of resources throughout the building based on the needs of each program.',450,396),
-        ('S1','structure','Natural Light & Shading','Daylight & Solar Control','How the façade pattern, openings, and orientation balance daylight admission and solar gain control across the building.',730,140),
-        ('S2','structure','Energy & Water Performance','System Responsiveness','Assesses how efficiently environmental systems respond to external and internal conditions while minimizing energy consumption and resource losses.',730,268),
-        ('S3','structure','Thermal, Solar & Wind Buffering','Environmental Envelope','Evaluates how effectively the façade mitigates external environmental forces before they reach interior spaces, integrating material properties, pattern behavior, and wind-responsive design.',730,396),
-        ('D1','data','Thermal Comfort Compliance','','Aggregates thermal inputs derived from program occupancy, envelope performance, structural mass, and active systems and evaluates how consistently interior spaces remain within acceptable thermal comfort ranges.',170,140),
-        ('D2','data','Acoustic Comfort & Noise Index','','Aggregates noise sources (mechanical systems, circulation, program activity), structural transmission paths, envelope attenuation, and spatial buffering strategies.',170,268),
-        ('D3','data','Air Purification Effectiveness','','Informed by façade geometry, structural porosity, program density, and core systems. Defines how much air the building processes and the degree to which pollutants are removed before redistribution.',170,396)
-    `)
-    await query(`
-      INSERT INTO kpi_edges (id, source_id, target_id, strength, type) VALUES
-        ('e-P1-D1','P1','D1','strong','cross'),
-        ('e-P1-D2','P1','D2','strong','cross'),
-        ('e-P1-D3','P1','D3','medium','cross'),
-        ('e-P2-D2','P2','D2','strong','cross'),
-        ('e-P3-D3','P3','D3','strong','cross'),
-        ('e-P3-S2','P3','S2','medium','cross'),
-        ('e-S1-D1','S1','D1','strong','cross'),
-        ('e-S2-D1','S2','D1','medium','cross'),
-        ('e-S3-D1','S3','D1','strong','cross'),
-        ('e-S3-D3','S3','D3','medium','cross'),
-        ('e-S1-S3','S1','S3','medium','within'),
-        ('e-P1-P2','P1','P2','medium','within')
-    `)
-    console.log('[db] kpi_nodes + kpi_edges seeded with defaults')
-  }
+  // Upsert KPI map nodes (update names/descriptions, preserve cx/cy positions)
+  await query(`
+    INSERT INTO kpi_nodes (id, team, label, sublabel, description, cx, cy) VALUES
+      ('P1','program','Effective Programmatic Area (EPA)','m²','The EPA (Effective Programmatic Area) is used to calculate operating costs based on actual usage. It defines how well-utilized (high EPA) or under-utilized (low EPA) spaces are in relation to the total area of the building.',450,140),
+      ('P2','program','Programmatic Proximity Index (PPI)','unitless [0.0-1.0]','The PPI (Programmatic Proximity Index) evaluates a space''s location based strictly on its functional dependencies. High values (1.0) indicate optimal connectivity to critical zones, while low values (0.0) signify operational isolation.',450,268),
+      ('P3','program','Resource Consumption Intensity Ratio (RCIR)','unitless [0.0-1.0]','The RCIR (Resource Consumption Intensity Ratio) is a performance metric (0.0 – 1.0) that quantifies the estimated demand for energy, water, and data services per program. By weighting the density of equipment and occupancy (the use_ratio) against specific technical requirements, the RCIR identifies high-intensity infrastructure cores versus low-impact, passive public zones.',450,396),
+      ('S1','structure','Solar Control Performance','%','Measures how effectively the building''s structural configuration moderates solar exposure. By relating structural density to incident solar radiation, it reflects the capacity of the structure to contribute to passive shading and solar mitigation. Higher values indicate improved control of solar gains and more stable interior conditions.',730,140),
+      ('S2','structure','Structural Efficiency','%','Evaluates how effectively the structural system resists environmental loads while maintaining material stability. By comparing structural density with stress loads and external wind pressure, it reflects the balance between structural capacity and environmental demand. Higher values indicate a more resilient and efficient structural configuration.',730,268),
+      ('S3','structure','Filtration Efficiency','%','Quantifies the building''s ability to mitigate external pollution through filtration systems. By comparing filtration capacity with environmental pollution intensity, it reflects how effectively airborne contaminants are reduced. Higher values indicate stronger filtration performance and improved indoor air quality.',730,396),
+      ('D1','data','Thermal Comfort Compliance Rate','%','Estimates the percentage of conditions that remain within acceptable thermal comfort ranges. By comparing structural buffering capacity with environmental pressures such as solar radiation and wind exposure, it approximates the building''s ability to moderate external climate effects. Higher values indicate more thermally stable environments.',170,140),
+      ('D2','data','Acoustic Comfort Noise Impact Index','dB','Estimates the level of acoustic disturbance transmitted through the building envelope. By relating environmental pressures and structural stress to the damping effect of structural density, it approximates internal noise impact. Lower values indicate improved acoustic comfort.',170,268),
+      ('D3','data','Air Purification Effectiveness','%','Estimates the percentage of airborne pollutants removed by the building. By normalizing pollution levels and combining with program intensity and filtration performance, it reflects the system''s capacity to process contaminated air. Higher values indicate stronger air purification capability.',170,396)
+    ON CONFLICT (id) DO UPDATE SET
+      label       = EXCLUDED.label,
+      sublabel    = EXCLUDED.sublabel,
+      description = EXCLUDED.description,
+      updated_at  = NOW()
+  `)
+  console.log('[db] kpi_nodes upserted')
+
+  // Replace all edges with formula-justified connections
+  await query('DELETE FROM kpi_edges')
+  await query(`
+    INSERT INTO kpi_edges (id, source_id, target_id, strength, type) VALUES
+      -- Within-team: shared formula parameters
+      ('e-P1-P3','P1','P3','medium','within'),
+      ('e-S1-S2','S1','S2','medium','within'),
+      -- Cross P→D
+      ('e-P1-D1','P1','D1','medium','cross'),
+      ('e-P1-D3','P1','D3','medium','cross'),
+      ('e-P3-D3','P3','D3','strong','cross'),
+      ('e-P2-D2','P2','D2','medium','cross'),
+      -- Cross S→D
+      ('e-S1-D1','S1','D1','strong','cross'),
+      ('e-S2-D1','S2','D1','medium','cross'),
+      ('e-S2-D2','S2','D2','strong','cross'),
+      ('e-S1-D2','S1','D2','medium','cross'),
+      ('e-S3-D3','S3','D3','strong','cross')
+  `)
+  console.log('[db] kpi_edges reset with formula-justified connections')
 }
