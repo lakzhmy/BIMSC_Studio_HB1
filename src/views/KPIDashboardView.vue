@@ -16,6 +16,38 @@
         </button>
       </div>
 
+      <!-- Legend -->
+      <div v-if="!isLoading && !loadError" class="flex items-center gap-4 flex-wrap text-xs bg-white border border-slate-100 rounded-lg px-4 py-2.5">
+        <span class="text-slate-400 font-medium text-[10px] uppercase tracking-wider">Status</span>
+        <div class="flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-green-500 inline-block flex-none"></span>
+          <span class="text-slate-600">Within target range</span>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-red-500 inline-block flex-none"></span>
+          <span class="text-slate-600">Outside target range</span>
+        </div>
+        <div class="border-l border-slate-200 h-4 mx-1"></div>
+        <span class="text-slate-400 font-medium text-[10px] uppercase tracking-wider">Logic</span>
+        <div class="flex items-center gap-1.5">
+          <span class="bg-purple-100 text-purple-700 text-[9px] px-1.5 py-0.5 rounded font-medium">MAX</span>
+          <span class="text-slate-600">higher is better</span>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <span class="bg-blue-100 text-blue-700 text-[9px] px-1.5 py-0.5 rounded font-medium">MIN</span>
+          <span class="text-slate-600">lower is better</span>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <span class="bg-amber-100 text-amber-700 text-[9px] px-1.5 py-0.5 rounded font-medium">STRICT</span>
+          <span class="text-slate-600">within ±10% of target</span>
+        </div>
+        <div class="border-l border-slate-200 h-4 mx-1"></div>
+        <div class="flex items-center gap-1.5">
+          <span class="w-3 h-1 inline-block" style="background: linear-gradient(to right, #94a3b8, transparent);"></span>
+          <span class="text-slate-500 italic">Hover a card to see description &amp; formula</span>
+        </div>
+      </div>
+
       <!-- Row 1: Program | Structure | Data -->
       <div v-if="!isLoading && !loadError" class="grid lg:grid-cols-3 gap-6 items-stretch">
 
@@ -26,20 +58,13 @@
             <p class="text-xs text-slate-500">Space usage and program KPIs</p>
           </div>
 
-          <!-- Program KPI Cards with inline bullet charts -->
           <div v-if="programFilteredKPIs.length > 0" class="space-y-3">
             <div
               v-for="(kpi, index) in programFilteredKPIs"
               :key="kpi.id"
-              class="bg-slate-50 rounded-lg border border-slate-100 hover:shadow-md transition-shadow cursor-pointer relative"
-              @mouseenter="handleProgramKPIMouseEnter(kpi.id)"
-              @mouseleave="handleProgramKPIMouseLeave(kpi.id)"
+              class="group bg-slate-50 rounded-lg border border-slate-100 hover:shadow-md transition-shadow"
             >
-              <!-- Hover tooltip -->
-              <div v-if="showProgramKPITooltip === kpi.id" class="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white text-xs px-2 py-1 rounded whitespace-nowrap z-10">
-                Click on card to display KPI description
-              </div>
-              <div class="p-4" @click="toggleExpandProgramKPI(kpi.id)">
+              <div class="p-4">
                 <div class="flex items-start justify-between mb-2">
                   <div class="flex-1">
                     <h3 class="text-xs font-semibold text-slate-700">{{ kpi.name }}</h3>
@@ -50,14 +75,17 @@
                     <span :class="['text-[9px] px-1.5 py-0.5 rounded font-medium', getLogicBadgeColor(kpi.logic)]">
                       {{ kpi.logic }}
                     </span>
-                    <svg :class="['w-4 h-4 text-slate-500 transition-transform', expandedProgramKPIs.has(kpi.id) ? 'rotate-180' : '']" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
-                    </svg>
                   </div>
                 </div>
-                <!-- Expandable description section -->
-                <div v-if="expandedProgramKPIs.has(kpi.id)" class="bg-slate-100 -mx-4 px-4 py-2 mb-3 border-t border-b border-slate-200">
-                  <p class="text-xs text-slate-600 leading-relaxed">{{ kpi.description }}</p>
+                <!-- Hover-expand: description + formula -->
+                <div class="max-h-0 overflow-hidden opacity-0 transition-all duration-300 group-hover:max-h-96 group-hover:opacity-100">
+                  <div class="bg-slate-100 -mx-4 px-4 py-2 mb-3 border-t border-b border-slate-200">
+                    <p class="text-xs text-slate-600 leading-relaxed">{{ kpi.description }}</p>
+                    <div class="mt-2 pt-2 border-t border-slate-200">
+                      <p class="text-[9px] text-slate-400 uppercase tracking-wider mb-1">Formula</p>
+                      <code class="text-xs bg-white text-slate-700 rounded border border-slate-200 px-2 py-1 block font-mono">{{ kpi.formula }}</code>
+                    </div>
+                  </div>
                 </div>
                 <div class="text-2xl font-bold text-slate-900 mb-3">{{ formatNumberDE(kpi.value) }}</div>
                 <template v-if="programSummaryCards[index]">
@@ -88,22 +116,13 @@
             <p class="text-xs text-slate-500">Structural performance KPIs</p>
           </div>
 
-
-
-          <!-- Structure KPI Cards with inline bullet charts -->
           <div v-if="structureFilteredKPIs.length > 0" class="space-y-3">
             <div
               v-for="(kpi, index) in structureFilteredKPIs"
               :key="kpi.id"
-              class="bg-slate-50 rounded-lg border border-slate-100 hover:shadow-md transition-shadow cursor-pointer relative"
-              @mouseenter="hoveredStructureIndex = index; handleStructureKPIMouseEnter(kpi.id)"
-              @mouseleave="hoveredStructureIndex = null; handleStructureKPIMouseLeave(kpi.id)"
+              class="group bg-slate-50 rounded-lg border border-slate-100 hover:shadow-md transition-shadow"
             >
-              <!-- Hover tooltip -->
-              <div v-if="showStructureKPITooltip === kpi.id" class="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white text-xs px-2 py-1 rounded whitespace-nowrap z-10">
-                Click on card to display KPI description
-              </div>
-              <div class="p-4" @click="toggleExpandStructureKPI(kpi.id)">
+              <div class="p-4">
                 <div class="flex items-start justify-between mb-2">
                   <div class="flex-1">
                     <h3 class="text-xs font-semibold text-slate-700">{{ kpi.name }}</h3>
@@ -114,14 +133,17 @@
                     <span :class="['text-[9px] px-1.5 py-0.5 rounded font-medium', getLogicBadgeColor(kpi.logic)]">
                       {{ kpi.logic }}
                     </span>
-                    <svg :class="['w-4 h-4 text-slate-500 transition-transform', expandedStructureKPIs.has(kpi.id) ? 'rotate-180' : '']" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
-                    </svg>
                   </div>
                 </div>
-                <!-- Expandable description section -->
-                <div v-if="expandedStructureKPIs.has(kpi.id)" class="bg-slate-100 -mx-4 px-4 py-2 mb-3 border-t border-b border-slate-200">
-                  <p class="text-xs text-slate-600 leading-relaxed">{{ kpi.description }}</p>
+                <!-- Hover-expand: description + formula -->
+                <div class="max-h-0 overflow-hidden opacity-0 transition-all duration-300 group-hover:max-h-96 group-hover:opacity-100">
+                  <div class="bg-slate-100 -mx-4 px-4 py-2 mb-3 border-t border-b border-slate-200">
+                    <p class="text-xs text-slate-600 leading-relaxed">{{ kpi.description }}</p>
+                    <div class="mt-2 pt-2 border-t border-slate-200">
+                      <p class="text-[9px] text-slate-400 uppercase tracking-wider mb-1">Formula</p>
+                      <code class="text-xs bg-white text-slate-700 rounded border border-slate-200 px-2 py-1 block font-mono">{{ kpi.formula }}</code>
+                    </div>
+                  </div>
                 </div>
                 <div class="text-2xl font-bold text-slate-900 mb-3">{{ formatNumberDE(kpi.value) }}</div>
                 <template v-if="structureSummaryCards[index]">
@@ -152,22 +174,13 @@
             <p class="text-xs text-slate-500">Full building KPIs</p>
           </div>
 
-
-
-          <!-- Data KPI Cards with inline bullet charts -->
           <div v-if="dataFilteredKPIs.length > 0" class="space-y-3">
             <div
               v-for="(kpi, index) in dataFilteredKPIs"
               :key="kpi.id"
-              class="bg-slate-50 rounded-lg border border-slate-100 hover:shadow-md transition-shadow cursor-pointer relative"
-              @mouseenter="hoveredDataIndex = index; handleDataKPIMouseEnter(kpi.id)"
-              @mouseleave="hoveredDataIndex = null; handleDataKPIMouseLeave(kpi.id)"
+              class="group bg-slate-50 rounded-lg border border-slate-100 hover:shadow-md transition-shadow"
             >
-              <!-- Hover tooltip -->
-              <div v-if="showDataKPITooltip === kpi.id" class="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white text-xs px-2 py-1 rounded whitespace-nowrap z-10">
-                Click on card to display KPI description
-              </div>
-              <div class="p-4" @click="toggleExpandDataKPI(kpi.id)">
+              <div class="p-4">
                 <div class="flex items-start justify-between mb-2">
                   <div class="flex-1">
                     <h3 class="text-xs font-semibold text-slate-700">{{ kpi.name }}</h3>
@@ -178,14 +191,17 @@
                     <span :class="['text-[9px] px-1.5 py-0.5 rounded font-medium', getLogicBadgeColor(kpi.logic)]">
                       {{ kpi.logic }}
                     </span>
-                    <svg :class="['w-4 h-4 text-slate-500 transition-transform', expandedDataKPIs.has(kpi.id) ? 'rotate-180' : '']" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
-                    </svg>
                   </div>
                 </div>
-                <!-- Expandable description section -->
-                <div v-if="expandedDataKPIs.has(kpi.id)" class="bg-slate-100 -mx-4 px-4 py-2 mb-3 border-t border-b border-slate-200">
-                  <p class="text-xs text-slate-600 leading-relaxed">{{ kpi.description }}</p>
+                <!-- Hover-expand: description + formula -->
+                <div class="max-h-0 overflow-hidden opacity-0 transition-all duration-300 group-hover:max-h-96 group-hover:opacity-100">
+                  <div class="bg-slate-100 -mx-4 px-4 py-2 mb-3 border-t border-b border-slate-200">
+                    <p class="text-xs text-slate-600 leading-relaxed">{{ kpi.description }}</p>
+                    <div class="mt-2 pt-2 border-t border-slate-200">
+                      <p class="text-[9px] text-slate-400 uppercase tracking-wider mb-1">Formula</p>
+                      <code class="text-xs bg-white text-slate-700 rounded border border-slate-200 px-2 py-1 block font-mono">{{ kpi.formula }}</code>
+                    </div>
+                  </div>
                 </div>
                 <div class="text-2xl font-bold text-slate-900 mb-3">{{ formatNumberDE(kpi.value) }}</div>
                 <template v-if="dataSummaryCards[index]">
@@ -211,25 +227,129 @@
 
       </div>
 
-      <!-- Row 2: Vitals (full width) -->
-      <div v-if="!isLoading && !loadError" class="bg-white rounded-lg border border-slate-200 p-6 space-y-6">
+      <!-- Row 2: Performance Overview -->
+      <div v-if="!isLoading && !loadError" class="bg-white rounded-lg border border-slate-200 p-6 space-y-8">
         <div>
-          <h2 class="text-lg font-bold" style="color: #8b5cf6;">Vitals</h2>
-          <p class="text-slate-500 text-sm">Building performance visualizations and real-time monitoring.</p>
+          <h2 class="text-lg font-bold text-slate-900">Performance Overview</h2>
+          <p class="text-slate-500 text-sm">Headline KPIs per team and system-wide balance against targets.</p>
         </div>
 
-        <div class="grid lg:grid-cols-2 gap-6">
-          <div class="bg-slate-50 p-4 rounded-lg border border-slate-100 hover:shadow-lg transition-shadow">
-            <BreathingChart />
-          </div>
-          <div class="bg-slate-50 p-4 rounded-lg border border-slate-100 hover:shadow-lg transition-shadow">
-            <ProjectComplexity />
+        <!-- Radial Gauges (headline KPI per team) -->
+        <div>
+          <p class="text-xs text-slate-400 uppercase tracking-wider mb-5">Team Headline KPIs</p>
+          <div class="flex justify-around items-start gap-4 flex-wrap">
+            <div v-for="g in gaugeItems" :key="g.team" class="flex flex-col items-center gap-1 min-w-36">
+              <p class="text-xs font-bold uppercase tracking-wider" :style="{ color: g.color }">{{ g.team }}</p>
+              <svg viewBox="0 0 130 130" width="160" height="160">
+                <!-- Background track (270° arc) -->
+                <circle
+                  cx="65" cy="65" r="54"
+                  fill="none" stroke="#e2e8f0" stroke-width="10"
+                  :stroke-dasharray="`${GAUGE_ARC_LENGTH} ${GAUGE_CIRCUMFERENCE}`"
+                  stroke-linecap="round"
+                  transform="rotate(135, 65, 65)"
+                />
+                <!-- Progress arc -->
+                <circle
+                  v-if="g.kpi"
+                  cx="65" cy="65" r="54"
+                  fill="none" :stroke="g.color" stroke-width="10"
+                  :stroke-dasharray="`${g.progress * GAUGE_ARC_LENGTH} ${GAUGE_CIRCUMFERENCE}`"
+                  stroke-linecap="round"
+                  transform="rotate(135, 65, 65)"
+                />
+                <!-- Center: value -->
+                <text x="65" y="58" text-anchor="middle" style="font-size: 17px; font-weight: 800; fill: #0f172a;">
+                  {{ g.displayValue }}
+                </text>
+                <!-- Unit -->
+                <text x="65" y="73" text-anchor="middle" style="font-size: 9px; fill: #94a3b8;">
+                  {{ g.unit }}
+                </text>
+                <!-- vs target -->
+                <text x="65" y="90" text-anchor="middle" style="font-size: 8px; fill: #cbd5e1;">
+                  target {{ g.displayTarget }}
+                </text>
+              </svg>
+              <p class="text-[11px] text-slate-500 text-center leading-tight max-w-32">{{ g.name }}</p>
+              <!-- Status indicator -->
+              <div class="flex items-center gap-1 mt-1">
+                <span :class="['w-1.5 h-1.5 rounded-full', g.withinMargin ? 'bg-green-500' : 'bg-red-500']"></span>
+                <span :class="['text-[9px] font-medium', g.withinMargin ? 'text-green-600' : 'text-red-600']">
+                  {{ g.withinMargin ? 'On target' : 'Off target' }}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div class="bg-slate-50 p-4 rounded-lg border border-slate-100 hover:shadow-lg transition-shadow">
-          <PorousVisualization />
+        <!-- Radar Chart (all 9 KPIs vs targets) -->
+        <div v-if="radarCurrentPoints">
+          <p class="text-xs text-slate-400 uppercase tracking-wider mb-3">All KPIs vs Targets</p>
+          <div class="flex items-center justify-center gap-6 mb-3 flex-wrap">
+            <div class="flex items-center gap-1.5">
+              <svg width="20" height="8"><line x1="0" y1="4" x2="20" y2="4" stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="4 2"/></svg>
+              <span class="text-[10px] text-slate-400">Target</span>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <svg width="20" height="8"><line x1="0" y1="4" x2="20" y2="4" stroke="#6366f1" stroke-width="2"/></svg>
+              <span class="text-[10px] text-slate-400">Current state</span>
+            </div>
+          </div>
+          <div class="flex justify-center overflow-x-auto">
+            <svg viewBox="0 0 500 440" width="100%" style="max-width: 560px; min-width: 320px;">
+
+              <!-- Concentric reference rings -->
+              <polygon
+                v-for="(ringPts, ri) in radarRings"
+                :key="`ring-${ri}`"
+                :points="ringPts"
+                fill="none"
+                stroke="#f1f5f9"
+                stroke-width="1"
+              />
+
+              <!-- Axes -->
+              <line
+                v-for="ax in radarAxes"
+                :key="`ax-${ax.label}`"
+                :x1="RADAR_CX" :y1="RADAR_CY"
+                :x2="ax.axisEndX" :y2="ax.axisEndY"
+                stroke="#e2e8f0" stroke-width="1"
+              />
+
+              <!-- Target polygon -->
+              <polygon
+                :points="radarTargetPoints"
+                fill="none"
+                stroke="#cbd5e1"
+                stroke-width="1.5"
+                stroke-dasharray="5 3"
+              />
+
+              <!-- Current state polygon -->
+              <polygon
+                :points="radarCurrentPoints"
+                fill="rgba(99,102,241,0.12)"
+                stroke="#6366f1"
+                stroke-width="2"
+                stroke-linejoin="round"
+              />
+
+              <!-- Axis labels -->
+              <text
+                v-for="ax in radarAxes"
+                :key="`lbl-${ax.label}`"
+                :x="ax.labelX" :y="ax.labelY"
+                text-anchor="middle"
+                dominant-baseline="central"
+                style="font-size: 10px; font-weight: 600; fill: #64748b;"
+              >{{ ax.label }}</text>
+
+            </svg>
+          </div>
         </div>
+
       </div>
 
     </div>
@@ -238,11 +358,7 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
-import ProgramKPISelector from '@/components/ProgramKPISelector.vue'
-import BreathingChart from '@/components/BreathingChart.vue'
-import PorousVisualization from '@/components/PorousVisualization.vue'
-import ProjectComplexity from '@/components/ProjectComplexity.vue'
-import { fetchKPIsByCategory, fetchStructureParams, fetchProgramParams, fetchFormulaTargets, extractParamValues } from '@/services/googleSheetsService'
+import { fetchKPIsByCategory, fetchStructureParams, fetchProgramParams, fetchFormulaTargets } from '@/services/googleSheetsService'
 import { KPI_BY_CATEGORY, computeKPI, updateKPITargets, evaluateKPIStatus } from '@/services/kpiFormulas'
 import { useUserStore } from '@/stores/userStore'
 
@@ -278,92 +394,6 @@ const closestWeek = (weeks) => {
 // --- Global state ---
 const isLoading = ref(false)
 const loadError = ref('')
-
-// --- Per-widget hover state ---
-const hoveredStructureIndex = ref(null)
-const hoveredDataIndex = ref(null)
-
-// --- Expandable KPI cards state ---
-const expandedStructureKPIs = ref(new Set())
-const showStructureKPITooltip = ref(null)
-const structureKPITooltipTimeouts = ref({})
-
-const toggleExpandStructureKPI = (id) => {
-  if (expandedStructureKPIs.value.has(id)) {
-    expandedStructureKPIs.value.delete(id)
-  } else {
-    expandedStructureKPIs.value.add(id)
-  }
-  expandedStructureKPIs.value = new Set(expandedStructureKPIs.value)
-}
-
-const handleStructureKPIMouseEnter = (id) => {
-  structureKPITooltipTimeouts.value[id] = setTimeout(() => {
-    showStructureKPITooltip.value = id
-  }, 1000)
-}
-
-const handleStructureKPIMouseLeave = (id) => {
-  clearTimeout(structureKPITooltipTimeouts.value[id])
-  delete structureKPITooltipTimeouts.value[id]
-  if (showStructureKPITooltip.value === id) {
-    showStructureKPITooltip.value = null
-  }
-}
-
-const expandedProgramKPIs = ref(new Set())
-const showProgramKPITooltip = ref(null)
-const programKPITooltipTimeouts = ref({})
-
-const toggleExpandProgramKPI = (id) => {
-  if (expandedProgramKPIs.value.has(id)) {
-    expandedProgramKPIs.value.delete(id)
-  } else {
-    expandedProgramKPIs.value.add(id)
-  }
-  expandedProgramKPIs.value = new Set(expandedProgramKPIs.value)
-}
-
-const handleProgramKPIMouseEnter = (id) => {
-  programKPITooltipTimeouts.value[id] = setTimeout(() => {
-    showProgramKPITooltip.value = id
-  }, 1000)
-}
-
-const handleProgramKPIMouseLeave = (id) => {
-  clearTimeout(programKPITooltipTimeouts.value[id])
-  delete programKPITooltipTimeouts.value[id]
-  if (showProgramKPITooltip.value === id) {
-    showProgramKPITooltip.value = null
-  }
-}
-
-const expandedDataKPIs = ref(new Set())
-const showDataKPITooltip = ref(null)
-const dataKPITooltipTimeouts = ref({})
-
-const toggleExpandDataKPI = (id) => {
-  if (expandedDataKPIs.value.has(id)) {
-    expandedDataKPIs.value.delete(id)
-  } else {
-    expandedDataKPIs.value.add(id)
-  }
-  expandedDataKPIs.value = new Set(expandedDataKPIs.value)
-}
-
-const handleDataKPIMouseEnter = (id) => {
-  dataKPITooltipTimeouts.value[id] = setTimeout(() => {
-    showDataKPITooltip.value = id
-  }, 1000)
-}
-
-const handleDataKPIMouseLeave = (id) => {
-  clearTimeout(dataKPITooltipTimeouts.value[id])
-  delete dataKPITooltipTimeouts.value[id]
-  if (showDataKPITooltip.value === id) {
-    showDataKPITooltip.value = null
-  }
-}
 
 // --- Sheet data store ---
 const sheetDataByCategory = ref({
@@ -408,14 +438,10 @@ const structureFilteredKPIs = computed(() => {
   let rows = structureParamsData.value.rows || []
   if (!rows.length) return []
 
-  // Use all rows (no week/scenario filtering needed for live data)
-  if (!rows.length) return []
-
-  // Calculate average parameters across all structure data rows
   const avgParams = {}
   const firstRowParams = rows[0]?.params || {}
   const paramNames = Object.keys(firstRowParams)
-  
+
   for (const param of paramNames) {
     let sum = 0
     let count = 0
@@ -427,10 +453,6 @@ const structureFilteredKPIs = computed(() => {
     }
     avgParams[param] = count > 0 ? sum / count : 0
   }
-  
-  console.log('📊 Structure avgParams:', avgParams)
-  console.log('📊 Structure params keys:', Object.keys(avgParams))
-  console.log('📊 Structure row count:', rows.length)
 
   const defs = KPI_BY_CATEGORY['structure']
   const descriptions = {
@@ -439,28 +461,10 @@ const structureFilteredKPIs = computed(() => {
     'filtration-efficiency': 'Quantifies the building\'s ability to mitigate external pollution through filtration systems. By comparing filtration capacity with environmental pollution intensity, it reflects how effectively airborne contaminants are reduced. Higher values indicate stronger filtration performance and improved indoor air quality.',
   }
   return defs.map(def => {
-    // Use computeAggregate if available (for normalized formulas), otherwise use computeKPI
     let value
     if (def.computeAggregate) {
       const paramRows = rows.map(r => r.params || {})
-      if (def.id === 'structural-efficiency-performance') {
-        console.log('🔍 Debug - Structural Efficiency:', {
-          rowCount: rows.length,
-          firstRow: rows[0],
-          firstRowParams: rows[0]?.params,
-          paramRows: paramRows,
-          deValues: paramRows.map(p => p.De)
-        })
-      }
       value = Math.round(def.computeAggregate(paramRows) * 100) / 100
-      if (def.id === 'structural-efficiency-performance') {
-        console.log(`🔴 Structural Efficiency (aggregate):`, {
-          formula: def.formula,
-          rowCount: rows.length,
-          computed: def.computeAggregate(paramRows),
-          final: value
-        })
-      }
     } else {
       value = Math.round(computeKPI(def, avgParams) * 100) / 100
     }
@@ -471,20 +475,18 @@ const structureFilteredKPIs = computed(() => {
       unit: def.unit,
       target: def.target,
       logic: def.logic,
-      status: 'good',
+      formula: def.formula,
       description: descriptions[def.id] || 'No description available.',
     }
   })
 })
 
-// Returns true when value is within ±10% of the target
 const isWithinMargin = (value, target, logic = 'STRICT') => {
   const status = evaluateKPIStatus(value, target, logic)
   return status.acceptable
 }
 
 const structureSummaryCards = computed(() => {
-  const targets = structureSheetData.value?.targetsByScenario?.[structureScenario.value] || []
   const formatValue = (value) => formatNumberDE(value)
   const parseNumber = (value) => {
     if (typeof value === 'number') return value
@@ -546,28 +548,18 @@ const programSummaryCards = computed(() => {
   })
 })
 
-// --- Data widget state (uses structure week/scenario, no separate selectors) ---
-
-// Average PRG param values across all program param rows
+// Average PRG param values
 const averagePrgParams = computed(() => {
   const rows = programParamsData.value?.rows || []
   if (!rows.length) return {}
-
   const avgParams = {}
-  if (rows.length > 0) {
-    const paramNames = Object.keys(rows[0])
-    
-    for (const param of paramNames) {
-      let sum = 0
-      let count = 0
-      for (const row of rows) {
-        if (row[param] !== undefined && row[param] !== null) {
-          sum += Number(row[param])
-          count++
-        }
-      }
-      avgParams[param] = count > 0 ? sum / count : 0
+  const paramNames = Object.keys(rows[0])
+  for (const param of paramNames) {
+    let sum = 0, count = 0
+    for (const row of rows) {
+      if (row[param] !== undefined && row[param] !== null) { sum += Number(row[param]); count++ }
     }
+    avgParams[param] = count > 0 ? sum / count : 0
   }
   return avgParams
 })
@@ -577,22 +569,14 @@ const programFilteredKPIs = computed(() => {
   const rows = programParamsData.value?.rows || []
   if (!rows.length) return []
 
-  // Calculate average parameters across all program data rows
   const avgParams = {}
-  if (rows.length > 0) {
-    const paramNames = Object.keys(rows[0])
-    
-    for (const param of paramNames) {
-      let sum = 0
-      let count = 0
-      for (const row of rows) {
-        if (row[param] !== undefined && row[param] !== null) {
-          sum += Number(row[param])
-          count++
-        }
-      }
-      avgParams[param] = count > 0 ? sum / count : 0
+  const paramNames = Object.keys(rows[0])
+  for (const param of paramNames) {
+    let sum = 0, count = 0
+    for (const row of rows) {
+      if (row[param] !== undefined && row[param] !== null) { sum += Number(row[param]); count++ }
     }
+    avgParams[param] = count > 0 ? sum / count : 0
   }
 
   const descriptions = {
@@ -603,7 +587,6 @@ const programFilteredKPIs = computed(() => {
 
   const defs = KPI_BY_CATEGORY['program']
   return defs.map(def => {
-    // Use computeAggregate if available (for e.g., RCIR), otherwise use computeKPI with averaged params
     let value
     if (def.computeAggregate) {
       value = def.computeAggregate(rows)
@@ -617,60 +600,36 @@ const programFilteredKPIs = computed(() => {
       unit: def.unit,
       target: def.target,
       logic: def.logic,
-      status: 'good',
+      formula: def.formula,
       description: descriptions[def.id] || 'No description available.',
     }
   })
 })
 
-// Calculate average structure parameters across all structure data rows
+// Average structure params
 const averageStructureParams = computed(() => {
   const rows = structureParamsData.value.rows || []
   if (!rows.length) return {}
-
   const avgParams = {}
-  if (rows.length > 0) {
-    const firstRowParams = rows[0]?.params || {}
-    const paramNames = Object.keys(firstRowParams)
-    
-    for (const param of paramNames) {
-      let sum = 0
-      let count = 0
-      for (const row of rows) {
-        if (row.params && row.params[param] !== undefined) {
-          sum += row.params[param]
-          count++
-        }
-      }
-      avgParams[param] = count > 0 ? sum / count : 0
+  const paramNames = Object.keys(rows[0]?.params || {})
+  for (const param of paramNames) {
+    let sum = 0, count = 0
+    for (const row of rows) {
+      if (row.params && row.params[param] !== undefined) { sum += row.params[param]; count++ }
     }
+    avgParams[param] = count > 0 ? sum / count : 0
   }
   return avgParams
 })
 
-// Compute environment KPIs from averaged STR params + averaged PRG params + ENV defaults
+// Compute environment KPIs
 const dataFilteredKPIs = computed(() => {
   const structParams = averageStructureParams.value
   const prgParams = averagePrgParams.value
-  
   if (Object.keys(structParams).length === 0 || Object.keys(prgParams).length === 0) return []
 
-  // Get raw structure rows for normalization-based KPIs
   const structRows = structureParamsData.value.rows || []
-  
-  console.log('📊 dataFilteredKPIs - structParams:', structParams)
-  console.log('📊 dataFilteredKPIs - prgParams:', prgParams)
-  console.log('📊 dataFilteredKPIs - structRows count:', structRows.length)
-  
-  // Create rows with merged struct + program params for Air Purification (needs Ep, Ur, Fe, Wr)
-  const mergedRows = structRows.map(row => {
-    const params = { ...row.params, ...prgParams }
-    return { params }
-  })
-  
-  console.log('📊 dataFilteredKPIs - mergedRows[0]:', mergedRows[0])
-
-  // Merge averaged STR params with averaged PRG params (ENV defaults handled by computeKPI)
+  const mergedRows = structRows.map(row => ({ params: { ...row.params, ...prgParams } }))
   const mergedParams = { ...structParams, ...prgParams }
 
   const defs = KPI_BY_CATEGORY['environment']
@@ -681,11 +640,9 @@ const dataFilteredKPIs = computed(() => {
   }
   return defs.map(def => {
     let value
-    // Use computeAggregate for KPIs with normalization
     if (def.computeAggregate && def.id === 'thermal-comfort-compliance-rate') {
       value = Math.round(def.computeAggregate(structRows.map(r => r.params || {})) * 100) / 100
     } else if (def.computeAggregate && def.id === 'air-purification-effectiveness') {
-      console.log('📊 Calling Air Purification computeAggregate with:', mergedRows.map(r => r.params || {}))
       value = Math.round(def.computeAggregate(mergedRows.map(r => r.params || {})) * 100) / 100
     } else {
       value = Math.round(computeKPI(def, mergedParams) * 100) / 100
@@ -696,8 +653,8 @@ const dataFilteredKPIs = computed(() => {
       value,
       unit: def.unit,
       target: def.target,
-      status: 'good',
       logic: def.logic,
+      formula: def.formula,
       description: descriptions[def.id] || 'No description available.',
     }
   })
@@ -734,7 +691,110 @@ const dataSummaryCards = computed(() => {
   })
 })
 
-// --- localStorage helpers ---
+// ─── Gauge constants & helpers ────────────────────────────────────────────────
+
+const GAUGE_CIRCUMFERENCE = 2 * Math.PI * 54       // ≈ 339.29
+const GAUGE_ARC_LENGTH = 0.75 * GAUGE_CIRCUMFERENCE // 270° = ≈ 254.47
+
+function formatGaugeValue(value) {
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(2)}M`
+  if (value >= 1_000) return `${(value / 1_000).toFixed(1)}K`
+  return value.toFixed(2)
+}
+
+const gaugeItems = computed(() => {
+  const entries = [
+    { kpi: programFilteredKPIs.value[0],   color: '#3b82f6', team: 'Program'   },
+    { kpi: structureFilteredKPIs.value[0], color: '#10b981', team: 'Structure' },
+    { kpi: dataFilteredKPIs.value[0],      color: '#ef4444', team: 'Data'      },
+  ]
+  return entries.map(({ kpi, color, team }) => {
+    if (!kpi) return { kpi: null, color, team, progress: 0, displayValue: '—', displayTarget: '—', unit: '', name: '', withinMargin: false }
+    const value = Number(kpi.value) || 0
+    const target = Number(kpi.target) || 1
+    const progress = Math.min(value / target, 1)
+    return {
+      kpi, color, team, progress,
+      displayValue: formatGaugeValue(value),
+      displayTarget: formatGaugeValue(target),
+      unit: kpi.unit,
+      name: kpi.name,
+      withinMargin: evaluateKPIStatus(value, target, kpi.logic || 'STRICT').acceptable,
+    }
+  })
+})
+
+// ─── Radar chart constants & helpers ─────────────────────────────────────────
+
+const RADAR_LABELS = ['EPA', 'PPI', 'RCIR', 'SE', 'SCP', 'FiltEff', 'TCR', 'APE', 'ACNI']
+const RADAR_CX = 250, RADAR_CY = 220, RADAR_MAX_R = 150
+const RADAR_N = 9
+
+function axisAngle(i) {
+  return (-90 + i * (360 / RADAR_N)) * Math.PI / 180
+}
+
+function kpiToRadarScore(kpi) {
+  const value = Number(kpi.value) || 0
+  const target = Number(kpi.target) || 1
+  if (kpi.logic === 'MAX') return Math.min(value / target, 1.2)
+  if (kpi.logic === 'MIN') return Math.min(target / Math.max(value, 0.001), 1.2)
+  // STRICT
+  return Math.max(0, 1 - Math.abs(value - target) / (target * 0.3))
+}
+
+function radarScoreToR(score) {
+  return (Math.min(score, 1.2) / 1.2) * RADAR_MAX_R
+}
+
+function axisPoint(i, r) {
+  const a = axisAngle(i)
+  return { x: RADAR_CX + r * Math.cos(a), y: RADAR_CY + r * Math.sin(a) }
+}
+
+const radarCurrentPoints = computed(() => {
+  const all = [...programFilteredKPIs.value, ...structureFilteredKPIs.value, ...dataFilteredKPIs.value]
+  if (all.length < RADAR_N) return ''
+  return all.map((kpi, i) => {
+    const pt = axisPoint(i, radarScoreToR(kpiToRadarScore(kpi)))
+    return `${pt.x.toFixed(1)},${pt.y.toFixed(1)}`
+  }).join(' ')
+})
+
+const radarTargetPoints = computed(() => {
+  const r = (1.0 / 1.2) * RADAR_MAX_R   // score = 1.0 → 83.3% of maxR
+  return Array.from({ length: RADAR_N }, (_, i) => {
+    const pt = axisPoint(i, r)
+    return `${pt.x.toFixed(1)},${pt.y.toFixed(1)}`
+  }).join(' ')
+})
+
+const radarAxes = computed(() => {
+  return Array.from({ length: RADAR_N }, (_, i) => {
+    const end = axisPoint(i, RADAR_MAX_R)
+    const lbl = axisPoint(i, RADAR_MAX_R + 24)
+    return {
+      label: RADAR_LABELS[i],
+      axisEndX: end.x.toFixed(1),
+      axisEndY: end.y.toFixed(1),
+      labelX: lbl.x.toFixed(1),
+      labelY: lbl.y.toFixed(1),
+    }
+  })
+})
+
+const radarRings = computed(() => {
+  return [0.25, 0.5, 0.75, 1.0].map(frac => {
+    const r = frac * RADAR_MAX_R
+    return Array.from({ length: RADAR_N }, (_, i) => {
+      const pt = axisPoint(i, r)
+      return `${pt.x.toFixed(1)},${pt.y.toFixed(1)}`
+    }).join(' ')
+  })
+})
+
+// ─── localStorage helpers ─────────────────────────────────────────────────────
+
 const loadStoredSelection = (category) => {
   try {
     const stored = localStorage.getItem(`kpi-selection-${category}`)
@@ -747,19 +807,15 @@ const loadStoredSelection = (category) => {
 const storeSelection = (category, week, scenario) => {
   try {
     localStorage.setItem(`kpi-selection-${category}`, JSON.stringify({ week, scenario }))
-  } catch {
-    // ignore
-  }
+  } catch { /* ignore */ }
 }
 
-// --- Auto-select current week when weeks load (structure) ---
+// ─── Watchers ─────────────────────────────────────────────────────────────────
+
 watch(() => structureWeeks.value, (newWeeks) => {
   if (!newWeeks || newWeeks.length === 0) return
   const stored = loadStoredSelection('structure')
-  if (stored?.week && newWeeks.includes(stored.week)) {
-    structureWeek.value = stored.week
-    return
-  }
+  if (stored?.week && newWeeks.includes(stored.week)) { structureWeek.value = stored.week; return }
   if (!structureWeek.value || !newWeeks.includes(structureWeek.value)) {
     structureWeek.value = closestWeek(newWeeks)
   }
@@ -768,10 +824,7 @@ watch(() => structureWeeks.value, (newWeeks) => {
 watch(() => structureScenarios.value, (newScenarios) => {
   if (!newScenarios || newScenarios.length === 0) return
   const stored = loadStoredSelection('structure')
-  if (stored?.scenario && newScenarios.includes(stored.scenario)) {
-    structureScenario.value = stored.scenario
-    return
-  }
+  if (stored?.scenario && newScenarios.includes(stored.scenario)) { structureScenario.value = stored.scenario; return }
   if (!structureScenario.value || !newScenarios.includes(structureScenario.value)) {
     structureScenario.value = newScenarios[0]
   }
@@ -781,40 +834,21 @@ watch(() => [structureWeek.value, structureScenario.value], ([week, scenario]) =
   if (week && scenario) storeSelection('structure', week, scenario)
 })
 
-// --- Live KPI health (pushed to dashboard store) ---
-const programKpiHealth = computed(() => {
-  const data = programSheetData.value?.data
-  const targets = programSheetData.value?.targets || []
-  if (!data?.length) return { total: 0, onTarget: 0 }
-  const parse = (v) => {
-    if (typeof v === 'number') return v
-    const m = String(v || '').replace(/,/g, '').match(/-?\d*\.?\d+/)
-    return m ? Number(m[0]) : 0
-  }
-  const sum = (idx) => data.reduce((acc, row) => acc + parse((row.kpis || [])[idx]?.value), 0)
-  const avg = (idx) => {
-    const rows = data.filter(r => (r.kpis || [])[idx])
-    return rows.length ? rows.reduce((acc, r) => acc + parse(r.kpis[idx].value), 0) / rows.length : 0
-  }
-  const values = [sum(0), avg(1), avg(2)]
-  const onTarget = values.filter((v, i) => parse(targets[i]) === 0 || v - parse(targets[i]) <= 0).length
-  return { total: 3, onTarget }
-})
-
 watch(
   [programSummaryCards, structureSummaryCards, dataSummaryCards],
   ([progCards, strCards, dataCards]) => {
-    const progOnTarget = progCards.filter(c => c.withinMargin).length
-    const strOnTarget = strCards.filter(c => c.withinMargin).length
-    const dataOnTarget = dataCards.filter(c => c.withinMargin).length
-    const total = progCards.length + strCards.length + dataCards.length
+    const progOnTarget  = progCards.filter(c => c.withinMargin).length
+    const strOnTarget   = strCards.filter(c => c.withinMargin).length
+    const dataOnTarget  = dataCards.filter(c => c.withinMargin).length
+    const total    = progCards.length + strCards.length + dataCards.length
     const onTarget = progOnTarget + strOnTarget + dataOnTarget
     userStore.setKpiHealth({ total, onTarget, warnings: total - onTarget })
   },
   { immediate: true }
 )
 
-// --- Data loading ---
+// ─── Data loading ─────────────────────────────────────────────────────────────
+
 async function loadData() {
   isLoading.value = true
   loadError.value = ''
@@ -826,19 +860,12 @@ async function loadData() {
       fetchProgramParams(),
       fetchFormulaTargets(),
     ])
-    
-    // Update KPI targets from the FORMULA sheet
     if (formulaTargets && Object.keys(formulaTargets).length > 0) {
       updateKPITargets(formulaTargets)
     }
-    
-    sheetDataByCategory.value = {
-      program: programData,
-      structure: structureData,
-      data: null,
-    }
+    sheetDataByCategory.value = { program: programData, structure: structureData, data: null }
     structureParamsData.value = strParamsResult
-    programParamsData.value = prgParamsResult
+    programParamsData.value   = prgParamsResult
   } catch (error) {
     console.error('Failed to load KPI data:', error)
     loadError.value = `Error: ${error instanceof Error ? error.message : String(error)}`
@@ -851,7 +878,7 @@ onMounted(() => {
   loadData()
   const storedStructure = loadStoredSelection('structure')
   if (storedStructure) {
-    structureWeek.value = storedStructure.week || ''
+    structureWeek.value    = storedStructure.week     || ''
     structureScenario.value = storedStructure.scenario || ''
   }
 })
