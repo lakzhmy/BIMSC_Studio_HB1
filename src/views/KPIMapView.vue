@@ -537,24 +537,34 @@ const haloLabelY = computed(() => maxNodeCy.value + 90)
 
 const tooltipStyle = computed(() => {
   if (!activeNode.value) return { display: 'none' }
-  const viewH  = parseInt(dynamicViewBox.value.split(' ')[3])
-  const viewW  = 960
+  const svg = svgRef.value
+  const container = containerRef.value
+  if (!svg || !container) return { display: 'none' }
 
-  // Horizontal: clamp tighter for edge columns so the 256px card stays in view
-  const rawX   = (activeNode.value.cx / viewW) * 100
-  const clampX = Math.min(Math.max(rawX, 16), 84)
+  // Use SVG's CTM to convert viewBox coords → screen coords → container-relative px.
+  // This correctly handles preserveAspectRatio letterboxing for edge columns (D2, S2).
+  const pt = svg.createSVGPoint()
+  pt.x = activeNode.value.cx
+  pt.y = activeNode.value.cy
+  const ctm = svg.getScreenCTM()
+  if (!ctm) return { display: 'none' }
+  const screenPt = pt.matrixTransform(ctm)
+  const containerRect = container.getBoundingClientRect()
+  const nodeX = screenPt.x - containerRect.left
+  const nodeY = screenPt.y - containerRect.top
 
-  const yPct = (activeNode.value.cy / viewH) * 100
+  // Clamp horizontally so the 256px (w-64) card never overflows the container
+  const halfCard = 128
+  const clampedX = Math.min(Math.max(nodeX, halfCard + 8), containerRect.width - halfCard - 8)
 
-  // If the node is in the top 28% of the viewBox, flip the card below the node
-  const showBelow = (activeNode.value.cy / viewH) < 0.28
+  const showBelow = nodeY / containerRect.height < 0.28
 
   return {
-    left:      `${clampX}%`,
-    top:       `${yPct}%`,
+    left:      `${clampedX}px`,
+    top:       `${nodeY}px`,
     transform: showBelow
-      ? 'translate(-50%, 32px)'                  // card appears below node
-      : 'translate(-50%, calc(-100% - 18px))',   // card appears above node
+      ? 'translate(-50%, 32px)'
+      : 'translate(-50%, calc(-100% - 18px))',
   }
 })
 
