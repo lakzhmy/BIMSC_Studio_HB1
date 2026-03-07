@@ -284,67 +284,149 @@
         </div>
 
         <!-- Radar Chart (all 9 KPIs vs targets) -->
-        <div v-if="radarCurrentPoints">
-          <p class="text-xs text-slate-400 uppercase tracking-wider mb-3">All KPIs vs Targets</p>
-          <div class="flex items-center justify-center gap-6 mb-3 flex-wrap">
+        <div v-if="radarDotPositions.length === RADAR_N">
+          <!-- Header + filter toggles -->
+          <div class="flex items-center justify-between flex-wrap gap-3 mb-3">
+            <p class="text-xs text-slate-400 uppercase tracking-wider">All KPIs vs Targets</p>
+            <div class="flex items-center gap-1.5">
+              <button
+                @click="toggleRadarTeam('program')"
+                :class="['text-[10px] px-2.5 py-1 rounded-full border font-semibold transition-colors',
+                  activeRadarTeams.has('program') ? 'bg-blue-100 text-blue-700 border-blue-300' : 'bg-slate-100 text-slate-400 border-slate-200']"
+              >Program</button>
+              <button
+                @click="toggleRadarTeam('structure')"
+                :class="['text-[10px] px-2.5 py-1 rounded-full border font-semibold transition-colors',
+                  activeRadarTeams.has('structure') ? 'bg-green-100 text-green-700 border-green-300' : 'bg-slate-100 text-slate-400 border-slate-200']"
+              >Structure</button>
+              <button
+                @click="toggleRadarTeam('data')"
+                :class="['text-[10px] px-2.5 py-1 rounded-full border font-semibold transition-colors',
+                  activeRadarTeams.has('data') ? 'bg-red-100 text-red-700 border-red-300' : 'bg-slate-100 text-slate-400 border-slate-200']"
+              >Data</button>
+            </div>
+          </div>
+
+          <!-- Legend -->
+          <div class="flex items-center justify-center gap-5 mb-3 flex-wrap">
             <div class="flex items-center gap-1.5">
               <svg width="20" height="8"><line x1="0" y1="4" x2="20" y2="4" stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="4 2"/></svg>
               <span class="text-[10px] text-slate-400">Target</span>
             </div>
             <div class="flex items-center gap-1.5">
-              <svg width="20" height="8"><line x1="0" y1="4" x2="20" y2="4" stroke="#6366f1" stroke-width="2"/></svg>
-              <span class="text-[10px] text-slate-400">Current state</span>
+              <span class="w-2 h-2 rounded-full bg-blue-400 inline-block"></span>
+              <span class="text-[10px] text-slate-400">Program</span>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-green-500 inline-block"></span>
+              <span class="text-[10px] text-slate-400">Structure</span>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-red-400 inline-block"></span>
+              <span class="text-[10px] text-slate-400">Data</span>
             </div>
           </div>
+
           <div class="flex justify-center overflow-x-auto">
-            <svg viewBox="0 0 500 440" width="100%" style="max-width: 560px; min-width: 320px;">
+            <svg viewBox="0 0 500 440" width="100%" style="max-width: 560px; min-width: 320px;" @mouseleave="hoveredRadarIdx = null">
 
               <!-- Concentric reference rings -->
               <polygon
                 v-for="(ringPts, ri) in radarRings"
                 :key="`ring-${ri}`"
                 :points="ringPts"
-                fill="none"
-                stroke="#f1f5f9"
-                stroke-width="1"
+                fill="none" stroke="#f1f5f9" stroke-width="1"
               />
 
-              <!-- Axes -->
+              <!-- Axes — dimmed when their team is filtered out -->
               <line
-                v-for="ax in radarAxes"
+                v-for="(ax, i) in radarAxes"
                 :key="`ax-${ax.label}`"
                 :x1="RADAR_CX" :y1="RADAR_CY"
                 :x2="ax.axisEndX" :y2="ax.axisEndY"
-                stroke="#e2e8f0" stroke-width="1"
+                :stroke="ax.color"
+                :stroke-opacity="activeRadarTeams.has(RADAR_TEAM_NAMES[i].toLowerCase()) ? 0.25 : 0.06"
+                stroke-width="1"
               />
 
               <!-- Target polygon -->
-              <polygon
-                :points="radarTargetPoints"
-                fill="none"
-                stroke="#cbd5e1"
-                stroke-width="1.5"
-                stroke-dasharray="5 3"
-              />
+              <polygon :points="radarTargetPoints" fill="none" stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="5 3" />
 
-              <!-- Current state polygon -->
-              <polygon
-                :points="radarCurrentPoints"
-                fill="rgba(99,102,241,0.12)"
-                stroke="#6366f1"
-                stroke-width="2"
-                stroke-linejoin="round"
-              />
+              <!-- Team polygons (each a coloured sector slice) -->
+              <polygon v-if="activeRadarTeams.has('program') && radarProgramPoints"
+                :points="radarProgramPoints"
+                fill="rgba(59,130,246,0.15)" stroke="#3b82f6" stroke-width="1.5" stroke-linejoin="round" />
+              <polygon v-if="activeRadarTeams.has('structure') && radarStructurePoints"
+                :points="radarStructurePoints"
+                fill="rgba(16,185,129,0.15)" stroke="#10b981" stroke-width="1.5" stroke-linejoin="round" />
+              <polygon v-if="activeRadarTeams.has('data') && radarDataPoints"
+                :points="radarDataPoints"
+                fill="rgba(239,68,68,0.15)" stroke="#ef4444" stroke-width="1.5" stroke-linejoin="round" />
 
-              <!-- Axis labels -->
+              <!-- Score dots + hit areas -->
+              <g
+                v-for="dot in radarDotPositions"
+                :key="`dot-${dot.i}`"
+                @mouseenter="hoveredRadarIdx = dot.i"
+                style="cursor: pointer;"
+              >
+                <circle
+                  :cx="dot.x" :cy="dot.y"
+                  :r="hoveredRadarIdx === dot.i ? 6 : 4"
+                  :fill="dot.color"
+                  :fill-opacity="hoveredRadarIdx === dot.i ? 1 : 0.75"
+                  style="transition: r 0.15s, fill-opacity 0.15s;"
+                />
+                <!-- Invisible larger hit area -->
+                <circle :cx="dot.x" :cy="dot.y" r="14" fill="transparent" />
+              </g>
+
+              <!-- Axis labels — coloured by team, bolded when hovered -->
               <text
-                v-for="ax in radarAxes"
+                v-for="(ax, i) in radarAxes"
                 :key="`lbl-${ax.label}`"
                 :x="ax.labelX" :y="ax.labelY"
-                text-anchor="middle"
-                dominant-baseline="central"
-                style="font-size: 10px; font-weight: 600; fill: #64748b;"
+                text-anchor="middle" dominant-baseline="central"
+                :fill="ax.color"
+                :fill-opacity="activeRadarTeams.has(RADAR_TEAM_NAMES[i].toLowerCase()) ? 1 : 0.25"
+                :style="{ fontSize: hoveredRadarIdx === i ? '11px' : '10px', fontWeight: hoveredRadarIdx === i ? '800' : '600', transition: 'font-size 0.15s' }"
               >{{ ax.label }}</text>
+
+              <!-- Hover tooltip (foreignObject centred in radar) -->
+              <foreignObject
+                v-if="hoveredRadarIdx !== null && hoveredKPIInfo"
+                x="172" y="128" width="156" height="194"
+              >
+                <div class="bg-white rounded-xl shadow-xl border border-slate-200 p-3 pointer-events-none" style="font-family: inherit;">
+                  <div class="flex items-center gap-1.5 mb-2">
+                    <span class="inline-block w-2 h-2 rounded-full flex-none" :style="{ backgroundColor: RADAR_TEAM_COLORS[hoveredRadarIdx] }"></span>
+                    <span class="text-[10px] font-bold uppercase tracking-wider" :style="{ color: RADAR_TEAM_COLORS[hoveredRadarIdx] }">
+                      {{ RADAR_TEAM_NAMES[hoveredRadarIdx] }}
+                    </span>
+                  </div>
+                  <p class="text-xs font-semibold text-slate-800 leading-snug mb-2">{{ hoveredKPIInfo.name }}</p>
+                  <div class="text-[10px] text-slate-600 space-y-1">
+                    <div class="flex justify-between gap-2">
+                      <span>Value</span>
+                      <span class="font-mono font-bold text-slate-800">{{ hoveredKPIInfo.displayValue }}</span>
+                    </div>
+                    <div class="flex justify-between gap-2">
+                      <span>Target</span>
+                      <span class="font-mono text-slate-600">{{ hoveredKPIInfo.displayTarget }}</span>
+                    </div>
+                    <div class="flex justify-between gap-2">
+                      <span>Score</span>
+                      <span class="font-mono font-semibold" :style="{ color: RADAR_TEAM_COLORS[hoveredRadarIdx] }">{{ hoveredKPIInfo.scoreDisplay }}</span>
+                    </div>
+                  </div>
+                  <div class="mt-2 flex items-center gap-1.5 flex-wrap">
+                    <span class="text-[9px] px-1.5 py-0.5 rounded font-medium" :class="getLogicBadgeColor(hoveredKPIInfo.logic)">{{ hoveredKPIInfo.logic }}</span>
+                    <span class="text-[9px] font-medium" :class="hoveredKPIInfo.withinMargin ? 'text-green-600' : 'text-red-500'">
+                      {{ hoveredKPIInfo.withinMargin ? '✓ on target' : '✗ off target' }}
+                    </span>
+                  </div>
+                </div>
+              </foreignObject>
 
             </svg>
           </div>
@@ -727,8 +809,22 @@ const gaugeItems = computed(() => {
 // ─── Radar chart constants & helpers ─────────────────────────────────────────
 
 const RADAR_LABELS = ['EPA', 'PPI', 'RCIR', 'SE', 'SCP', 'FiltEff', 'TCR', 'APE', 'ACNI']
+// Team colour per axis index (0-2 program, 3-5 structure, 6-8 data)
+const RADAR_TEAM_COLORS = ['#3b82f6','#3b82f6','#3b82f6','#10b981','#10b981','#10b981','#ef4444','#ef4444','#ef4444']
+const RADAR_TEAM_NAMES  = ['Program','Program','Program','Structure','Structure','Structure','Data','Data','Data']
 const RADAR_CX = 250, RADAR_CY = 220, RADAR_MAX_R = 150
 const RADAR_N = 9
+
+// Team filter state
+const activeRadarTeams = ref(new Set(['program', 'structure', 'data']))
+function toggleRadarTeam(team) {
+  const s = new Set(activeRadarTeams.value)
+  s.has(team) ? s.delete(team) : s.add(team)
+  activeRadarTeams.value = s
+}
+
+// Hover state
+const hoveredRadarIdx = ref(null)
 
 function axisAngle(i) {
   return (-90 + i * (360 / RADAR_N)) * Math.PI / 180
@@ -752,13 +848,49 @@ function axisPoint(i, r) {
   return { x: RADAR_CX + r * Math.cos(a), y: RADAR_CY + r * Math.sin(a) }
 }
 
-const radarCurrentPoints = computed(() => {
+// Helper: build a polygon string for one team's sector (other axes collapse to centre)
+function makeTeamRadarPoints(teamAxes) {
   const all = [...programFilteredKPIs.value, ...structureFilteredKPIs.value, ...dataFilteredKPIs.value]
   if (all.length < RADAR_N) return ''
   return all.map((kpi, i) => {
-    const pt = axisPoint(i, radarScoreToR(kpiToRadarScore(kpi)))
+    const r = teamAxes.includes(i) ? radarScoreToR(kpiToRadarScore(kpi)) : 0
+    const pt = axisPoint(i, r)
     return `${pt.x.toFixed(1)},${pt.y.toFixed(1)}`
   }).join(' ')
+}
+
+const radarProgramPoints   = computed(() => makeTeamRadarPoints([0, 1, 2]))
+const radarStructurePoints = computed(() => makeTeamRadarPoints([3, 4, 5]))
+const radarDataPoints      = computed(() => makeTeamRadarPoints([6, 7, 8]))
+
+// Dots at each axis's current-score position
+const radarDotPositions = computed(() => {
+  const all = [...programFilteredKPIs.value, ...structureFilteredKPIs.value, ...dataFilteredKPIs.value]
+  if (all.length < RADAR_N) return []
+  return all.map((kpi, i) => {
+    const r = radarScoreToR(kpiToRadarScore(kpi))
+    const pt = axisPoint(i, r)
+    return { x: pt.x, y: pt.y, color: RADAR_TEAM_COLORS[i], kpi, i }
+  })
+})
+
+// Tooltip data for the hovered axis
+const hoveredKPIInfo = computed(() => {
+  if (hoveredRadarIdx.value === null) return null
+  const all = [...programFilteredKPIs.value, ...structureFilteredKPIs.value, ...dataFilteredKPIs.value]
+  const kpi = all[hoveredRadarIdx.value]
+  if (!kpi) return null
+  const value  = Number(kpi.value)  || 0
+  const target = Number(kpi.target) || 1
+  const score  = kpiToRadarScore(kpi)
+  return {
+    name:         kpi.name,
+    displayValue: `${formatNumberDE(value)} ${kpi.unit}`,
+    displayTarget:`${formatNumberDE(target)} ${kpi.unit}`,
+    scoreDisplay: `${Math.round(score * 100)}%`,
+    logic:        kpi.logic,
+    withinMargin: evaluateKPIStatus(value, target, kpi.logic || 'STRICT').acceptable,
+  }
 })
 
 const radarTargetPoints = computed(() => {
@@ -775,6 +907,7 @@ const radarAxes = computed(() => {
     const lbl = axisPoint(i, RADAR_MAX_R + 24)
     return {
       label: RADAR_LABELS[i],
+      color: RADAR_TEAM_COLORS[i],
       axisEndX: end.x.toFixed(1),
       axisEndY: end.y.toFixed(1),
       labelX: lbl.x.toFixed(1),
