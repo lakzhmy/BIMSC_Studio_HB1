@@ -101,6 +101,45 @@ export async function initDb() {
   `)
   console.log('[db] kpi_edges table ready')
 
+  await query(`
+    CREATE TABLE IF NOT EXISTS annotations (
+      id          SERIAL PRIMARY KEY,
+      route       TEXT NOT NULL,
+      ann_id      TEXT NOT NULL,
+      arrow_path  JSONB NOT NULL,
+      label       TEXT NOT NULL,
+      label_anchor JSONB NOT NULL,
+      color       TEXT NOT NULL DEFAULT '#c0392b',
+      created_by  TEXT,
+      created_at  TIMESTAMPTZ DEFAULT NOW(),
+      updated_at  TIMESTAMPTZ DEFAULT NOW(),
+      UNIQUE(route, ann_id)
+    )
+  `)
+  console.log('[db] annotations table ready')
+
+  // Seed annotations if table is empty
+  const { rows: annCount } = await query('SELECT count(*)::int AS c FROM annotations')
+  if (annCount[0].c === 0) {
+    await query(`
+      INSERT INTO annotations (route, ann_id, arrow_path, label, label_anchor, color) VALUES
+        ('dashboard','kpi-health','[[0.08,0.50],[0.06,0.40],[0.14,0.32],[0.22,0.34]]','KPI health and Warning detecting\nbased on set targets.\nConnected to the KPI Tab.','{"x":0.03,"y":0.51}','#c0392b'),
+        ('dashboard','milestone','[[0.38,0.62],[0.40,0.52],[0.42,0.42],[0.44,0.34]]','Milestones summary to keep\nthe motivation up. Connected\nto the Timeline Tab.','{"x":0.28,"y":0.62}','#c0392b'),
+        ('dashboard','team-health','[[0.88,0.50],[0.90,0.42],[0.86,0.34],[0.76,0.34]]','Team Health calculated\nfrom the "Stress Test"\nmini game.','{"x":0.82,"y":0.51}','#c0392b'),
+        ('dashboard','team-members','[[0.84,0.86],[0.78,0.82],[0.60,0.76],[0.48,0.72]]','Team members with their\npersonal avatar and info.','{"x":0.78,"y":0.87}','#c0392b'),
+        ('kpi','kpi-table','[[0.08,0.48],[0.06,0.38],[0.12,0.30],[0.24,0.32]]','KPI cards pulled live from\nGoogle Sheets. Green = on target,\nRed = outside target range.','{"x":0.03,"y":0.49}','#c0392b'),
+        ('kpi','kpi-radar','[[0.80,0.56],[0.82,0.48],[0.78,0.40],[0.68,0.42]]','Radar chart: relative KPI\nperformance per team.\nUse toggles to filter teams.','{"x":0.74,"y":0.57}','#c0392b'),
+        ('kpi-map','kpi-network','[[0.08,0.52],[0.06,0.42],[0.14,0.36],[0.28,0.42]]','KPI dependency network.\nNodes represent design parameters.\nDrag to reorganise.','{"x":0.03,"y":0.53}','#c0392b'),
+        ('kpi-map','kpi-map-filter','[[0.82,0.24],[0.84,0.18],[0.88,0.14],[0.92,0.13]]','Filter by team to highlight\nrelevant KPI connections.','{"x":0.72,"y":0.25}','#c0392b'),
+        ('timeline','timeline-track','[[0.10,0.46],[0.08,0.36],[0.16,0.28],[0.30,0.32]]','Weekly milestone track.\nEach lane = one team.\nToday marker shows current week.','{"x":0.04,"y":0.47}','#c0392b'),
+        ('timeline','timeline-add','[[0.76,0.22],[0.80,0.17],[0.86,0.14],[0.90,0.15]]','Add Milestone to log\nteam deliverables.','{"x":0.66,"y":0.22}','#c0392b'),
+        ('viewer','viewer-3d','[[0.10,0.54],[0.08,0.44],[0.16,0.36],[0.30,0.42]]','3D model viewer powered by\nSpeckle. Navigate with mouse.\nToggle model versions on the right.','{"x":0.04,"y":0.55}','#c0392b'),
+        ('stress-test','stress-game','[[0.10,0.56],[0.08,0.46],[0.16,0.38],[0.30,0.44]]','Pop the blobs to score.\nYour result becomes your\npersonal Health score.','{"x":0.03,"y":0.57}','#c0392b'),
+        ('stress-test','stress-leaderboard','[[0.82,0.50],[0.84,0.42],[0.80,0.36],[0.72,0.38]]','Team calmness ranking\nand health breakdown\nper member.','{"x":0.76,"y":0.51}','#c0392b')
+    `)
+    console.log('[db] annotations seeded with defaults')
+  }
+
   // Upsert KPI map nodes (update names/descriptions, preserve cx/cy positions)
   await query(`
     INSERT INTO kpi_nodes (id, team, label, sublabel, description, cx, cy) VALUES

@@ -376,6 +376,109 @@ app.delete('/api/kpi-map/edges/:id', async (req, res) => {
   }
 })
 
+// --- Annotations CRUD ---
+
+const ANNOTATION_ADMINS = [
+  'Emilie El Chidiac',
+  'María Sánchez Domínguez',
+  'Lakzhmy Mari Zaro',
+]
+
+function isAnnotationAdmin(name) {
+  return ANNOTATION_ADMINS.some(
+    (admin) => admin.localeCompare(name, undefined, { sensitivity: 'base' }) === 0
+  )
+}
+
+// GET all annotations (public)
+app.get('/api/annotations', async (req, res) => {
+  try {
+    const result = await query('SELECT * FROM annotations ORDER BY route, id')
+    res.json(result.rows)
+  } catch (err) {
+    console.error('[db] annotations fetch failed:', err.message)
+    res.status(500).json({ error: 'Failed to fetch annotations' })
+  }
+})
+
+// POST create an annotation (admin only)
+app.post('/api/annotations', async (req, res) => {
+  const { route: annRoute, ann_id, arrow_path, label, label_anchor, color, user_name } = req.body
+  if (!user_name || !isAnnotationAdmin(user_name)) {
+    return res.status(403).json({ error: 'Not authorized to manage annotations' })
+  }
+  if (!annRoute || !ann_id || !arrow_path || !label || !label_anchor) {
+    return res.status(400).json({ error: 'route, ann_id, arrow_path, label, and label_anchor are required' })
+  }
+  try {
+    const result = await query(
+      `INSERT INTO annotations (route, ann_id, arrow_path, label, label_anchor, color, created_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       ON CONFLICT (route, ann_id) DO UPDATE SET
+         arrow_path   = EXCLUDED.arrow_path,
+         label        = EXCLUDED.label,
+         label_anchor = EXCLUDED.label_anchor,
+         color        = EXCLUDED.color,
+         updated_at   = NOW()
+       RETURNING *`,
+      [annRoute, ann_id, JSON.stringify(arrow_path), label, JSON.stringify(label_anchor), color || '#c0392b', user_name]
+    )
+    res.status(201).json(result.rows[0])
+  } catch (err) {
+    console.error('[db] annotation create failed:', err.message)
+    res.status(500).json({ error: 'Failed to create annotation' })
+  }
+})
+
+// PUT update an annotation (admin only)
+app.put('/api/annotations/:id', async (req, res) => {
+  const { id } = req.params
+  const { arrow_path, label, label_anchor, color, user_name } = req.body
+  if (!user_name || !isAnnotationAdmin(user_name)) {
+    return res.status(403).json({ error: 'Not authorized to manage annotations' })
+  }
+  try {
+    const result = await query(
+      `UPDATE annotations SET
+        arrow_path   = COALESCE($1, arrow_path),
+        label        = COALESCE($2, label),
+        label_anchor = COALESCE($3, label_anchor),
+        color        = COALESCE($4, color),
+        updated_at   = NOW()
+       WHERE id = $5 RETURNING *`,
+      [
+        arrow_path ? JSON.stringify(arrow_path) : null,
+        label || null,
+        label_anchor ? JSON.stringify(label_anchor) : null,
+        color || null,
+        id,
+      ]
+    )
+    if (!result.rows.length) return res.status(404).json({ error: 'Annotation not found' })
+    res.json(result.rows[0])
+  } catch (err) {
+    console.error('[db] annotation update failed:', err.message)
+    res.status(500).json({ error: 'Failed to update annotation' })
+  }
+})
+
+// DELETE an annotation (admin only)
+app.delete('/api/annotations/:id', async (req, res) => {
+  const { id } = req.params
+  const userName = req.query.user_name
+  if (!userName || !isAnnotationAdmin(userName)) {
+    return res.status(403).json({ error: 'Not authorized to manage annotations' })
+  }
+  try {
+    const result = await query('DELETE FROM annotations WHERE id = $1 RETURNING id', [id])
+    if (!result.rows.length) return res.status(404).json({ error: 'Annotation not found' })
+    res.json({ ok: true, deleted: result.rows[0].id })
+  } catch (err) {
+    console.error('[db] annotation delete failed:', err.message)
+    res.status(500).json({ error: 'Failed to delete annotation' })
+  }
+})
+
 // --- Speckle /api catch-all proxy (after Express API routes so they take priority) ---
 app.use('/api', makeSpeckleProxy('/api'))
 
