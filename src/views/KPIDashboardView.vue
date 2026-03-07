@@ -655,25 +655,52 @@ const dataFilteredKPIs = computed(() => {
   
   if (Object.keys(structParams).length === 0 || Object.keys(prgParams).length === 0) return []
 
+  // Get raw structure rows for normalization-based KPIs
+  const structRows = structureParamsData.value.rows || []
+  
+  console.log('📊 dataFilteredKPIs - structParams:', structParams)
+  console.log('📊 dataFilteredKPIs - prgParams:', prgParams)
+  console.log('📊 dataFilteredKPIs - structRows count:', structRows.length)
+  
+  // Create rows with merged struct + program params for Air Purification (needs Ep, Ur, Fe, Wr)
+  const mergedRows = structRows.map(row => {
+    const params = { ...row.params, ...prgParams }
+    return { params }
+  })
+  
+  console.log('📊 dataFilteredKPIs - mergedRows[0]:', mergedRows[0])
+
   // Merge averaged STR params with averaged PRG params (ENV defaults handled by computeKPI)
   const mergedParams = { ...structParams, ...prgParams }
 
   const defs = KPI_BY_CATEGORY['environment']
   const descriptions = {
     'thermal-comfort-compliance-rate': 'Estimates the percentage of conditions that remain within acceptable thermal comfort ranges. By comparing structural buffering capacity with environmental pressures such as solar radiation and wind exposure, it approximates the building\'s ability to moderate external climate effects. Higher values indicate more thermally stable environments.',
-    'air-purification-effectiveness': 'Estimates the mass of airborne pollutants removed by the building each day (kg/day). By combining pollution levels, program intensity, and filtration performance, it reflects the system\'s capacity to process contaminated air. Higher values indicate stronger air purification capability.',
+    'air-purification-effectiveness': 'Estimates the percentage of airborne pollutants removed by the building. By normalizing pollution levels and combining with program intensity and filtration performance, it reflects the system\'s capacity to process contaminated air. Higher values indicate stronger air purification capability.',
     'acoustic-comfort-noise-impact-index': 'Estimates the level of acoustic disturbance transmitted through the building envelope. By relating environmental pressures and structural stress to the damping effect of structural density, it approximates internal noise impact. Lower values indicate improved acoustic comfort.',
   }
-  return defs.map(def => ({
-    id: def.id,
-    name: def.name,
-    value: Math.round(computeKPI(def, mergedParams) * 100) / 100,
-    unit: def.unit,
-    target: def.target,
-    status: 'good',
-    logic: def.logic,
-    description: descriptions[def.id] || 'No description available.',
-  }))
+  return defs.map(def => {
+    let value
+    // Use computeAggregate for KPIs with normalization
+    if (def.computeAggregate && def.id === 'thermal-comfort-compliance-rate') {
+      value = Math.round(def.computeAggregate(structRows.map(r => r.params || {})) * 100) / 100
+    } else if (def.computeAggregate && def.id === 'air-purification-effectiveness') {
+      console.log('📊 Calling Air Purification computeAggregate with:', mergedRows.map(r => r.params || {}))
+      value = Math.round(def.computeAggregate(mergedRows.map(r => r.params || {})) * 100) / 100
+    } else {
+      value = Math.round(computeKPI(def, mergedParams) * 100) / 100
+    }
+    return {
+      id: def.id,
+      name: def.name,
+      value,
+      unit: def.unit,
+      target: def.target,
+      status: 'good',
+      logic: def.logic,
+      description: descriptions[def.id] || 'No description available.',
+    }
+  })
 })
 
 const dataSummaryCards = computed(() => {
@@ -775,12 +802,13 @@ const programKpiHealth = computed(() => {
 })
 
 watch(
-  [programKpiHealth, structureSummaryCards, dataSummaryCards],
-  ([prog, strCards, dataCards]) => {
-    const strOnTarget = strCards.filter(c => c.delta <= 0).length
-    const dataOnTarget = dataCards.filter(c => c.delta <= 0).length
-    const total = prog.total + strCards.length + dataCards.length
-    const onTarget = prog.onTarget + strOnTarget + dataOnTarget
+  [programSummaryCards, structureSummaryCards, dataSummaryCards],
+  ([progCards, strCards, dataCards]) => {
+    const progOnTarget = progCards.filter(c => c.withinMargin).length
+    const strOnTarget = strCards.filter(c => c.withinMargin).length
+    const dataOnTarget = dataCards.filter(c => c.withinMargin).length
+    const total = progCards.length + strCards.length + dataCards.length
+    const onTarget = progOnTarget + strOnTarget + dataOnTarget
     userStore.setKpiHealth({ total, onTarget, warnings: total - onTarget })
   },
   { immediate: true }

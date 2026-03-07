@@ -195,14 +195,37 @@ const thermalComfortComplianceRate: KPIFormulaDef = {
   id: 'thermal-comfort-compliance-rate',
   name: 'Thermal Comfort Compliance Rate',
   category: 'environment',
-  formula: '100 × ((Hr/100) + (Ae/100) + (Sse/100)) / (1 + (Ir/100) + (Sl/100))',
-  params: ['Hr', 'Ae', 'Sse', 'Ir', 'Sl'],
+  formula: '100 * normalized_De / (1 + AVERAGE(Ir_range) / 100 + AVERAGE(Wl_range) / 100)',
+  params: ['De', 'Ir', 'Wl'],
   unit: '%',
-  target: 85,
-  logic: 'STRICT',
-  compute: (p) =>
-    (100 * ((p.Hr / 100) + (p.Ae / 100) + (p.Sse / 100))) /
-    (1 + (p.Ir / 100) + (p.Sl / 100)),
+  target: 70,
+  logic: 'MAX',
+  compute: (p) => (100 * p.De) / (1 + (p.Ir / 100) + (p.Wl / 100)),
+  computeAggregate: (rows) => {
+    if (rows.length === 0) return 0;
+    
+    // Extract parameter values
+    const deValues = rows.map(r => r.De || 0);
+    const irValues = rows.map(r => r.Ir || 0);
+    const wlValues = rows.map(r => r.Wl || 0);
+    
+    // Calculate averages
+    const avgDe = deValues.reduce((a, b) => a + b, 0) / rows.length;
+    const avgIr = irValues.reduce((a, b) => a + b, 0) / rows.length;
+    const avgWl = wlValues.reduce((a, b) => a + b, 0) / rows.length;
+    
+    // Find min/max for De normalization
+    const minDe = Math.min(...deValues);
+    const maxDe = Math.max(...deValues);
+    const deRange = maxDe - minDe;
+    
+    // Normalize the average De
+    const normalizedDe = deRange !== 0 ? (avgDe - minDe) / deRange : 0;
+    
+    // Apply formula: 100 * normalized_De / (1 + (Ir/100) + (Wl/100))
+    const denominator = 1 + (avgIr / 100) + (avgWl / 100);
+    return 100 * normalizedDe / denominator;
+  },
 };
 
 const structuralEfficiencyPerformance: KPIFormulaDef = {
@@ -213,7 +236,7 @@ const structuralEfficiencyPerformance: KPIFormulaDef = {
   params: ['De', 'Sl', 'Wl'],
   unit: '%',
   target: 70,
-  logic: 'STRICT',
+  logic: 'MAX',
   compute: (p) => p.De / (1 + (p.Sl / p.Wl)),
   computeAggregate: (rows) => {
     console.log('🔧 structuralEfficiencyPerformance computeAggregate called:', { rowCount: rows.length, firstRow: rows[0] });
@@ -256,7 +279,7 @@ const solarControlPerformance: KPIFormulaDef = {
   params: ['De', 'Ir'],
   unit: '%',
   target: 65,
-  logic: 'STRICT',
+  logic: 'MAX',
   compute: (p) => p.De / (1 + (p.Ir / 100)),
   computeAggregate: (rows) => {
     if (rows.length === 0) return 0;
@@ -286,24 +309,68 @@ const airPurificationEffectiveness: KPIFormulaDef = {
   id: 'air-purification-effectiveness',
   name: 'Air Purification Effectiveness',
   category: 'environment',
-  formula: '(Ep × Ar × Ur × (Ae/100) × (Wr/100)) / 1000',
-  params: ['Ep', 'Ar', 'Ur', 'Ae', 'Wr'],
-  unit: 'kg/day',
-  target: 250,
-  logic: 'STRICT',
-  compute: (p) => (p.Ep * p.Ar * p.Ur * (p.Ae / 100) * (p.Wr / 100)) / 1000,
+  formula: '100 * normalized_Ep * AVERAGE(Ur_range) * (AVERAGE(Fe_range)/100) * normalized_Wr',
+  params: ['Ep', 'Ur', 'Fe', 'Wr'],
+  unit: '%',
+  target: 70,
+  logic: 'MAX',
+  compute: (p) => (p.Ep * p.Ur * (p.Fe / 100) * (p.Wr / 100)) / 1000,
+  computeAggregate: (rows) => {
+    console.log('🔧 airPurificationEffectiveness computeAggregate called:', { rowCount: rows.length, firstRow: rows[0] });
+    
+    if (rows.length === 0) return 0;
+    
+    // Extract parameter values
+    const epValues = rows.map(r => r.Ep || 0);
+    const urValues = rows.map(r => r.Ur || 0);
+    const feValues = rows.map(r => r.Fe || 0);
+    const wrValues = rows.map(r => r.Wr || 0);
+    
+    console.log('🔧 airPurification extracted values:', { epValues, urValues, feValues, wrValues });
+    
+    // Calculate averages
+    const avgEp = epValues.reduce((a, b) => a + b, 0) / rows.length;
+    const avgUr = urValues.reduce((a, b) => a + b, 0) / rows.length;
+    const avgFe = feValues.reduce((a, b) => a + b, 0) / rows.length;
+    const avgWr = wrValues.reduce((a, b) => a + b, 0) / rows.length;
+    
+    console.log('🔧 airPurification averages:', { avgEp, avgUr, avgFe, avgWr });
+    
+    // Find min/max for Ep normalization
+    const minEp = Math.min(...epValues);
+    const maxEp = Math.max(...epValues);
+    const epRange = maxEp - minEp;
+    
+    // Find min/max for Wr normalization
+    const minWr = Math.min(...wrValues);
+    const maxWr = Math.max(...wrValues);
+    const wrRange = maxWr - minWr;
+    
+    // Normalize both Ep and Wr
+    const normalizedEp = epRange !== 0 ? (avgEp - minEp) / epRange : 0;
+    // If Wr has no variation (wrRange = 0), use 1.0 as normalized value; otherwise normalize it
+    const normalizedWr = wrRange !== 0 ? (avgWr - minWr) / wrRange : 1.0;
+    
+    console.log('🔧 airPurification normalization:', { minEp, maxEp, epRange, minWr, maxWr, wrRange, normalizedEp, normalizedWr });
+    
+    // Apply formula: 100 * normalized_Ep * AVERAGE(Ur) * (AVERAGE(Fe)/100) * normalized_Wr
+    const result = 100 * normalizedEp * avgUr * (avgFe / 100) * normalizedWr;
+    console.log('🔧 airPurification final result:', result);
+    
+    return result;
+  },
 };
 
 const acousticComfortNoiseImpactIndex: KPIFormulaDef = {
   id: 'acoustic-comfort-noise-impact-index',
   name: 'Acoustic Comfort Noise Impact Index',
   category: 'environment',
-  formula: 'Ne × (1 − (Se/100)) + Ni × (Se/100)',
-  params: ['Ne', 'Se', 'Ni'],
+  formula: '(Wl + Sl) / (1 + (De/100))',
+  params: ['Wl', 'Sl', 'De'],
   unit: 'dB',
   target: 35,
-  logic: 'STRICT',
-  compute: (p) => p.Ne * (1 - p.Se / 100) + p.Ni * (p.Se / 100),
+  logic: 'MIN',
+  compute: (p) => (p.Wl + p.Sl) / (1 + (p.De / 100)),
 };
 
 const filtrationEfficiency: KPIFormulaDef = {
