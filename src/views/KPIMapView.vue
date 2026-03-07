@@ -275,28 +275,28 @@
             class="absolute z-20 pointer-events-none"
             :style="tooltipStyle"
           >
-            <div class="bg-white border border-slate-200 rounded-xl shadow-xl p-4 w-64">
-              <div class="flex items-center gap-2 mb-2">
-                <span class="inline-block w-2.5 h-2.5 rounded-full flex-none"
+            <div class="bg-white border border-slate-200 rounded-xl shadow-xl p-3 w-48">
+              <div class="flex items-center gap-1.5 mb-1.5">
+                <span class="inline-block w-2 h-2 rounded-full flex-none"
                   :style="{ backgroundColor: TEAM_COLORS[activeNode.team].hex }"></span>
-                <span class="text-xs font-bold uppercase tracking-widest"
+                <span class="text-[10px] font-bold uppercase tracking-widest"
                   :style="{ color: TEAM_COLORS[activeNode.team].hex }">{{ activeNode.team }}</span>
-                <span class="ml-auto text-xs text-slate-300 font-mono font-bold">{{ activeNode.id }}</span>
+                <span class="ml-auto text-[10px] text-slate-300 font-mono font-bold">{{ activeNode.id }}</span>
               </div>
-              <p class="text-sm font-semibold text-slate-900 leading-snug">{{ activeNode.label }}</p>
-              <p v-if="activeNode.sublabel" class="text-xs text-slate-400 mt-0.5">{{ activeNode.sublabel }}</p>
-              <p class="text-xs text-slate-500 leading-relaxed mt-2">{{ activeNode.description }}</p>
-              <div v-if="connectedNodeIds.size > 0" class="mt-3 pt-3 border-t border-slate-100">
-                <p class="text-[10px] text-slate-400 uppercase tracking-wider mb-1.5">Connects to</p>
+              <p class="text-xs font-semibold text-slate-900 leading-snug">{{ activeNode.label }}</p>
+              <p v-if="activeNode.sublabel" class="text-[10px] text-slate-400 mt-0.5">{{ activeNode.sublabel }}</p>
+              <p class="text-[10px] text-slate-500 leading-relaxed mt-1.5">{{ activeNode.description }}</p>
+              <div v-if="connectedNodeIds.size > 0" class="mt-2 pt-2 border-t border-slate-100">
+                <p class="text-[9px] text-slate-400 uppercase tracking-wider mb-1">Connects to</p>
                 <div class="flex flex-wrap gap-1">
                   <span v-for="cid in connectedNodeIds" :key="cid"
-                    class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold font-mono"
+                    class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold font-mono"
                     :style="{ backgroundColor: TEAM_COLORS[nodeMap[cid]?.team]?.light, color: TEAM_COLORS[nodeMap[cid]?.team]?.hex }"
                   >{{ cid }}</span>
                 </div>
               </div>
-              <p v-if="!lockedNodeId" class="text-[10px] text-slate-300 mt-3">Click to lock · click canvas to clear</p>
-              <p v-else class="text-[10px] text-slate-400 mt-3 font-medium">Locked — click canvas to release</p>
+              <p v-if="!lockedNodeId" class="text-[9px] text-slate-300 mt-2">Click to lock · click canvas to clear</p>
+              <p v-else class="text-[9px] text-slate-400 mt-2 font-medium">Locked — click canvas to release</p>
             </div>
           </div>
         </Transition>
@@ -553,8 +553,8 @@ const tooltipStyle = computed(() => {
   const nodeX = screenPt.x - containerRect.left
   const nodeY = screenPt.y - containerRect.top
 
-  // Clamp horizontally so the 256px (w-64) card never overflows the container
-  const halfCard = 128
+  // Clamp horizontally so the 192px (w-48) card never overflows the container
+  const halfCard = 96
   const clampedX = Math.min(Math.max(nodeX, halfCard + 8), containerRect.width - halfCard - 8)
 
   const showBelow = nodeY / containerRect.height < 0.28
