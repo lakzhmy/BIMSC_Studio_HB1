@@ -278,11 +278,11 @@
           </div>
 
           <!-- Two-column layout: radar left, info panel right -->
-          <div class="flex gap-6 items-center">
+          <div class="flex gap-8 items-center justify-center mx-auto" style="max-width: 860px;">
 
             <!-- Left: Radar SVG -->
-            <div class="flex-1 min-w-0 overflow-x-auto">
-              <svg viewBox="0 0 500 440" width="100%" style="max-width: 560px; min-width: 300px;" @mouseleave="hoveredRadarIdx = null">
+            <div class="overflow-x-auto" style="width: 480px; flex: 0 0 480px;">
+              <svg viewBox="0 0 500 440" width="480" height="422" @mouseleave="hoveredRadarIdx = null">
 
                 <!-- Concentric reference rings -->
                 <polygon
