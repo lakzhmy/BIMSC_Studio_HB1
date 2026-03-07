@@ -54,8 +54,11 @@
                     <h3 class="text-xs font-semibold text-slate-700">{{ kpi.name }}</h3>
                     <p class="text-[11px] text-slate-500">{{ kpi.unit }}</p>
                   </div>
-                  <div class="flex items-center gap-2 flex-shrink-0">
-                    <div class="w-2 h-2 rounded-full bg-slate-300"></div>
+                  <div class="flex items-center gap-1 flex-shrink-0">
+                    <div :class="['w-2 h-2 rounded-full', programSummaryCards[index] ? (programSummaryCards[index].withinMargin ? 'bg-green-500' : 'bg-red-500') : 'bg-slate-300']"></div>
+                    <span :class="['text-[9px] px-1.5 py-0.5 rounded font-medium', getLogicBadgeColor(kpi.logic)]">
+                      {{ kpi.logic }}
+                    </span>
                     <svg :class="['w-4 h-4 text-slate-500 transition-transform', expandedProgramKPIs.has(kpi.id) ? 'rotate-180' : '']" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
                     </svg>
@@ -65,7 +68,7 @@
                 <div v-if="expandedProgramKPIs.has(kpi.id)" class="bg-slate-100 -mx-4 px-4 py-2 mb-3 border-t border-b border-slate-200">
                   <p class="text-xs text-slate-600 leading-relaxed">{{ kpi.description }}</p>
                 </div>
-                <div class="text-2xl font-bold text-slate-900 mb-3">{{ typeof kpi.value === 'number' ? kpi.value.toFixed(2) : kpi.value }}</div>
+                <div class="text-2xl font-bold text-slate-900 mb-3">{{ formatNumberDE(kpi.value) }}</div>
                 <template v-if="programSummaryCards[index]">
                   <div class="text-[11px] text-slate-500">Target: {{ programSummaryCards[index].displayTarget }}</div>
                   <div class="flex items-center gap-2 mt-1 mb-3">
@@ -115,8 +118,11 @@
                     <h3 class="text-xs font-semibold text-slate-700">{{ kpi.name }}</h3>
                     <p class="text-[11px] text-slate-500">{{ kpi.unit }}</p>
                   </div>
-                  <div class="flex items-center gap-2 flex-shrink-0">
+                  <div class="flex items-center gap-1 flex-shrink-0">
                     <div :class="['w-2 h-2 rounded-full', structureSummaryCards[index] ? (structureSummaryCards[index].withinMargin ? 'bg-green-500' : 'bg-red-500') : 'bg-slate-300']"></div>
+                    <span :class="['text-[9px] px-1.5 py-0.5 rounded font-medium', getLogicBadgeColor(kpi.logic)]">
+                      {{ kpi.logic }}
+                    </span>
                     <svg :class="['w-4 h-4 text-slate-500 transition-transform', expandedStructureKPIs.has(kpi.id) ? 'rotate-180' : '']" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
                     </svg>
@@ -126,7 +132,7 @@
                 <div v-if="expandedStructureKPIs.has(kpi.id)" class="bg-slate-100 -mx-4 px-4 py-2 mb-3 border-t border-b border-slate-200">
                   <p class="text-xs text-slate-600 leading-relaxed">{{ kpi.description }}</p>
                 </div>
-                <div class="text-2xl font-bold text-slate-900 mb-3">{{ typeof kpi.value === 'number' ? kpi.value.toFixed(2) : kpi.value }}</div>
+                <div class="text-2xl font-bold text-slate-900 mb-3">{{ formatNumberDE(kpi.value) }}</div>
                 <template v-if="structureSummaryCards[index]">
                   <div class="text-[11px] text-slate-500">Target: {{ structureSummaryCards[index].displayTarget }}</div>
                   <div class="flex items-center gap-2 mt-1 mb-3">
@@ -176,8 +182,11 @@
                     <h3 class="text-xs font-semibold text-slate-700">{{ kpi.name }}</h3>
                     <p class="text-[11px] text-slate-500">{{ kpi.unit }}</p>
                   </div>
-                  <div class="flex items-center gap-2 flex-shrink-0">
+                  <div class="flex items-center gap-1 flex-shrink-0">
                     <div :class="['w-2 h-2 rounded-full', dataSummaryCards[index] ? (dataSummaryCards[index].withinMargin ? 'bg-green-500' : 'bg-red-500') : 'bg-slate-300']"></div>
+                    <span :class="['text-[9px] px-1.5 py-0.5 rounded font-medium', getLogicBadgeColor(kpi.logic)]">
+                      {{ kpi.logic }}
+                    </span>
                     <svg :class="['w-4 h-4 text-slate-500 transition-transform', expandedDataKPIs.has(kpi.id) ? 'rotate-180' : '']" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
                     </svg>
@@ -187,7 +196,7 @@
                 <div v-if="expandedDataKPIs.has(kpi.id)" class="bg-slate-100 -mx-4 px-4 py-2 mb-3 border-t border-b border-slate-200">
                   <p class="text-xs text-slate-600 leading-relaxed">{{ kpi.description }}</p>
                 </div>
-                <div class="text-2xl font-bold text-slate-900 mb-3">{{ typeof kpi.value === 'number' ? kpi.value.toFixed(2) : kpi.value }}</div>
+                <div class="text-2xl font-bold text-slate-900 mb-3">{{ formatNumberDE(kpi.value) }}</div>
                 <template v-if="dataSummaryCards[index]">
                   <div class="text-[11px] text-slate-500">Target: {{ dataSummaryCards[index].displayTarget }}</div>
                   <div class="flex items-center gap-2 mt-1 mb-3">
@@ -247,6 +256,18 @@ import { KPI_BY_CATEGORY, computeKPI, updateKPITargets, evaluateKPIStatus } from
 import { useUserStore } from '@/stores/userStore'
 
 const userStore = useUserStore()
+
+// --- German number formatter ---
+const formatNumberDE = (value) => {
+  return new Intl.NumberFormat('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(value))
+}
+
+// --- Logic type badge helper ---
+const getLogicBadgeColor = (logic) => {
+  if (logic === 'MIN') return 'bg-blue-100 text-blue-700'
+  if (logic === 'MAX') return 'bg-purple-100 text-purple-700'
+  return 'bg-amber-100 text-amber-700' // STRICT
+}
 
 // --- Current calendar week (Jan 12 2026 = Week 1, +7 days per week) ---
 const currentWeekNumber = computed(() => {
@@ -441,7 +462,7 @@ const isWithinMargin = (value, target, logic = 'STRICT') => {
 
 const structureSummaryCards = computed(() => {
   const targets = structureSheetData.value?.targetsByScenario?.[structureScenario.value] || []
-  const formatValue = (value) => Number(value).toLocaleString(undefined, { maximumFractionDigits: 2 })
+  const formatValue = (value) => formatNumberDE(value)
   const parseNumber = (value) => {
     if (typeof value === 'number') return value
     const sanitized = String(value || '').replace(/,/g, '')
@@ -472,7 +493,7 @@ const structureSummaryCards = computed(() => {
 })
 
 const programSummaryCards = computed(() => {
-  const formatValue = (value) => Number(value).toLocaleString(undefined, { maximumFractionDigits: 2 })
+  const formatValue = (value) => formatNumberDE(value)
   const parseNumber = (value) => {
     if (typeof value === 'number') return value
     const sanitized = String(value || '').replace(/,/g, '')
@@ -559,7 +580,13 @@ const programFilteredKPIs = computed(() => {
 
   const defs = KPI_BY_CATEGORY['program']
   return defs.map(def => {
-    const value = computeKPI(def, avgParams)
+    // Use computeAggregate if available (for e.g., RCIR), otherwise use computeKPI with averaged params
+    let value
+    if (def.computeAggregate) {
+      value = def.computeAggregate(rows)
+    } else {
+      value = computeKPI(def, avgParams)
+    }
     return {
       id: def.id,
       name: def.name,
@@ -627,7 +654,7 @@ const dataFilteredKPIs = computed(() => {
 })
 
 const dataSummaryCards = computed(() => {
-  const formatValue = (value) => Number(value).toLocaleString(undefined, { maximumFractionDigits: 2 })
+  const formatValue = (value) => formatNumberDE(value)
   const parseNumber = (value) => {
     if (typeof value === 'number') return value
     const sanitized = String(value || '').replace(/,/g, '')

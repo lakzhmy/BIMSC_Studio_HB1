@@ -447,19 +447,20 @@ export async function fetchProgramParams(): Promise<{
   if (csvRows.length < 2) return { rows: [] };
 
   const headerRow = csvRows[0];
-  // Column names from C onward are the PRG_PAR_* parameter names
-  const paramNames = headerRow.slice(2).map(h => h?.trim() || '');
+  // Column names from B onward are the PRG_PAR_* parameter names
+  // Sheet layout: program | PRG_PAR_Area | PRG_PAR_UseRatio | ...
+  const paramNames = headerRow.slice(1).map(h => h?.trim() || '');
 
   const rows: ParamValues[] = [];
 
   for (let i = 1; i < csvRows.length; i++) {
     const row = csvRows[i];
-    if (!row || row.length < 3) continue;
+    if (!row || row.length < 2) continue;
 
     const raw: Record<string, number | string> = {};
     for (let j = 0; j < paramNames.length; j++) {
       const name = paramNames[j];
-      const val = row[2 + j]?.trim() || '';
+      const val = row[1 + j]?.trim() || '';
       if (name) raw[name] = val;
     }
 
@@ -486,18 +487,51 @@ export async function fetchFormulaTargets(): Promise<Record<string, { target: nu
   // Start from row 3 (index 2), read until we hit an empty KPI name
   for (let i = 2; i < csvRows.length; i++) {
     const row = csvRows[i];
-    if (!row || row.length < 7) continue;
+    if (!row || row.length < 2) continue;
 
     const kpiName = row[1]?.trim() || ''; // Column B
-    const targetStr = row[5]?.trim() || ''; // Column F (index 5)
-    const logicStr = row[6]?.trim().toUpperCase() || 'STRICT'; // Column G (index 6)
-
     if (!kpiName) break; // Stop at first empty KPI name
 
-    const targetValue = Number(targetStr.replace(/,/g, ''));
+    // For target, we need to handle cases where the value may span multiple columns
+    // due to embedded commas (e.g., "110,000.00 m²" might be split across columns)
+    // The target is typically in column F (index 5), but may extend to index 6 if quoted
+    let targetStr = '';
+    let logicStr = '';
+    
+    // Try to extract target and logic, accounting for values that may span columns
+    if (row.length >= 7) {
+      // Standard case: target in F (index 5), logic in G (index 6)
+      targetStr = row[5]?.trim() || '';
+      logicStr = row[6]?.trim().toUpperCase() || 'STRICT';
+      
+      // Check if the target looks incomplete (quoted value that was split)
+      if (targetStr.startsWith('"') && !targetStr.endsWith('"')) {
+        // The value was split by comma; reconstruct it
+        let j = 5;
+        while (j < row.length && !targetStr.endsWith('"')) {
+          j++;
+          if (j < row.length) {
+            targetStr += ',' + (row[j]?.trim() || '');
+          }
+        }
+        // Now logicStr should come after the reconstructed target
+        logicStr = row[j + 1]?.trim().toUpperCase() || 'STRICT';
+      }
+    }
+
+    // Clean up the target string: remove quotes and unit labels (like "m²")
+    // Extract just the numeric part
+    const numericMatch = targetStr.match(/-?[\d.,]+/);
+    const targetValue = numericMatch 
+      ? Number(numericMatch[0].replace(/,/g, '').trim())
+      : NaN;
+
     if (!Number.isNaN(targetValue)) {
       const logic = (['MAX', 'MIN', 'STRICT'].includes(logicStr) ? logicStr : 'STRICT') as 'MAX' | 'MIN' | 'STRICT';
       targets[kpiName] = { target: targetValue, logic };
+      console.log(`✅ Fetched target for "${kpiName}": ${targetValue} (logic: ${logic})`);
+    } else {
+      console.log(`⚠️ Failed to parse target for "${kpiName}": raw="${targetStr}"`);
     }
   }
 

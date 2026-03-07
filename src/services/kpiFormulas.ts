@@ -150,12 +150,43 @@ const resourceConsumptionIntensityRatio: KPIFormulaDef = {
   id: 'resource-consumption-intensity-ratio',
   name: 'Resource Consumption Intensity Ratio (RCIR)',
   category: 'program',
-  formula: 'Ur × Wr',
+  formula: 'AVERAGE(Ur) × AVERAGE((Wr - Wr_min) / (Wr_max - Wr_min))',
   params: ['Ur', 'Wr'],
   unit: 'unitless [0.0-1.0]',
   target: 0.6,
-  logic: 'STRICT',
+  logic: 'MIN',
   compute: (p) => p.Ur * p.Wr,
+  computeAggregate: (rows) => {
+    if (rows.length === 0) return 0;
+    
+    // Calculate average Ur
+    let sumUr = 0;
+    const wrValues: number[] = [];
+    
+    for (const p of rows) {
+      sumUr += p.Ur || 0;
+      wrValues.push(p.Wr || 0);
+    }
+    
+    const avgUr = sumUr / rows.length;
+    
+    // Find min and max Wr
+    const minWr = Math.min(...wrValues);
+    const maxWr = Math.max(...wrValues);
+    const wrRange = maxWr - minWr;
+    
+    // Calculate normalized average Wr: AVERAGE((Wr - min) / (max - min))
+    let sumNormalizedWr = 0;
+    for (const wr of wrValues) {
+      const normalized = wrRange !== 0 ? (wr - minWr) / wrRange : 0;
+      sumNormalizedWr += normalized;
+    }
+    
+    const avgNormalizedWr = sumNormalizedWr / rows.length;
+    
+    // Return AVERAGE(Ur) × AVERAGE((Wr - Wr_min) / (Wr_max - Wr_min))
+    return avgUr * avgNormalizedWr;
+  },
 };
 
 // ── Structure KPIs ─────────────────────────────────────────────────────────
