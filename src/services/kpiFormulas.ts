@@ -209,24 +209,77 @@ const structuralEfficiencyPerformance: KPIFormulaDef = {
   id: 'structural-efficiency-performance',
   name: 'Structural Efficiency',
   category: 'structure',
-  formula: 'De / (1 + (Sl / Wl))',
+  formula: '100 * normalized_De / (1 + AVERAGE(Sl_range) / AVERAGE(Wl_range))',
   params: ['De', 'Sl', 'Wl'],
   unit: '%',
   target: 70,
   logic: 'STRICT',
   compute: (p) => p.De / (1 + (p.Sl / p.Wl)),
+  computeAggregate: (rows) => {
+    console.log('🔧 structuralEfficiencyPerformance computeAggregate called:', { rowCount: rows.length, firstRow: rows[0] });
+    
+    if (rows.length === 0) return 0;
+    
+    // Extract parameter values
+    const deValues = rows.map(r => r.De || 0);
+    const slValues = rows.map(r => r.Sl || 0);
+    const wlValues = rows.map(r => r.Wl || 0);
+    
+    // Calculate averages
+    const avgDe = deValues.reduce((a, b) => a + b, 0) / rows.length;
+    const avgSl = slValues.reduce((a, b) => a + b, 0) / rows.length;
+    const avgWl = wlValues.reduce((a, b) => a + b, 0) / rows.length;
+    
+    // Find min/max for normalization
+    const minDe = Math.min(...deValues);
+    const maxDe = Math.max(...deValues);
+    const deRange = maxDe - minDe;
+    
+    // Normalize the average: (AVERAGE(De) - MIN(De)) / (MAX(De) - MIN(De))
+    const normalizedDe = deRange !== 0 ? (avgDe - minDe) / deRange : 0;
+    
+    // Apply formula: 100 * normalized_De / (1 + AVERAGE(Sl) / AVERAGE(Wl))
+    const denominator = avgWl !== 0 ? 1 + (avgSl / avgWl) : 1;
+    const result = 100 * normalizedDe / denominator;
+    
+    console.log('🔧 structuralEfficiencyPerformance:', { deValues, slValues, wlValues, avgDe, avgSl, avgWl, minDe, maxDe, normalizedDe, denominator, result });
+    
+    return result;
+  },
 };
 
 const solarControlPerformance: KPIFormulaDef = {
   id: 'solar-control-performance',
   name: 'Solar Control Performance',
   category: 'structure',
-  formula: 'De / (1 + (Ir / 100))',
+  formula: '100 * normalized_De / (1 + AVERAGE(Ir_range) / 100)',
   params: ['De', 'Ir'],
   unit: '%',
   target: 65,
   logic: 'STRICT',
   compute: (p) => p.De / (1 + (p.Ir / 100)),
+  computeAggregate: (rows) => {
+    if (rows.length === 0) return 0;
+    
+    // Extract parameter values
+    const deValues = rows.map(r => r.De || 0);
+    const irValues = rows.map(r => r.Ir || 0);
+    
+    // Calculate averages
+    const avgDe = deValues.reduce((a, b) => a + b, 0) / rows.length;
+    const avgIr = irValues.reduce((a, b) => a + b, 0) / rows.length;
+    
+    // Find min/max for normalization
+    const minDe = Math.min(...deValues);
+    const maxDe = Math.max(...deValues);
+    const deRange = maxDe - minDe;
+    
+    // Normalize the average: (AVERAGE(De) - MIN(De)) / (MAX(De) - MIN(De))
+    const normalizedDe = deRange !== 0 ? (avgDe - minDe) / deRange : 0;
+    
+    // Apply formula: 100 * normalized_De / (1 + AVERAGE(Ir) / 100)
+    return 100 * normalizedDe / (1 + (avgIr / 100));
+  },
 };
 
 const airPurificationEffectiveness: KPIFormulaDef = {
@@ -257,12 +310,34 @@ const filtrationEfficiency: KPIFormulaDef = {
   id: 'filtration-efficiency',
   name: 'Filtration Efficiency',
   category: 'structure',
-  formula: 'Fe / (1 + (Ep / 100))',
+  formula: '100 * normalized_Fe / (1 + AVERAGE(Ep_range) / 100)',
   params: ['Fe', 'Ep'],
   unit: '%',
   target: 80,
   logic: 'STRICT',
   compute: (p) => p.Fe / (1 + (p.Ep / 100)),
+  computeAggregate: (rows) => {
+    if (rows.length === 0) return 0;
+    
+    // Extract parameter values
+    const feValues = rows.map(r => r.Fe || 0);
+    const epValues = rows.map(r => r.Ep || 0);
+    
+    // Calculate averages
+    const avgFe = feValues.reduce((a, b) => a + b, 0) / rows.length;
+    const avgEp = epValues.reduce((a, b) => a + b, 0) / rows.length;
+    
+    // Find min/max for normalization
+    const minFe = Math.min(...feValues);
+    const maxFe = Math.max(...feValues);
+    const feRange = maxFe - minFe;
+    
+    // Normalize the average: (AVERAGE(Fe) - MIN(Fe)) / (MAX(Fe) - MIN(Fe))
+    const normalizedFe = feRange !== 0 ? (avgFe - minFe) / feRange : 0;
+    
+    // Apply formula: 100 * normalized_Fe / (1 + AVERAGE(Ep) / 100)
+    return 100 * normalizedFe / (1 + (avgEp / 100));
+  },
 };
 
 // ---------------------------------------------------------------------------

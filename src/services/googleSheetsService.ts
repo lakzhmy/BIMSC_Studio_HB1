@@ -397,8 +397,11 @@ export async function fetchStructureParams(): Promise<{
   if (csvRows.length < 2) return { weeks: [], scenarios: [], rows: [] };
 
   const headerRow = csvRows[0];
-  // Column names from C onward are the STR_PAR_* parameter names
-  const paramNames = headerRow.slice(2).map(h => h?.trim() || '');
+  // Column A is Element, Columns B onwards are the STR_PAR_* and ENV_PAR_* parameter names
+  const paramNames = headerRow.slice(1).map(h => h?.trim() || '');
+  
+  console.log('🔍 STRUCTURE sheet header:', headerRow);
+  console.log('🔍 STRUCTURE param names:', paramNames);
 
   const weeks = new Set<string>();
   const scenarios = new Set<string>();
@@ -406,26 +409,25 @@ export async function fetchStructureParams(): Promise<{
 
   for (let i = 1; i < csvRows.length; i++) {
     const row = csvRows[i];
-    if (!row || row.length < 3) continue;
+    if (!row || row.length < 2) continue;
 
-    const week = row[0]?.trim() || '';
-    const scenario = row[1]?.trim() || '';
-    if (!week || !scenario) continue;
-
-    weeks.add(week);
-    scenarios.add(scenario);
+    const element = row[0]?.trim() || '';
+    if (!element) continue;
 
     const raw: Record<string, number | string> = {};
     for (let j = 0; j < paramNames.length; j++) {
       const name = paramNames[j];
-      const val = row[2 + j]?.trim() || '';
+      const val = row[1 + j]?.trim() || '';
       if (name) raw[name] = val;
     }
 
+    const params = toParamValues(raw);
+    console.log(`🔍 Element ${i} (${element}):`, { raw, params });
+
     rows.push({
-      week,
-      scenario,
-      params: toParamValues(raw),
+      week: '',
+      scenario: '',
+      params,
     });
   }
 

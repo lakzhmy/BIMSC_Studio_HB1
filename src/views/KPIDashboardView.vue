@@ -16,15 +16,6 @@
         </button>
       </div>
 
-      <!-- Shared Week Selector -->
-      <div v-if="!isLoading && !loadError" class="flex items-center gap-3">
-        <label class="text-sm font-medium text-slate-700">Week</label>
-        <select v-model="structureWeek" class="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-sm">
-          <option value="">Select Week</option>
-          <option v-for="week in structureWeeks" :key="week" :value="week">{{ week }}</option>
-        </select>
-      </div>
-
       <!-- Row 1: Program | Structure | Data -->
       <div v-if="!isLoading && !loadError" class="grid lg:grid-cols-3 gap-6 items-stretch">
 
@@ -414,27 +405,32 @@ const structureScenarios = computed(() => {
 
 // Compute structure KPIs from raw params using the formula engine
 const structureFilteredKPIs = computed(() => {
-  const rows = structureParamsData.value.rows || []
+  let rows = structureParamsData.value.rows || []
+  if (!rows.length) return []
+
+  // Use all rows (no week/scenario filtering needed for live data)
   if (!rows.length) return []
 
   // Calculate average parameters across all structure data rows
   const avgParams = {}
-  if (rows.length > 0) {
-    const firstRowParams = rows[0]?.params || {}
-    const paramNames = Object.keys(firstRowParams)
-    
-    for (const param of paramNames) {
-      let sum = 0
-      let count = 0
-      for (const row of rows) {
-        if (row.params && row.params[param] !== undefined) {
-          sum += row.params[param]
-          count++
-        }
+  const firstRowParams = rows[0]?.params || {}
+  const paramNames = Object.keys(firstRowParams)
+  
+  for (const param of paramNames) {
+    let sum = 0
+    let count = 0
+    for (const row of rows) {
+      if (row.params && row.params[param] !== undefined) {
+        sum += row.params[param]
+        count++
       }
-      avgParams[param] = count > 0 ? sum / count : 0
     }
+    avgParams[param] = count > 0 ? sum / count : 0
   }
+  
+  console.log('📊 Structure avgParams:', avgParams)
+  console.log('📊 Structure params keys:', Object.keys(avgParams))
+  console.log('📊 Structure row count:', rows.length)
 
   const defs = KPI_BY_CATEGORY['structure']
   const descriptions = {
@@ -442,16 +438,43 @@ const structureFilteredKPIs = computed(() => {
     'solar-control-performance': 'Measures how effectively the building\'s structural configuration moderates solar exposure. By relating structural density to incident solar radiation, it reflects the capacity of the structure to contribute to passive shading and solar mitigation. Higher values indicate improved control of solar gains and more stable interior conditions.',
     'filtration-efficiency': 'Quantifies the building\'s ability to mitigate external pollution through filtration systems. By comparing filtration capacity with environmental pollution intensity, it reflects how effectively airborne contaminants are reduced. Higher values indicate stronger filtration performance and improved indoor air quality.',
   }
-  return defs.map(def => ({
-    id: def.id,
-    name: def.name,
-    value: Math.round(computeKPI(def, avgParams) * 100) / 100,
-    unit: def.unit,
-    target: def.target,
-    logic: def.logic,
-    status: 'good',
-    description: descriptions[def.id] || 'No description available.',
-  }))
+  return defs.map(def => {
+    // Use computeAggregate if available (for normalized formulas), otherwise use computeKPI
+    let value
+    if (def.computeAggregate) {
+      const paramRows = rows.map(r => r.params || {})
+      if (def.id === 'structural-efficiency-performance') {
+        console.log('🔍 Debug - Structural Efficiency:', {
+          rowCount: rows.length,
+          firstRow: rows[0],
+          firstRowParams: rows[0]?.params,
+          paramRows: paramRows,
+          deValues: paramRows.map(p => p.De)
+        })
+      }
+      value = Math.round(def.computeAggregate(paramRows) * 100) / 100
+      if (def.id === 'structural-efficiency-performance') {
+        console.log(`🔴 Structural Efficiency (aggregate):`, {
+          formula: def.formula,
+          rowCount: rows.length,
+          computed: def.computeAggregate(paramRows),
+          final: value
+        })
+      }
+    } else {
+      value = Math.round(computeKPI(def, avgParams) * 100) / 100
+    }
+    return {
+      id: def.id,
+      name: def.name,
+      value,
+      unit: def.unit,
+      target: def.target,
+      logic: def.logic,
+      status: 'good',
+      description: descriptions[def.id] || 'No description available.',
+    }
+  })
 })
 
 // Returns true when value is within ±10% of the target
