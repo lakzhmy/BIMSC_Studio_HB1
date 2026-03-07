@@ -90,7 +90,7 @@
           class="absolute top-14 left-1/2 -translate-x-1/2 z-10 pointer-events-none"
           style="font-family: 'Caveat', cursive; font-size: 0.95rem; font-style: italic; color: rgba(255,255,255,0.60); letter-spacing: 0.02em;"
         >
-          Drag label boxes or arrowheads to reposition · Double-click label to edit text · Press Delete or click ✕ to remove
+          Drag label or arrowhead · Resize from corner · Double-click to edit text · Delete or ✕ to remove
         </div>
 
         <!-- SVG canvas for editor mode -->
@@ -126,9 +126,21 @@
               @mousedown.stop
               @click.stop="handleDeleteEditor(ann)"
               title="Delete annotation"
-            >
-              ✕
-            </button>
+            >✕</button>
+
+            <!-- Resize handle (bottom-right corner) -->
+            <div
+              data-handle="resize"
+              class="absolute -bottom-1.5 -right-1.5 w-3.5 h-3.5 rounded-sm bg-white/80 border border-white hover:bg-white transition-colors"
+              style="cursor: nwse-resize;"
+              @mousedown.stop="onResizeDown($event, ann)"
+            />
+
+            <!-- Edge connection dots (midpoints) -->
+            <div class="absolute left-1/2 -top-1.5 w-2 h-2 rounded-full -translate-x-1/2" :class="getEdgeDotClass(ann, 'top')" />
+            <div class="absolute left-1/2 -bottom-1.5 w-2 h-2 rounded-full -translate-x-1/2" :class="getEdgeDotClass(ann, 'bottom')" />
+            <div class="absolute top-1/2 -left-1.5 w-2 h-2 rounded-full -translate-y-1/2" :class="getEdgeDotClass(ann, 'left')" />
+            <div class="absolute top-1/2 -right-1.5 w-2 h-2 rounded-full -translate-y-1/2" :class="getEdgeDotClass(ann, 'right')" />
           </div>
 
           <!-- Arrowhead drag handle (circle) -->
@@ -153,8 +165,8 @@
           <textarea
             ref="textEditRef"
             v-model="textEditValue"
-            class="w-[230px] min-h-[60px] p-3 rounded-xl border-2 border-white bg-black/80 text-white text-sm outline-none resize-y"
-            style="font-family: 'Caveat', cursive; font-size: 15px; line-height: 22px;"
+            class="min-h-[60px] p-3 rounded-xl border-2 border-white bg-black/80 text-white text-sm outline-none resize-y"
+            :style="{ width: (textEditAnn.boxWidth || 230) + 'px', fontFamily: `'Caveat', cursive`, fontSize: '15px', lineHeight: '22px' }"
             @keydown.escape="cancelTextEdit"
             @blur="commitTextEdit"
           />
@@ -203,12 +215,13 @@ const selectedId = ref(null)
 // Drag state
 const dragState = reactive({
   active: false,
-  type: null,     // 'label' | 'tip'
+  type: null,     // 'label' | 'tip' | 'resize'
   annDbId: null,
   startMouseX: 0,
   startMouseY: 0,
   startValX: 0,   // fraction
   startValY: 0,   // fraction
+  startWidth: 0,
 })
 
 // Text editing state
@@ -226,6 +239,7 @@ function enterEditorMode() {
     ...a,
     arrowPath: a.arrowPath.map((p) => [...p]),
     labelAnchor: { ...a.labelAnchor },
+    boxWidth: a.boxWidth || DEFAULT_BOX_W,
   }))
   selectedId.value = null
   textEditAnn.value = null
@@ -245,7 +259,9 @@ const LABEL_FONT_SIZE = 15
 const LABEL_LINE_HEIGHT = 22
 const LABEL_PAD_X = 12
 const LABEL_PAD_Y = 10
-const LABEL_BOX_W = 230
+const DEFAULT_BOX_W = 230
+const MIN_BOX_W = 120
+const MAX_BOX_W = 500
 
 function labelBoxHeight(ann) {
   const lines = ann.label.split('\n')
@@ -255,13 +271,14 @@ function labelBoxHeight(ann) {
 function labelBoxStyle(ann) {
   const W = vw.value
   const DH = document.documentElement.scrollHeight
-  const bx = Math.min(ann.labelAnchor.x * W, W - LABEL_BOX_W - 8)
+  const bw = ann.boxWidth || DEFAULT_BOX_W
+  const bx = Math.min(ann.labelAnchor.x * W, W - bw - 8)
   const by = ann.labelAnchor.y * DH - currentScrollY
   const h = labelBoxHeight(ann)
   return {
     left: `${bx}px`,
     top: `${by}px`,
-    width: `${LABEL_BOX_W}px`,
+    width: `${bw}px`,
     height: `${h}px`,
   }
 }
@@ -279,18 +296,79 @@ const textEditorStyle = computed(() => {
   if (!textEditAnn.value) return {}
   const W = vw.value
   const DH = document.documentElement.scrollHeight
-  const bx = Math.min(textEditAnn.value.labelAnchor.x * W, W - LABEL_BOX_W - 8)
+  const bw = textEditAnn.value.boxWidth || DEFAULT_BOX_W
+  const bx = Math.min(textEditAnn.value.labelAnchor.x * W, W - bw - 8)
   const by = textEditAnn.value.labelAnchor.y * DH - currentScrollY
   return { left: `${bx}px`, top: `${by}px` }
 })
 
+// ─── Edge-snap: compute which box edge the arrow connects to ─────────────────
+
+function getBoxEdge(ann, W, DH, scrollY) {
+  const bw = ann.boxWidth || DEFAULT_BOX_W
+  const bh = labelBoxHeight(ann)
+  const bx = Math.min(ann.labelAnchor.x * W, W - bw - 8)
+  const by = ann.labelAnchor.y * DH - (scrollY ?? 0)
+
+  const tip = ann.arrowPath[3]
+  const tx = tip[0] * W
+  const ty = tip[1] * DH - (scrollY ?? 0)
+
+  const cx = bx + bw / 2
+  const cy = by + bh / 2
+  const dx = tx - cx
+  const dy = ty - cy
+
+  if (Math.abs(dx) > Math.abs(dy)) {
+    if (dx > 0) return { edge: 'right',  x: bx + bw, y: cy, bx, by, bw, bh }
+    else        return { edge: 'left',   x: bx,      y: cy, bx, by, bw, bh }
+  } else {
+    if (dy > 0) return { edge: 'bottom', x: cx, y: by + bh, bx, by, bw, bh }
+    else        return { edge: 'top',    x: cx, y: by,      bx, by, bw, bh }
+  }
+}
+
+function getEdgeDotClass(ann, edgeName) {
+  const W = vw.value
+  const DH = document.documentElement.scrollHeight
+  const info = getBoxEdge(ann, W, DH, currentScrollY)
+  return info.edge === edgeName ? 'bg-white' : 'bg-white/30'
+}
+
+// ─── Arrow path: compute bezier from edge midpoint to tip ────────────────────
+
+function recalcArrowFromEdge(ann) {
+  const W = vw.value
+  const DH = document.documentElement.scrollHeight
+  const info = getBoxEdge(ann, W, DH, currentScrollY)
+  const tip = ann.arrowPath[3]
+
+  const tailXFrac = info.x / W
+  const tailYFrac = (info.y + currentScrollY) / DH
+
+  ann.arrowPath[0] = [tailXFrac, tailYFrac]
+
+  const tipXPx = tip[0] * W
+  const tipYPx = tip[1] * DH - currentScrollY
+
+  if (info.edge === 'top' || info.edge === 'bottom') {
+    const midY = (info.y + tipYPx) / 2
+    ann.arrowPath[1] = [tailXFrac, (midY + currentScrollY) / DH]
+    ann.arrowPath[2] = [tip[0], (midY + currentScrollY) / DH]
+  } else {
+    const midX = (info.x + tipXPx) / 2
+    ann.arrowPath[1] = [midX / W, tailYFrac]
+    ann.arrowPath[2] = [midX / W, tip[1]]
+  }
+}
+
+function clamp(v, min, max) { return Math.min(max, Math.max(min, v)) }
+
 // ─── Drag handlers ───────────────────────────────────────────────────────────
 
 function onLabelDown(e, ann) {
-  if (textEditAnn.value) return // don't drag while editing text
+  if (textEditAnn.value) return
   selectedId.value = ann.dbId
-  const W = vw.value
-  const DH = document.documentElement.scrollHeight
   dragState.active = true
   dragState.type = 'label'
   dragState.annDbId = ann.dbId
@@ -314,35 +392,43 @@ function onTipDown(e, ann) {
   e.preventDefault()
 }
 
+function onResizeDown(e, ann) {
+  if (textEditAnn.value) return
+  selectedId.value = ann.dbId
+  dragState.active = true
+  dragState.type = 'resize'
+  dragState.annDbId = ann.dbId
+  dragState.startMouseX = e.clientX
+  dragState.startMouseY = e.clientY
+  dragState.startWidth = ann.boxWidth || DEFAULT_BOX_W
+  e.preventDefault()
+}
+
 function onDrag(e) {
   if (!dragState.active) return
-  const W = vw.value
-  const DH = document.documentElement.scrollHeight
-  const dx = (e.clientX - dragState.startMouseX) / W
-  const dy = (e.clientY - dragState.startMouseY) / DH
 
   const ann = editorAnnotations.value.find((a) => a.dbId === dragState.annDbId)
   if (!ann) return
 
+  const W = vw.value
+  const DH = document.documentElement.scrollHeight
+
   if (dragState.type === 'label') {
-    const newX = clamp(dragState.startValX + dx, 0, 1)
-    const newY = clamp(dragState.startValY + dy, 0, 1)
-    // Move label anchor
-    ann.labelAnchor.x = newX
-    ann.labelAnchor.y = newY
-    // Also move the arrow tail (point 0) to stay near the label
-    ann.arrowPath[0][0] = newX
-    ann.arrowPath[0][1] = newY
-    // Recalculate control points
-    recalcControlPoints(ann)
+    const dx = (e.clientX - dragState.startMouseX) / W
+    const dy = (e.clientY - dragState.startMouseY) / DH
+    ann.labelAnchor.x = clamp(dragState.startValX + dx, 0, 1)
+    ann.labelAnchor.y = clamp(dragState.startValY + dy, 0, 1)
   } else if (dragState.type === 'tip') {
-    const newX = clamp(dragState.startValX + dx, 0, 1)
-    const newY = clamp(dragState.startValY + dy, 0, 1)
-    ann.arrowPath[3][0] = newX
-    ann.arrowPath[3][1] = newY
-    recalcControlPoints(ann)
+    const dx = (e.clientX - dragState.startMouseX) / W
+    const dy = (e.clientY - dragState.startMouseY) / DH
+    ann.arrowPath[3][0] = clamp(dragState.startValX + dx, 0, 1)
+    ann.arrowPath[3][1] = clamp(dragState.startValY + dy, 0, 1)
+  } else if (dragState.type === 'resize') {
+    const dxPx = e.clientX - dragState.startMouseX
+    ann.boxWidth = clamp(dragState.startWidth + dxPx, MIN_BOX_W, MAX_BOX_W)
   }
 
+  recalcArrowFromEdge(ann)
   drawEditorAnnotations()
 }
 
@@ -354,23 +440,10 @@ function onDragEnd() {
 }
 
 function onEditorBgDown(e) {
-  // Deselect if clicking background (not a handle)
   if (!e.target.closest('[data-handle]') && !e.target.closest('button') && !e.target.closest('textarea')) {
     selectedId.value = null
   }
 }
-
-function recalcControlPoints(ann) {
-  const [tail, , , tip] = ann.arrowPath
-  const midX = (tail[0] + tip[0]) / 2
-  const midY = (tail[1] + tip[1]) / 2
-  ann.arrowPath[1][0] = tail[0]
-  ann.arrowPath[1][1] = midY
-  ann.arrowPath[2][0] = midX
-  ann.arrowPath[2][1] = tip[1]
-}
-
-function clamp(v, min, max) { return Math.min(max, Math.max(min, v)) }
 
 // ─── Text editing ────────────────────────────────────────────────────────────
 
@@ -389,6 +462,7 @@ function commitTextEdit() {
   const ann = textEditAnn.value
   if (textEditValue.value.trim() && textEditValue.value !== ann.label) {
     ann.label = textEditValue.value
+    recalcArrowFromEdge(ann)
     drawEditorAnnotations()
     persistAnnotation(ann)
   }
@@ -412,9 +486,7 @@ async function handleDeleteEditor(ann) {
 // ─── Add new ─────────────────────────────────────────────────────────────────
 
 async function handleAddNew() {
-  const W = vw.value
   const DH = document.documentElement.scrollHeight
-  // Place new annotation in center of visible viewport
   const centerX = 0.5
   const centerY = (currentScrollY + vh.value / 2) / DH
   const tipX = centerX + 0.15
@@ -433,16 +505,16 @@ async function handleAddNew() {
       ann_id: annId,
       arrow_path: arrowPath,
       label: 'New annotation\nDouble-click to edit',
-      label_anchor: { x: centerX, y: centerY + 0.01 },
+      label_anchor: { x: centerX, y: centerY + 0.01, w: DEFAULT_BOX_W },
       color: '#c0392b',
       user_name: userStore.currentUser.name,
     })
-    // Refresh editor list from DB
     const source = dbAnnotations.value[route.name] ?? []
     editorAnnotations.value = source.map((a) => ({
       ...a,
       arrowPath: a.arrowPath.map((p) => [...p]),
       labelAnchor: { ...a.labelAnchor },
+      boxWidth: a.boxWidth || DEFAULT_BOX_W,
     }))
     drawEditorAnnotations()
   } catch (err) {
@@ -457,7 +529,7 @@ async function persistAnnotation(ann) {
     await updateAnnotation(ann.dbId, {
       arrow_path: ann.arrowPath,
       label: ann.label,
-      label_anchor: ann.labelAnchor,
+      label_anchor: { x: ann.labelAnchor.x, y: ann.labelAnchor.y, w: ann.boxWidth || DEFAULT_BOX_W },
       color: ann.color,
       user_name: userStore.currentUser.name,
     })
@@ -546,7 +618,44 @@ function drawAnnotations() {
   const rc = rough.svg(svgRef.value)
 
   currentAnnotations.forEach((ann) => {
-    drawSingleAnnotation(group, rc, ann, W, DH)
+    const bw = ann.boxWidth || DEFAULT_BOX_W
+    const bh = labelBoxHeight(ann)
+    const bx = Math.min(ann.labelAnchor.x * W, W - bw - 8)
+    const by = ann.labelAnchor.y * DH
+
+    const tip = ann.arrowPath[3]
+    const tipPx = [tip[0] * W, tip[1] * DH]
+
+    const cxBox = bx + bw / 2
+    const cyBox = by + bh / 2
+    const dx = tipPx[0] - cxBox
+    const dy = tipPx[1] - cyBox
+
+    let edgeX, edgeY, edgeDir
+    if (Math.abs(dx) > Math.abs(dy)) {
+      edgeDir = dx > 0 ? 'right' : 'left'
+      edgeX = dx > 0 ? bx + bw : bx
+      edgeY = cyBox
+    } else {
+      edgeDir = dy > 0 ? 'bottom' : 'top'
+      edgeX = cxBox
+      edgeY = dy > 0 ? by + bh : by
+    }
+
+    let cp1x, cp1y, cp2x, cp2y
+    if (edgeDir === 'top' || edgeDir === 'bottom') {
+      const midY = (edgeY + tipPx[1]) / 2
+      cp1x = edgeX; cp1y = midY; cp2x = tipPx[0]; cp2y = midY
+    } else {
+      const midX = (edgeX + tipPx[0]) / 2
+      cp1x = midX; cp1y = edgeY; cp2x = midX; cp2y = tipPx[1]
+    }
+
+    const opts = { stroke: ann.color, strokeWidth: 2.2, roughness: 1.8, bowing: 1.5 }
+    const pathStr = `M ${edgeX} ${edgeY} C ${cp1x} ${cp1y} ${cp2x} ${cp2y} ${tipPx[0]} ${tipPx[1]}`
+    group.appendChild(rc.path(pathStr, opts))
+    drawArrowhead(group, rc, tipPx[0], tipPx[1], cp2x, cp2y, opts)
+    drawLabel(group, rc, ann.label, bx, by, bw, bh, ann.color)
   })
 
   group.setAttribute('transform', `translate(0, ${-currentScrollY})`)
@@ -568,82 +677,52 @@ function drawEditorAnnotations() {
   const rc = rough.svg(editorSvgRef.value)
 
   editorAnnotations.value.forEach((ann) => {
-    // Draw in viewport-space (apply scroll offset manually)
-    const [[x1p, y1p], [cx1p, cy1p], [cx2p, cy2p], [x2p, y2p]] = ann.arrowPath
-    const x1 = x1p * W,  y1 = y1p * DH - currentScrollY
-    const cx1 = cx1p * W, cy1 = cy1p * DH - currentScrollY
-    const cx2 = cx2p * W, cy2 = cy2p * DH - currentScrollY
-    const x2 = x2p * W,  y2 = y2p * DH - currentScrollY
+    const info = getBoxEdge(ann, W, DH, currentScrollY)
+    const tip = ann.arrowPath[3]
+    const tipX = tip[0] * W
+    const tipY = tip[1] * DH - currentScrollY
 
-    const opts = {
-      stroke: ann.color,
-      strokeWidth: 2.2,
-      roughness: 1.8,
-      bowing: 1.5,
+    let cp1x, cp1y, cp2x, cp2y
+    if (info.edge === 'top' || info.edge === 'bottom') {
+      const midY = (info.y + tipY) / 2
+      cp1x = info.x; cp1y = midY; cp2x = tipX; cp2y = midY
+    } else {
+      const midX = (info.x + tipX) / 2
+      cp1x = midX; cp1y = info.y; cp2x = midX; cp2y = tipY
     }
 
-    const pathStr = `M ${x1} ${y1} C ${cx1} ${cy1} ${cx2} ${cy2} ${x2} ${y2}`
+    const opts = { stroke: ann.color, strokeWidth: 2.2, roughness: 1.8, bowing: 1.5 }
+    const pathStr = `M ${info.x} ${info.y} C ${cp1x} ${cp1y} ${cp2x} ${cp2y} ${tipX} ${tipY}`
     group.appendChild(rc.path(pathStr, opts))
-    drawArrowhead(group, rc, x2, y2, cx2, cy2, opts)
+    drawArrowhead(group, rc, tipX, tipY, cp2x, cp2y, opts)
 
-    // Draw label box + text in viewport-space
-    const labelLines = ann.label.split('\n')
-    const boxH = labelLines.length * LABEL_LINE_HEIGHT + LABEL_PAD_Y * 2
-    const bx = Math.min(ann.labelAnchor.x * W, W - LABEL_BOX_W - 8)
-    const by = ann.labelAnchor.y * DH - currentScrollY
-
-    group.appendChild(rc.rectangle(bx, by, LABEL_BOX_W, boxH, {
-      stroke: ann.color,
-      strokeWidth: 1.8,
-      roughness: 2.0,
-      bowing: 0.5,
-      fill: 'rgba(255,255,255,0.88)',
-      fillStyle: 'solid',
+    group.appendChild(rc.rectangle(info.bx, info.by, info.bw, info.bh, {
+      stroke: ann.color, strokeWidth: 1.8, roughness: 2.0, bowing: 0.5,
+      fill: 'rgba(255,255,255,0.88)', fillStyle: 'solid',
     }))
 
+    const lines = ann.label.split('\n')
     const textEl = document.createElementNS('http://www.w3.org/2000/svg', 'text')
-    textEl.setAttribute('x', bx + LABEL_PAD_X)
-    textEl.setAttribute('y', by + LABEL_PAD_Y + LABEL_FONT_SIZE)
+    textEl.setAttribute('x', info.bx + LABEL_PAD_X)
+    textEl.setAttribute('y', info.by + LABEL_PAD_Y + LABEL_FONT_SIZE)
     textEl.setAttribute('font-family', "'Caveat', cursive")
     textEl.setAttribute('font-size', LABEL_FONT_SIZE)
     textEl.setAttribute('font-style', 'italic')
     textEl.setAttribute('font-weight', '600')
     textEl.setAttribute('fill', ann.color)
 
-    labelLines.forEach((line, i) => {
+    lines.forEach((line, i) => {
       const tspan = document.createElementNS('http://www.w3.org/2000/svg', 'tspan')
-      tspan.setAttribute('x', bx + LABEL_PAD_X)
+      tspan.setAttribute('x', info.bx + LABEL_PAD_X)
       tspan.setAttribute('dy', i === 0 ? 0 : LABEL_LINE_HEIGHT)
       tspan.textContent = line
       textEl.appendChild(tspan)
     })
-
     group.appendChild(textEl)
   })
 }
 
 // ─── Shared SVG helpers ──────────────────────────────────────────────────────
-
-function drawSingleAnnotation(group, rc, ann, W, DH) {
-  const opts = {
-    stroke: ann.color,
-    strokeWidth: 2.2,
-    roughness: 1.8,
-    bowing: 1.5,
-  }
-
-  const [[x1p, y1p], [cx1p, cy1p], [cx2p, cy2p], [x2p, y2p]] = ann.arrowPath
-  const x1 = x1p * W,  y1 = y1p * DH
-  const cx1 = cx1p * W, cy1 = cy1p * DH
-  const cx2 = cx2p * W, cy2 = cy2p * DH
-  const x2 = x2p * W,  y2 = y2p * DH
-
-  const pathStr = `M ${x1} ${y1} C ${cx1} ${cy1} ${cx2} ${cy2} ${x2} ${y2}`
-  group.appendChild(rc.path(pathStr, opts))
-
-  drawArrowhead(group, rc, x2, y2, cx2, cy2, opts)
-  drawLabel(group, rc, ann.label, ann.labelAnchor, W, DH, ann.color)
-}
 
 function drawArrowhead(group, rc, x2, y2, cx2, cy2, opts) {
   const dx = x2 - cx2
@@ -651,38 +730,18 @@ function drawArrowhead(group, rc, x2, y2, cx2, cy2, opts) {
   const len = Math.sqrt(dx * dx + dy * dy) || 1
   const ux = dx / len, uy = dy / len
   const px = -uy, py = ux
-  const headLen = 16
-  const spread = 6
 
-  group.appendChild(rc.line(
-    x2, y2,
-    x2 - ux * headLen + px * spread,
-    y2 - uy * headLen + py * spread,
-    { ...opts, roughness: 1.2 }
-  ))
-  group.appendChild(rc.line(
-    x2, y2,
-    x2 - ux * headLen - px * spread,
-    y2 - uy * headLen - py * spread,
-    { ...opts, roughness: 1.2 }
-  ))
+  group.appendChild(rc.line(x2, y2, x2 - ux * 16 + px * 6, y2 - uy * 16 + py * 6, { ...opts, roughness: 1.2 }))
+  group.appendChild(rc.line(x2, y2, x2 - ux * 16 - px * 6, y2 - uy * 16 - py * 6, { ...opts, roughness: 1.2 }))
 }
 
-function drawLabel(group, rc, labelText, anchor, W, DH, color) {
-  const lines = labelText.split('\n')
-  const boxH = lines.length * LABEL_LINE_HEIGHT + LABEL_PAD_Y * 2
-  const bx = Math.min(anchor.x * W, W - LABEL_BOX_W - 8)
-  const by = anchor.y * DH
-
-  group.appendChild(rc.rectangle(bx, by, LABEL_BOX_W, boxH, {
-    stroke: color,
-    strokeWidth: 1.8,
-    roughness: 2.0,
-    bowing: 0.5,
-    fill: 'rgba(255,255,255,0.88)',
-    fillStyle: 'solid',
+function drawLabel(group, rc, labelText, bx, by, bw, bh, color) {
+  group.appendChild(rc.rectangle(bx, by, bw, bh, {
+    stroke: color, strokeWidth: 1.8, roughness: 2.0, bowing: 0.5,
+    fill: 'rgba(255,255,255,0.88)', fillStyle: 'solid',
   }))
 
+  const lines = labelText.split('\n')
   const textEl = document.createElementNS('http://www.w3.org/2000/svg', 'text')
   textEl.setAttribute('x', bx + LABEL_PAD_X)
   textEl.setAttribute('y', by + LABEL_PAD_Y + LABEL_FONT_SIZE)
@@ -699,7 +758,6 @@ function drawLabel(group, rc, labelText, anchor, W, DH, color) {
     tspan.textContent = line
     textEl.appendChild(tspan)
   })
-
   group.appendChild(textEl)
 }
 

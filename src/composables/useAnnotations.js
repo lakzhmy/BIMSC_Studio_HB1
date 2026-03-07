@@ -31,6 +31,7 @@ function groupByRoute(rows) {
       arrowPath,
       label: row.label,
       labelAnchor,
+      boxWidth: labelAnchor.w || 230,
       color: row.color,
     })
   })
