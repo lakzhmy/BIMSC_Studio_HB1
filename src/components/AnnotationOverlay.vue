@@ -1,11 +1,11 @@
 <template>
   <!-- Hint button: hidden on login/auth/profile pages -->
   <div v-if="showHintButton" class="fixed bottom-4 right-4 z-[9998] flex items-center gap-2">
-    <!-- Admin: Manage Annotations button -->
+    <!-- Admin: Manage Annotations button (black) -->
     <button
       v-if="canEdit"
-      class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-rose-500/90 backdrop-blur-sm border border-rose-400 text-white hover:bg-rose-600 shadow-sm transition-all select-none"
-      @click="openEditor"
+      class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-black/85 backdrop-blur-sm border border-slate-600 text-white hover:bg-black shadow-sm transition-all select-none"
+      @click="enterEditorMode"
       title="Manage annotations for this page"
     >
       <Settings :size="13" />
@@ -22,11 +22,11 @@
     </button>
   </div>
 
-  <!-- Full-screen overlay teleported to body root -->
+  <!-- Read-only hint overlay (Space / click) -->
   <Teleport to="body">
     <Transition name="annotation-fade">
       <div
-        v-if="isVisible"
+        v-if="isVisible && !editorMode"
         class="fixed inset-0 z-[9999] select-none cursor-pointer"
         style="background: rgba(0, 0, 0, 0.07);"
         @click="hideAnnotations"
@@ -52,123 +52,115 @@
       </div>
     </Transition>
 
-    <!-- Annotation Editor Modal (admin only) -->
+    <!-- ─── Editor mode overlay (admin only) ─── -->
     <Transition name="annotation-fade">
       <div
-        v-if="editorOpen"
-        class="fixed inset-0 z-[10000] flex items-center justify-center bg-black/40 backdrop-blur-sm"
-        @click.self="closeEditor"
+        v-if="editorMode"
+        class="fixed inset-0 z-[10000] select-none"
+        style="background: rgba(0, 0, 0, 0.12);"
+        @mousedown="onEditorBgDown"
+        @mousemove="onDrag"
+        @mouseup="onDragEnd"
       >
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] overflow-hidden flex flex-col" @click.stop>
-          <!-- Header -->
-          <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
-            <div>
-              <h2 class="text-lg font-semibold text-slate-800">Manage Annotations</h2>
-              <p class="text-xs text-slate-400 mt-0.5">Page: <span class="font-medium text-slate-600">{{ route.name }}</span></p>
-            </div>
-            <button @click="closeEditor" class="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors">
-              <X :size="18" />
+        <!-- Top bar -->
+        <div class="absolute top-0 inset-x-0 z-10 flex items-center justify-between px-5 py-3 bg-black/70 backdrop-blur-sm">
+          <div class="flex items-center gap-3">
+            <span class="text-white text-sm font-semibold tracking-wide">Editing Annotations</span>
+            <span class="text-white/50 text-xs">{{ route.name }}</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <button
+              @click="handleAddNew"
+              class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-white/15 text-white hover:bg-white/25 border border-white/20 transition-colors"
+            >
+              <Plus :size="13" />
+              Add Annotation
+            </button>
+            <button
+              @click="leaveEditorMode"
+              class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-white text-black hover:bg-slate-100 transition-colors"
+            >
+              Done
+            </button>
+          </div>
+        </div>
+
+        <!-- Instructions -->
+        <div
+          class="absolute top-14 left-1/2 -translate-x-1/2 z-10 pointer-events-none"
+          style="font-family: 'Caveat', cursive; font-size: 0.95rem; font-style: italic; color: rgba(255,255,255,0.60); letter-spacing: 0.02em;"
+        >
+          Drag label boxes or arrowheads to reposition · Double-click label to edit text · Press Delete or click ✕ to remove
+        </div>
+
+        <!-- SVG canvas for editor mode -->
+        <svg
+          ref="editorSvgRef"
+          class="absolute inset-0"
+          :width="vw"
+          :height="vh"
+          :viewBox="`0 0 ${vw} ${vh}`"
+          xmlns="http://www.w3.org/2000/svg"
+          style="width: 100%; height: 100%;"
+        >
+          <g ref="editorGroupRef" />
+        </svg>
+
+        <!-- HTML overlays for interactive handles (positioned over SVG) -->
+        <template v-for="ann in editorAnnotations" :key="ann.dbId">
+          <!-- Label box drag handle -->
+          <div
+            :data-ann-id="ann.dbId"
+            data-handle="label"
+            class="absolute rounded-xl border-2 transition-shadow"
+            :class="selectedId === ann.dbId ? 'border-white shadow-lg shadow-white/20' : 'border-transparent hover:border-white/50'"
+            :style="labelBoxStyle(ann)"
+            @mousedown.stop="onLabelDown($event, ann)"
+            @dblclick.stop="onLabelDblClick(ann)"
+            style="cursor: grab;"
+          >
+            <!-- Delete button -->
+            <button
+              class="absolute -top-2.5 -right-2.5 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center hover:bg-red-600 transition-colors shadow-sm"
+              style="font-size: 10px; line-height: 1; cursor: pointer;"
+              @mousedown.stop
+              @click.stop="handleDeleteEditor(ann)"
+              title="Delete annotation"
+            >
+              ✕
             </button>
           </div>
 
-          <!-- Annotation list -->
-          <div class="flex-1 overflow-y-auto px-6 py-4 space-y-3">
-            <div v-if="!routeAnnotations.length" class="text-center text-slate-400 py-8 text-sm">
-              No annotations on this page yet.
-            </div>
+          <!-- Arrowhead drag handle (circle) -->
+          <div
+            :data-ann-id="ann.dbId"
+            data-handle="tip"
+            class="absolute w-5 h-5 rounded-full border-2 transition-shadow"
+            :class="selectedId === ann.dbId ? 'bg-white border-white shadow-lg shadow-white/30' : 'bg-white/60 border-white/40 hover:bg-white hover:border-white'"
+            :style="tipHandleStyle(ann)"
+            @mousedown.stop="onTipDown($event, ann)"
+            style="cursor: grab;"
+          />
+        </template>
 
-            <div
-              v-for="(ann, idx) in routeAnnotations"
-              :key="ann.dbId || idx"
-              class="border border-slate-200 rounded-xl p-4 hover:border-slate-300 transition-colors"
-            >
-              <div class="flex items-start justify-between gap-3">
-                <div class="flex-1 min-w-0">
-                  <div class="flex items-center gap-2 mb-2">
-                    <span class="inline-block w-3 h-3 rounded-full" :style="{ background: ann.color }"></span>
-                    <span class="text-xs font-mono text-slate-400">{{ ann.id }}</span>
-                  </div>
-                  <div v-if="editingId !== ann.dbId">
-                    <p class="text-sm text-slate-700 whitespace-pre-line leading-relaxed">{{ ann.label }}</p>
-                  </div>
-                  <div v-else class="space-y-2">
-                    <textarea
-                      v-model="editForm.label"
-                      rows="3"
-                      class="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-rose-300 focus:border-rose-400 outline-none"
-                      placeholder="Annotation text (use \n for new lines)"
-                    />
-                    <div class="grid grid-cols-2 gap-2">
-                      <input v-model="editForm.ann_id" class="text-xs border border-slate-300 rounded-lg px-2 py-1.5 focus:ring-2 focus:ring-rose-300 outline-none" placeholder="ID (e.g. kpi-health)" />
-                      <input v-model="editForm.color" class="text-xs border border-slate-300 rounded-lg px-2 py-1.5 focus:ring-2 focus:ring-rose-300 outline-none" placeholder="Color (e.g. #c0392b)" />
-                    </div>
-                    <p class="text-[10px] text-slate-400">Arrow path & anchor use current values. Advanced: edit via JSON.</p>
-                  </div>
-                </div>
-                <div class="flex items-center gap-1 shrink-0">
-                  <template v-if="editingId !== ann.dbId">
-                    <button @click="startEdit(ann)" class="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-blue-500 transition-colors" title="Edit">
-                      <Pencil :size="14" />
-                    </button>
-                    <button @click="handleDelete(ann)" class="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors" title="Delete">
-                      <Trash2 :size="14" />
-                    </button>
-                  </template>
-                  <template v-else>
-                    <button @click="handleSaveEdit(ann)" class="p-1.5 rounded-lg hover:bg-green-50 text-green-600 transition-colors" title="Save">
-                      <Check :size="14" />
-                    </button>
-                    <button @click="editingId = null" class="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 transition-colors" title="Cancel">
-                      <X :size="14" />
-                    </button>
-                  </template>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Add new annotation -->
-          <div class="border-t border-slate-200 px-6 py-4">
-            <div v-if="!showAddForm" class="flex justify-center">
-              <button @click="showAddForm = true" class="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium text-rose-600 hover:bg-rose-50 border border-rose-200 transition-colors">
-                <Plus :size="14" />
-                Add Annotation
-              </button>
-            </div>
-            <div v-else class="space-y-3">
-              <div class="grid grid-cols-2 gap-2">
-                <input v-model="newForm.ann_id" class="text-sm border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-rose-300 outline-none" placeholder="ID (e.g. my-hint)" />
-                <input v-model="newForm.color" class="text-sm border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-rose-300 outline-none" placeholder="Color (default: #c0392b)" />
-              </div>
-              <textarea
-                v-model="newForm.label"
-                rows="3"
-                class="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-rose-300 focus:border-rose-400 outline-none"
-                placeholder="Annotation text (use \n for new lines)"
-              />
-              <div class="grid grid-cols-2 gap-2">
-                <div>
-                  <label class="text-[10px] text-slate-400 mb-1 block">Label position (x, y fractions 0-1)</label>
-                  <div class="flex gap-1">
-                    <input v-model.number="newForm.labelX" type="number" step="0.01" min="0" max="1" class="w-full text-xs border border-slate-300 rounded-lg px-2 py-1.5 outline-none focus:ring-2 focus:ring-rose-300" placeholder="x (0.5)" />
-                    <input v-model.number="newForm.labelY" type="number" step="0.01" min="0" max="1" class="w-full text-xs border border-slate-300 rounded-lg px-2 py-1.5 outline-none focus:ring-2 focus:ring-rose-300" placeholder="y (0.5)" />
-                  </div>
-                </div>
-                <div>
-                  <label class="text-[10px] text-slate-400 mb-1 block">Arrow tip (x, y fractions 0-1)</label>
-                  <div class="flex gap-1">
-                    <input v-model.number="newForm.tipX" type="number" step="0.01" min="0" max="1" class="w-full text-xs border border-slate-300 rounded-lg px-2 py-1.5 outline-none focus:ring-2 focus:ring-rose-300" placeholder="x (0.5)" />
-                    <input v-model.number="newForm.tipY" type="number" step="0.01" min="0" max="1" class="w-full text-xs border border-slate-300 rounded-lg px-2 py-1.5 outline-none focus:ring-2 focus:ring-rose-300" placeholder="y (0.5)" />
-                  </div>
-                </div>
-              </div>
-              <div class="flex items-center gap-2 justify-end">
-                <button @click="showAddForm = false" class="px-3 py-1.5 text-sm text-slate-500 hover:text-slate-700 transition-colors">Cancel</button>
-                <button @click="handleAdd" class="px-4 py-1.5 text-sm font-medium text-white bg-rose-500 hover:bg-rose-600 rounded-lg transition-colors" :disabled="saving">
-                  {{ saving ? 'Saving...' : 'Save' }}
-                </button>
-              </div>
-            </div>
+        <!-- Inline text editor -->
+        <div
+          v-if="textEditAnn"
+          class="absolute z-20"
+          :style="textEditorStyle"
+          @mousedown.stop
+        >
+          <textarea
+            ref="textEditRef"
+            v-model="textEditValue"
+            class="w-[230px] min-h-[60px] p-3 rounded-xl border-2 border-white bg-black/80 text-white text-sm outline-none resize-y"
+            style="font-family: 'Caveat', cursive; font-size: 15px; line-height: 22px;"
+            @keydown.escape="cancelTextEdit"
+            @blur="commitTextEdit"
+          />
+          <div class="flex justify-end gap-1 mt-1">
+            <button @mousedown.prevent @click="cancelTextEdit" class="px-2 py-0.5 text-xs text-white/60 hover:text-white transition-colors">Cancel</button>
+            <button @mousedown.prevent @click="commitTextEdit" class="px-2 py-0.5 text-xs text-white bg-white/20 hover:bg-white/30 rounded transition-colors">Save</button>
           </div>
         </div>
       </div>
@@ -179,7 +171,7 @@
 <script setup>
 import { ref, computed, watch, nextTick, onMounted, onUnmounted, reactive } from 'vue'
 import { useRoute } from 'vue-router'
-import { PenLine, Settings, X, Pencil, Trash2, Check, Plus } from 'lucide-vue-next'
+import { PenLine, Settings, Plus } from 'lucide-vue-next'
 import rough from 'roughjs'
 import { useAnnotations } from '@/composables/useAnnotations'
 import { useUserStore } from '@/stores/userStore'
@@ -187,117 +179,332 @@ import { useUserStore } from '@/stores/userStore'
 const {
   isVisible, dbAnnotations, isAdmin,
   toggleAnnotations, hideAnnotations,
-  saveAnnotation, updateAnnotation, deleteAnnotation,
+  saveAnnotation, updateAnnotation, deleteAnnotation, loadAnnotations,
 } = useAnnotations()
 
 const route = useRoute()
 const userStore = useUserStore()
+
+// ─── Read-only SVG refs ──────────────────────────────────────────────────────
 const svgRef = ref(null)
 const groupRef = ref(null)
 
-// Admin state
+// ─── Editor mode refs ────────────────────────────────────────────────────────
+const editorSvgRef = ref(null)
+const editorGroupRef = ref(null)
+
 const canEdit = computed(() => isAdmin(userStore.currentUser?.name))
-const editorOpen = ref(false)
-const editingId = ref(null)
-const showAddForm = ref(false)
-const saving = ref(false)
+const editorMode = ref(false)
 
-const editForm = reactive({ ann_id: '', label: '', color: '' })
-const newForm = reactive({ ann_id: '', label: '', color: '#c0392b', labelX: 0.1, labelY: 0.5, tipX: 0.4, tipY: 0.35 })
+// Local mutable copy of annotations for the current route during editing
+const editorAnnotations = ref([])
+const selectedId = ref(null)
 
-function openEditor() { editorOpen.value = true }
-function closeEditor() { editorOpen.value = false; editingId.value = null; showAddForm.value = false }
+// Drag state
+const dragState = reactive({
+  active: false,
+  type: null,     // 'label' | 'tip'
+  annDbId: null,
+  startMouseX: 0,
+  startMouseY: 0,
+  startValX: 0,   // fraction
+  startValY: 0,   // fraction
+})
 
-const routeAnnotations = computed(() => dbAnnotations.value[route.name] ?? [])
+// Text editing state
+const textEditAnn = ref(null)
+const textEditValue = ref('')
+const textEditRef = ref(null)
 
-function startEdit(ann) {
-  editingId.value = ann.dbId
-  editForm.ann_id = ann.id
-  editForm.label = ann.label
-  editForm.color = ann.color
+// ─── Editor mode lifecycle ───────────────────────────────────────────────────
+
+function enterEditorMode() {
+  hideAnnotations()
+  // Deep-clone current route's annotations into mutable array
+  const source = dbAnnotations.value[route.name] ?? []
+  editorAnnotations.value = source.map((a) => ({
+    ...a,
+    arrowPath: a.arrowPath.map((p) => [...p]),
+    labelAnchor: { ...a.labelAnchor },
+  }))
+  selectedId.value = null
+  textEditAnn.value = null
+  editorMode.value = true
+  nextTick(() => drawEditorAnnotations())
 }
 
-async function handleSaveEdit(ann) {
-  saving.value = true
-  try {
-    await updateAnnotation(ann.dbId, {
-      label: editForm.label,
-      color: editForm.color,
-      user_name: userStore.currentUser.name,
-    })
-    editingId.value = null
-  } catch (err) {
-    alert('Failed to save: ' + err.message)
-  } finally {
-    saving.value = false
+function leaveEditorMode() {
+  editorMode.value = false
+  textEditAnn.value = null
+  selectedId.value = null
+}
+
+// ─── Computed label box dimensions (reused for hit area + style) ─────────────
+
+const LABEL_FONT_SIZE = 15
+const LABEL_LINE_HEIGHT = 22
+const LABEL_PAD_X = 12
+const LABEL_PAD_Y = 10
+const LABEL_BOX_W = 230
+
+function labelBoxHeight(ann) {
+  const lines = ann.label.split('\n')
+  return lines.length * LABEL_LINE_HEIGHT + LABEL_PAD_Y * 2
+}
+
+function labelBoxStyle(ann) {
+  const W = vw.value
+  const DH = document.documentElement.scrollHeight
+  const bx = Math.min(ann.labelAnchor.x * W, W - LABEL_BOX_W - 8)
+  const by = ann.labelAnchor.y * DH - currentScrollY
+  const h = labelBoxHeight(ann)
+  return {
+    left: `${bx}px`,
+    top: `${by}px`,
+    width: `${LABEL_BOX_W}px`,
+    height: `${h}px`,
   }
 }
 
-async function handleDelete(ann) {
+function tipHandleStyle(ann) {
+  const W = vw.value
+  const DH = document.documentElement.scrollHeight
+  const tip = ann.arrowPath[3]
+  const tx = tip[0] * W - 10
+  const ty = tip[1] * DH - currentScrollY - 10
+  return { left: `${tx}px`, top: `${ty}px` }
+}
+
+const textEditorStyle = computed(() => {
+  if (!textEditAnn.value) return {}
+  const W = vw.value
+  const DH = document.documentElement.scrollHeight
+  const bx = Math.min(textEditAnn.value.labelAnchor.x * W, W - LABEL_BOX_W - 8)
+  const by = textEditAnn.value.labelAnchor.y * DH - currentScrollY
+  return { left: `${bx}px`, top: `${by}px` }
+})
+
+// ─── Drag handlers ───────────────────────────────────────────────────────────
+
+function onLabelDown(e, ann) {
+  if (textEditAnn.value) return // don't drag while editing text
+  selectedId.value = ann.dbId
+  const W = vw.value
+  const DH = document.documentElement.scrollHeight
+  dragState.active = true
+  dragState.type = 'label'
+  dragState.annDbId = ann.dbId
+  dragState.startMouseX = e.clientX
+  dragState.startMouseY = e.clientY
+  dragState.startValX = ann.labelAnchor.x
+  dragState.startValY = ann.labelAnchor.y
+  e.preventDefault()
+}
+
+function onTipDown(e, ann) {
+  if (textEditAnn.value) return
+  selectedId.value = ann.dbId
+  dragState.active = true
+  dragState.type = 'tip'
+  dragState.annDbId = ann.dbId
+  dragState.startMouseX = e.clientX
+  dragState.startMouseY = e.clientY
+  dragState.startValX = ann.arrowPath[3][0]
+  dragState.startValY = ann.arrowPath[3][1]
+  e.preventDefault()
+}
+
+function onDrag(e) {
+  if (!dragState.active) return
+  const W = vw.value
+  const DH = document.documentElement.scrollHeight
+  const dx = (e.clientX - dragState.startMouseX) / W
+  const dy = (e.clientY - dragState.startMouseY) / DH
+
+  const ann = editorAnnotations.value.find((a) => a.dbId === dragState.annDbId)
+  if (!ann) return
+
+  if (dragState.type === 'label') {
+    const newX = clamp(dragState.startValX + dx, 0, 1)
+    const newY = clamp(dragState.startValY + dy, 0, 1)
+    // Move label anchor
+    ann.labelAnchor.x = newX
+    ann.labelAnchor.y = newY
+    // Also move the arrow tail (point 0) to stay near the label
+    ann.arrowPath[0][0] = newX
+    ann.arrowPath[0][1] = newY
+    // Recalculate control points
+    recalcControlPoints(ann)
+  } else if (dragState.type === 'tip') {
+    const newX = clamp(dragState.startValX + dx, 0, 1)
+    const newY = clamp(dragState.startValY + dy, 0, 1)
+    ann.arrowPath[3][0] = newX
+    ann.arrowPath[3][1] = newY
+    recalcControlPoints(ann)
+  }
+
+  drawEditorAnnotations()
+}
+
+function onDragEnd() {
+  if (!dragState.active) return
+  const ann = editorAnnotations.value.find((a) => a.dbId === dragState.annDbId)
+  dragState.active = false
+  if (ann) persistAnnotation(ann)
+}
+
+function onEditorBgDown(e) {
+  // Deselect if clicking background (not a handle)
+  if (!e.target.closest('[data-handle]') && !e.target.closest('button') && !e.target.closest('textarea')) {
+    selectedId.value = null
+  }
+}
+
+function recalcControlPoints(ann) {
+  const [tail, , , tip] = ann.arrowPath
+  const midX = (tail[0] + tip[0]) / 2
+  const midY = (tail[1] + tip[1]) / 2
+  ann.arrowPath[1][0] = tail[0]
+  ann.arrowPath[1][1] = midY
+  ann.arrowPath[2][0] = midX
+  ann.arrowPath[2][1] = tip[1]
+}
+
+function clamp(v, min, max) { return Math.min(max, Math.max(min, v)) }
+
+// ─── Text editing ────────────────────────────────────────────────────────────
+
+function onLabelDblClick(ann) {
+  textEditAnn.value = ann
+  textEditValue.value = ann.label
+  nextTick(() => textEditRef.value?.focus())
+}
+
+function cancelTextEdit() {
+  textEditAnn.value = null
+}
+
+function commitTextEdit() {
+  if (!textEditAnn.value) return
+  const ann = textEditAnn.value
+  if (textEditValue.value.trim() && textEditValue.value !== ann.label) {
+    ann.label = textEditValue.value
+    drawEditorAnnotations()
+    persistAnnotation(ann)
+  }
+  textEditAnn.value = null
+}
+
+// ─── Delete ──────────────────────────────────────────────────────────────────
+
+async function handleDeleteEditor(ann) {
   if (!confirm(`Delete annotation "${ann.id}"?`)) return
-  saving.value = true
   try {
     await deleteAnnotation(ann.dbId, userStore.currentUser.name)
+    editorAnnotations.value = editorAnnotations.value.filter((a) => a.dbId !== ann.dbId)
+    if (selectedId.value === ann.dbId) selectedId.value = null
+    drawEditorAnnotations()
   } catch (err) {
-    alert('Failed to delete: ' + err.message)
-  } finally {
-    saving.value = false
+    alert('Delete failed: ' + err.message)
   }
 }
 
-function buildArrowPath(labelX, labelY, tipX, tipY) {
-  const midX = (labelX + tipX) / 2
-  const midY = (labelY + tipY) / 2
-  return [
-    [labelX, labelY],
-    [labelX, midY],
-    [midX, tipY],
-    [tipX, tipY],
-  ]
-}
+// ─── Add new ─────────────────────────────────────────────────────────────────
 
-async function handleAdd() {
-  if (!newForm.ann_id || !newForm.label) {
-    alert('ID and label text are required')
-    return
-  }
-  saving.value = true
+async function handleAddNew() {
+  const W = vw.value
+  const DH = document.documentElement.scrollHeight
+  // Place new annotation in center of visible viewport
+  const centerX = 0.5
+  const centerY = (currentScrollY + vh.value / 2) / DH
+  const tipX = centerX + 0.15
+  const tipY = centerY - 0.08
+  const annId = `hint-${Date.now()}`
+
   try {
-    const arrowPath = buildArrowPath(newForm.labelX, newForm.labelY, newForm.tipX, newForm.tipY)
+    const arrowPath = [
+      [centerX, centerY],
+      [centerX, (centerY + tipY) / 2],
+      [(centerX + tipX) / 2, tipY],
+      [tipX, tipY],
+    ]
     await saveAnnotation({
       route: route.name,
-      ann_id: newForm.ann_id,
+      ann_id: annId,
       arrow_path: arrowPath,
-      label: newForm.label,
-      label_anchor: { x: newForm.labelX, y: newForm.labelY + 0.01 },
-      color: newForm.color || '#c0392b',
+      label: 'New annotation\nDouble-click to edit',
+      label_anchor: { x: centerX, y: centerY + 0.01 },
+      color: '#c0392b',
       user_name: userStore.currentUser.name,
     })
-    // Reset form
-    Object.assign(newForm, { ann_id: '', label: '', color: '#c0392b', labelX: 0.1, labelY: 0.5, tipX: 0.4, tipY: 0.35 })
-    showAddForm.value = false
+    // Refresh editor list from DB
+    const source = dbAnnotations.value[route.name] ?? []
+    editorAnnotations.value = source.map((a) => ({
+      ...a,
+      arrowPath: a.arrowPath.map((p) => [...p]),
+      labelAnchor: { ...a.labelAnchor },
+    }))
+    drawEditorAnnotations()
   } catch (err) {
-    alert('Failed to add: ' + err.message)
-  } finally {
-    saving.value = false
+    alert('Add failed: ' + err.message)
   }
 }
+
+// ─── Persist a single annotation to DB ───────────────────────────────────────
+
+async function persistAnnotation(ann) {
+  try {
+    await updateAnnotation(ann.dbId, {
+      arrow_path: ann.arrowPath,
+      label: ann.label,
+      label_anchor: ann.labelAnchor,
+      color: ann.color,
+      user_name: userStore.currentUser.name,
+    })
+  } catch (err) {
+    console.error('[annotations] persist failed:', err)
+  }
+}
+
+// ─── Keyboard in editor mode ────────────────────────────────────────────────
+
+function onEditorKeydown(e) {
+  if (!editorMode.value) return
+  // Ignore if typing in textarea
+  const tag = document.activeElement?.tagName?.toLowerCase()
+  if (['input', 'textarea', 'select'].includes(tag)) return
+
+  if (e.code === 'Escape') {
+    leaveEditorMode()
+  }
+  if ((e.code === 'Delete' || e.code === 'Backspace') && selectedId.value) {
+    const ann = editorAnnotations.value.find((a) => a.dbId === selectedId.value)
+    if (ann) handleDeleteEditor(ann)
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', onEditorKeydown)
+})
+onUnmounted(() => {
+  window.removeEventListener('keydown', onEditorKeydown)
+})
+
+// ─── Shared state ────────────────────────────────────────────────────────────
 
 const showHintButton = computed(() =>
   !['login', 'auth-success', 'profile'].includes(route.name)
 )
 
-// Viewport dimensions (SVG size)
 const vw = ref(window.innerWidth)
 const vh = ref(window.innerHeight)
-
-// Current scroll position — updated via passive scroll listener
 let currentScrollY = window.scrollY
 
 function updateSize() {
   vw.value = window.innerWidth
   vh.value = window.innerHeight
   if (isVisible.value) drawAnnotations()
+  if (editorMode.value) drawEditorAnnotations()
 }
 
 function updateScroll() {
@@ -305,6 +512,8 @@ function updateScroll() {
   if (groupRef.value) {
     groupRef.value.setAttribute('transform', `translate(0, ${-currentScrollY})`)
   }
+  // Editor doesn't use transform — HTML overlays use top offset directly
+  if (editorMode.value) drawEditorAnnotations()
 }
 
 onMounted(() => {
@@ -316,7 +525,7 @@ onUnmounted(() => {
   window.removeEventListener('scroll', updateScroll)
 })
 
-// ─── Drawing ─────────────────────────────────────────────────────────────────
+// ─── Read-only drawing ───────────────────────────────────────────────────────
 
 function drawAnnotations() {
   const group = groupRef.value
@@ -337,6 +546,35 @@ function drawAnnotations() {
   const rc = rough.svg(svgRef.value)
 
   currentAnnotations.forEach((ann) => {
+    drawSingleAnnotation(group, rc, ann, W, DH)
+  })
+
+  group.setAttribute('transform', `translate(0, ${-currentScrollY})`)
+}
+
+// ─── Editor drawing (SVG only — handles are HTML overlays) ───────────────────
+
+function drawEditorAnnotations() {
+  const group = editorGroupRef.value
+  if (!group) return
+
+  while (group.firstChild) group.removeChild(group.firstChild)
+
+  const W = vw.value
+  const DH = document.documentElement.scrollHeight
+
+  if (!editorAnnotations.value.length) return
+
+  const rc = rough.svg(editorSvgRef.value)
+
+  editorAnnotations.value.forEach((ann) => {
+    // Draw in viewport-space (apply scroll offset manually)
+    const [[x1p, y1p], [cx1p, cy1p], [cx2p, cy2p], [x2p, y2p]] = ann.arrowPath
+    const x1 = x1p * W,  y1 = y1p * DH - currentScrollY
+    const cx1 = cx1p * W, cy1 = cy1p * DH - currentScrollY
+    const cx2 = cx2p * W, cy2 = cy2p * DH - currentScrollY
+    const x2 = x2p * W,  y2 = y2p * DH - currentScrollY
+
     const opts = {
       stroke: ann.color,
       strokeWidth: 2.2,
@@ -344,20 +582,67 @@ function drawAnnotations() {
       bowing: 1.5,
     }
 
-    const [[x1p, y1p], [cx1p, cy1p], [cx2p, cy2p], [x2p, y2p]] = ann.arrowPath
-    const x1 = x1p * W,  y1 = y1p * DH
-    const cx1 = cx1p * W, cy1 = cy1p * DH
-    const cx2 = cx2p * W, cy2 = cy2p * DH
-    const x2 = x2p * W,  y2 = y2p * DH
-
     const pathStr = `M ${x1} ${y1} C ${cx1} ${cy1} ${cx2} ${cy2} ${x2} ${y2}`
     group.appendChild(rc.path(pathStr, opts))
-
     drawArrowhead(group, rc, x2, y2, cx2, cy2, opts)
-    drawLabel(group, rc, ann.label, ann.labelAnchor, W, DH, ann.color)
-  })
 
-  group.setAttribute('transform', `translate(0, ${-currentScrollY})`)
+    // Draw label box + text in viewport-space
+    const labelLines = ann.label.split('\n')
+    const boxH = labelLines.length * LABEL_LINE_HEIGHT + LABEL_PAD_Y * 2
+    const bx = Math.min(ann.labelAnchor.x * W, W - LABEL_BOX_W - 8)
+    const by = ann.labelAnchor.y * DH - currentScrollY
+
+    group.appendChild(rc.rectangle(bx, by, LABEL_BOX_W, boxH, {
+      stroke: ann.color,
+      strokeWidth: 1.8,
+      roughness: 2.0,
+      bowing: 0.5,
+      fill: 'rgba(255,255,255,0.88)',
+      fillStyle: 'solid',
+    }))
+
+    const textEl = document.createElementNS('http://www.w3.org/2000/svg', 'text')
+    textEl.setAttribute('x', bx + LABEL_PAD_X)
+    textEl.setAttribute('y', by + LABEL_PAD_Y + LABEL_FONT_SIZE)
+    textEl.setAttribute('font-family', "'Caveat', cursive")
+    textEl.setAttribute('font-size', LABEL_FONT_SIZE)
+    textEl.setAttribute('font-style', 'italic')
+    textEl.setAttribute('font-weight', '600')
+    textEl.setAttribute('fill', ann.color)
+
+    labelLines.forEach((line, i) => {
+      const tspan = document.createElementNS('http://www.w3.org/2000/svg', 'tspan')
+      tspan.setAttribute('x', bx + LABEL_PAD_X)
+      tspan.setAttribute('dy', i === 0 ? 0 : LABEL_LINE_HEIGHT)
+      tspan.textContent = line
+      textEl.appendChild(tspan)
+    })
+
+    group.appendChild(textEl)
+  })
+}
+
+// ─── Shared SVG helpers ──────────────────────────────────────────────────────
+
+function drawSingleAnnotation(group, rc, ann, W, DH) {
+  const opts = {
+    stroke: ann.color,
+    strokeWidth: 2.2,
+    roughness: 1.8,
+    bowing: 1.5,
+  }
+
+  const [[x1p, y1p], [cx1p, cy1p], [cx2p, cy2p], [x2p, y2p]] = ann.arrowPath
+  const x1 = x1p * W,  y1 = y1p * DH
+  const cx1 = cx1p * W, cy1 = cy1p * DH
+  const cx2 = cx2p * W, cy2 = cy2p * DH
+  const x2 = x2p * W,  y2 = y2p * DH
+
+  const pathStr = `M ${x1} ${y1} C ${cx1} ${cy1} ${cx2} ${cy2} ${x2} ${y2}`
+  group.appendChild(rc.path(pathStr, opts))
+
+  drawArrowhead(group, rc, x2, y2, cx2, cy2, opts)
+  drawLabel(group, rc, ann.label, ann.labelAnchor, W, DH, ann.color)
 }
 
 function drawArrowhead(group, rc, x2, y2, cx2, cy2, opts) {
@@ -385,17 +670,11 @@ function drawArrowhead(group, rc, x2, y2, cx2, cy2, opts) {
 
 function drawLabel(group, rc, labelText, anchor, W, DH, color) {
   const lines = labelText.split('\n')
-  const fontSize = 15
-  const lineHeight = 22
-  const padX = 12
-  const padY = 10
-  const boxW = 230
-  const boxH = lines.length * lineHeight + padY * 2
-
-  const bx = Math.min(anchor.x * W, W - boxW - 8)
+  const boxH = lines.length * LABEL_LINE_HEIGHT + LABEL_PAD_Y * 2
+  const bx = Math.min(anchor.x * W, W - LABEL_BOX_W - 8)
   const by = anchor.y * DH
 
-  group.appendChild(rc.rectangle(bx, by, boxW, boxH, {
+  group.appendChild(rc.rectangle(bx, by, LABEL_BOX_W, boxH, {
     stroke: color,
     strokeWidth: 1.8,
     roughness: 2.0,
@@ -405,18 +684,18 @@ function drawLabel(group, rc, labelText, anchor, W, DH, color) {
   }))
 
   const textEl = document.createElementNS('http://www.w3.org/2000/svg', 'text')
-  textEl.setAttribute('x', bx + padX)
-  textEl.setAttribute('y', by + padY + fontSize)
+  textEl.setAttribute('x', bx + LABEL_PAD_X)
+  textEl.setAttribute('y', by + LABEL_PAD_Y + LABEL_FONT_SIZE)
   textEl.setAttribute('font-family', "'Caveat', cursive")
-  textEl.setAttribute('font-size', fontSize)
+  textEl.setAttribute('font-size', LABEL_FONT_SIZE)
   textEl.setAttribute('font-style', 'italic')
   textEl.setAttribute('font-weight', '600')
   textEl.setAttribute('fill', color)
 
   lines.forEach((line, i) => {
     const tspan = document.createElementNS('http://www.w3.org/2000/svg', 'tspan')
-    tspan.setAttribute('x', bx + padX)
-    tspan.setAttribute('dy', i === 0 ? 0 : lineHeight)
+    tspan.setAttribute('x', bx + LABEL_PAD_X)
+    tspan.setAttribute('dy', i === 0 ? 0 : LABEL_LINE_HEIGHT)
     tspan.textContent = line
     textEl.appendChild(tspan)
   })
@@ -443,11 +722,17 @@ function drawCenteredText(group, text, cx, cy) {
 watch(
   [isVisible, () => route.name, vw, vh, dbAnnotations],
   ([visible]) => {
-    if (visible) {
+    if (visible && !editorMode.value) {
       nextTick(() => document.fonts.ready.then(() => drawAnnotations()))
     }
   }
 )
+
+// Re-draw editor when editorAnnotations change (deep)
+watch(editorMode, (val) => {
+  if (!val) return
+  nextTick(() => document.fonts.ready.then(() => drawEditorAnnotations()))
+})
 </script>
 
 <style>
