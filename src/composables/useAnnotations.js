@@ -9,6 +9,7 @@ let listenerRegistered = false
 const ANNOTATION_ADMINS = [
   'Emilie El Chidiac',
   'María Sánchez Domínguez',
+  'María Sánchez i Domínguez',
   'Lakzhmy Mari Zaro',
 ]
 
