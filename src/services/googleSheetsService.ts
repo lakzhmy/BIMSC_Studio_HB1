@@ -413,7 +413,6 @@ export async function fetchStructureParams(): Promise<{
     // Wait before retrying (exponential backoff: 500ms, 1000ms)
     attempts++;
     const delay = 500 * Math.pow(2, attempts - 1);
-    console.log(`⏳ Structure sheet still loading, retrying in ${delay}ms (attempt ${attempts}/${maxAttempts})...`);
     await new Promise(resolve => setTimeout(resolve, delay));
   }
   
@@ -422,9 +421,6 @@ export async function fetchStructureParams(): Promise<{
   const headerRow = csvRows[0];
   // Column A is Element, Columns B onwards are the STR_PAR_* and ENV_PAR_* parameter names
   const paramNames = headerRow.slice(1).map(h => h?.trim() || '');
-  
-  console.log('🔍 STRUCTURE sheet header:', headerRow);
-  console.log('🔍 STRUCTURE param names:', paramNames);
 
   const weeks = new Set<string>();
   const scenarios = new Set<string>();
@@ -445,7 +441,6 @@ export async function fetchStructureParams(): Promise<{
     }
 
     const params = toParamValues(raw);
-    console.log(`🔍 Element ${i} (${element}):`, { raw, params });
 
     rows.push({
       week: '',
@@ -559,9 +554,6 @@ export async function fetchFormulaTargets(): Promise<Record<string, { target: nu
     if (!Number.isNaN(targetValue)) {
       const logic = (['MAX', 'MIN', 'STRICT'].includes(logicStr) ? logicStr : 'STRICT') as 'MAX' | 'MIN' | 'STRICT';
       targets[kpiName] = { target: targetValue, logic };
-      console.log(`✅ Fetched target for "${kpiName}": ${targetValue} (logic: ${logic})`);
-    } else {
-      console.log(`⚠️ Failed to parse target for "${kpiName}": raw="${targetStr}"`);
     }
   }
 

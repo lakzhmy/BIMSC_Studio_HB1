@@ -243,8 +243,6 @@ const structuralEfficiencyPerformance: KPIFormulaDef = {
   logic: 'MAX',
   compute: (p) => p.De / (1 + (p.Sl / p.Wl)),
   computeAggregate: (rows) => {
-    console.log('🔧 structuralEfficiencyPerformance computeAggregate called:', { rowCount: rows.length, firstRow: rows[0] });
-    
     if (rows.length === 0) return 0;
     
     // Extract parameter values
@@ -272,8 +270,6 @@ const structuralEfficiencyPerformance: KPIFormulaDef = {
     // Apply formula: 100 * normalized_De / (1 + AVERAGE(Sl) / AVERAGE(Wl))
     const denominator = avgWl !== 0 ? 1 + (avgSl / avgWl) : 1;
     const result = 100 * normalizedDe / denominator;
-    
-    console.log('🔧 structuralEfficiencyPerformance:', { deValues, slValues, wlValues, avgDe, avgSl, avgWl, minDe, maxDe, normalizedDe, denominator, result });
     
     return result;
   },
@@ -327,8 +323,6 @@ const airPurificationEffectiveness: KPIFormulaDef = {
   logic: 'MAX',
   compute: (p) => (p.Ep * p.Ur * p.Fe * p.Rc) / 1000,
   computeAggregate: (rows) => {
-    console.log('🔧 airPurificationEffectiveness computeAggregate called:', { rowCount: rows.length, firstRow: rows[0] });
-    
     if (rows.length === 0) return 0;
     
     // Extract parameter values
@@ -336,8 +330,6 @@ const airPurificationEffectiveness: KPIFormulaDef = {
     const urValues = rows.map(r => r.Ur || 0);
     const feValues = rows.map(r => r.Fe || 0);
     const rcValues = rows.map(r => r.Rc || 0);
-    
-    console.log('🔧 airPurification extracted values:', { epValues, urValues, feValues, rcValues });
     
     // Calculate averages using only non-zero values for each parameter
     const epNonZero = epValues.filter(v => v !== 0);
@@ -350,8 +342,6 @@ const airPurificationEffectiveness: KPIFormulaDef = {
     const avgFe = feNonZero.length > 0 ? feNonZero.reduce((a, b) => a + b, 0) / feNonZero.length : 0;
     const avgRc = rcNonZero.length > 0 ? rcNonZero.reduce((a, b) => a + b, 0) / rcNonZero.length : 0;
     
-    console.log('🔧 airPurification averages:', { avgEp, avgUr, avgFe, avgRc });
-    
     // Find min/max for Ep normalization (use all values including zeros)
     const minEp = Math.min(...epValues);
     const maxEp = Math.max(...epValues);
@@ -360,11 +350,8 @@ const airPurificationEffectiveness: KPIFormulaDef = {
     // Normalize Ep
     const normalizedEp = epRange !== 0 ? (avgEp - minEp) / epRange : 0;
     
-    console.log('🔧 airPurification normalization:', { minEp, maxEp, epRange, normalizedEp });
-    
     // Apply formula: 100 * ((AVERAGE(Ep) - MIN(Ep)) / (MAX(Ep) - MIN(Ep))) * AVERAGE(Ur) * AVERAGE(Fe) * AVERAGE(Rc)
     const result = 100 * normalizedEp * avgUr * avgFe * avgRc;
-    console.log('🔧 airPurification final result:', result);
     
     return result;
   },

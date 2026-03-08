@@ -270,10 +270,10 @@ function labelBoxHeight(ann) {
 
 function labelBoxStyle(ann) {
   const W = vw.value
-  const DH = document.documentElement.scrollHeight
+  const H = vh.value
   const bw = ann.boxWidth || DEFAULT_BOX_W
   const bx = Math.min(ann.labelAnchor.x * W, W - bw - 8)
-  const by = ann.labelAnchor.y * DH - currentScrollY
+  const by = ann.labelAnchor.y * H + currentScrollY
   const h = labelBoxHeight(ann)
   return {
     left: `${bx}px`,
@@ -285,34 +285,34 @@ function labelBoxStyle(ann) {
 
 function tipHandleStyle(ann) {
   const W = vw.value
-  const DH = document.documentElement.scrollHeight
+  const H = vh.value
   const tip = ann.arrowPath[3]
   const tx = tip[0] * W - 10
-  const ty = tip[1] * DH - currentScrollY - 10
+  const ty = tip[1] * H + currentScrollY - 10
   return { left: `${tx}px`, top: `${ty}px` }
 }
 
 const textEditorStyle = computed(() => {
   if (!textEditAnn.value) return {}
   const W = vw.value
-  const DH = document.documentElement.scrollHeight
+  const H = vh.value
   const bw = textEditAnn.value.boxWidth || DEFAULT_BOX_W
   const bx = Math.min(textEditAnn.value.labelAnchor.x * W, W - bw - 8)
-  const by = textEditAnn.value.labelAnchor.y * DH - currentScrollY
+  const by = textEditAnn.value.labelAnchor.y * H + currentScrollY
   return { left: `${bx}px`, top: `${by}px` }
 })
 
 // ─── Edge-snap: compute which box edge the arrow connects to ─────────────────
 
-function getBoxEdge(ann, W, DH, scrollY) {
+function getBoxEdge(ann, W, H, scrollY) {
   const bw = ann.boxWidth || DEFAULT_BOX_W
   const bh = labelBoxHeight(ann)
   const bx = Math.min(ann.labelAnchor.x * W, W - bw - 8)
-  const by = ann.labelAnchor.y * DH - (scrollY ?? 0)
+  const by = ann.labelAnchor.y * H + (scrollY ?? 0)
 
   const tip = ann.arrowPath[3]
   const tx = tip[0] * W
-  const ty = tip[1] * DH - (scrollY ?? 0)
+  const ty = tip[1] * H + (scrollY ?? 0)
 
   const cx = bx + bw / 2
   const cy = by + bh / 2
@@ -330,8 +330,8 @@ function getBoxEdge(ann, W, DH, scrollY) {
 
 function getEdgeDotClass(ann, edgeName) {
   const W = vw.value
-  const DH = document.documentElement.scrollHeight
-  const info = getBoxEdge(ann, W, DH, currentScrollY)
+  const H = vh.value
+  const info = getBoxEdge(ann, W, H, currentScrollY)
   return info.edge === edgeName ? 'bg-white' : 'bg-white/30'
 }
 
@@ -339,22 +339,22 @@ function getEdgeDotClass(ann, edgeName) {
 
 function recalcArrowFromEdge(ann) {
   const W = vw.value
-  const DH = document.documentElement.scrollHeight
-  const info = getBoxEdge(ann, W, DH, currentScrollY)
+  const H = vh.value
+  const info = getBoxEdge(ann, W, H, currentScrollY)
   const tip = ann.arrowPath[3]
 
   const tailXFrac = info.x / W
-  const tailYFrac = (info.y + currentScrollY) / DH
+  const tailYFrac = (info.y - currentScrollY) / H
 
   ann.arrowPath[0] = [tailXFrac, tailYFrac]
 
   const tipXPx = tip[0] * W
-  const tipYPx = tip[1] * DH - currentScrollY
+  const tipYPx = tip[1] * H + currentScrollY
 
   if (info.edge === 'top' || info.edge === 'bottom') {
     const midY = (info.y + tipYPx) / 2
-    ann.arrowPath[1] = [tailXFrac, (midY + currentScrollY) / DH]
-    ann.arrowPath[2] = [tip[0], (midY + currentScrollY) / DH]
+    ann.arrowPath[1] = [tailXFrac, (midY - currentScrollY) / H]
+    ann.arrowPath[2] = [tip[0], (midY - currentScrollY) / H]
   } else {
     const midX = (info.x + tipXPx) / 2
     ann.arrowPath[1] = [midX / W, tailYFrac]
@@ -411,16 +411,16 @@ function onDrag(e) {
   if (!ann) return
 
   const W = vw.value
-  const DH = document.documentElement.scrollHeight
+  const H = vh.value
 
   if (dragState.type === 'label') {
     const dx = (e.clientX - dragState.startMouseX) / W
-    const dy = (e.clientY - dragState.startMouseY) / DH
+    const dy = (e.clientY - dragState.startMouseY) / H
     ann.labelAnchor.x = clamp(dragState.startValX + dx, 0, 1)
     ann.labelAnchor.y = clamp(dragState.startValY + dy, 0, 1)
   } else if (dragState.type === 'tip') {
     const dx = (e.clientX - dragState.startMouseX) / W
-    const dy = (e.clientY - dragState.startMouseY) / DH
+    const dy = (e.clientY - dragState.startMouseY) / H
     ann.arrowPath[3][0] = clamp(dragState.startValX + dx, 0, 1)
     ann.arrowPath[3][1] = clamp(dragState.startValY + dy, 0, 1)
   } else if (dragState.type === 'resize') {
@@ -486,9 +486,9 @@ async function handleDeleteEditor(ann) {
 // ─── Add new ─────────────────────────────────────────────────────────────────
 
 async function handleAddNew() {
-  const DH = document.documentElement.scrollHeight
+  const H = vh.value
   const centerX = 0.5
-  const centerY = (currentScrollY + vh.value / 2) / DH
+  const centerY = 0.5
   const tipX = centerX + 0.15
   const tipY = centerY - 0.08
   const annId = `hint-${Date.now()}`
@@ -607,10 +607,10 @@ function drawAnnotations() {
 
   const currentAnnotations = dbAnnotations.value[route.name] ?? []
   const W = vw.value
-  const DH = document.documentElement.scrollHeight
+  const H = vh.value
 
   if (!currentAnnotations.length) {
-    drawCenteredText(group, 'No annotations for this page yet.', W / 2, currentScrollY + vh.value / 2)
+    drawCenteredText(group, 'No annotations for this page yet.', W / 2, currentScrollY + H / 2)
     group.setAttribute('transform', `translate(0, ${-currentScrollY})`)
     return
   }
@@ -621,10 +621,10 @@ function drawAnnotations() {
     const bw = ann.boxWidth || DEFAULT_BOX_W
     const bh = labelBoxHeight(ann)
     const bx = Math.min(ann.labelAnchor.x * W, W - bw - 8)
-    const by = ann.labelAnchor.y * DH
+    const by = ann.labelAnchor.y * H + currentScrollY
 
     const tip = ann.arrowPath[3]
-    const tipPx = [tip[0] * W, tip[1] * DH]
+    const tipPx = [tip[0] * W, tip[1] * H + currentScrollY]
 
     const cxBox = bx + bw / 2
     const cyBox = by + bh / 2
@@ -670,17 +670,17 @@ function drawEditorAnnotations() {
   while (group.firstChild) group.removeChild(group.firstChild)
 
   const W = vw.value
-  const DH = document.documentElement.scrollHeight
+  const H = vh.value
 
   if (!editorAnnotations.value.length) return
 
   const rc = rough.svg(editorSvgRef.value)
 
   editorAnnotations.value.forEach((ann) => {
-    const info = getBoxEdge(ann, W, DH, currentScrollY)
+    const info = getBoxEdge(ann, W, H, currentScrollY)
     const tip = ann.arrowPath[3]
     const tipX = tip[0] * W
-    const tipY = tip[1] * DH - currentScrollY
+    const tipY = tip[1] * H + currentScrollY
 
     let cp1x, cp1y, cp2x, cp2y
     if (info.edge === 'top' || info.edge === 'bottom') {
