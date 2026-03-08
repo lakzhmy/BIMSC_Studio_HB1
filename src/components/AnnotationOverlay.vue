@@ -253,7 +253,27 @@ function leaveEditorMode() {
   selectedId.value = null
 }
 
-// ─── Computed label box dimensions (reused for hit area + style) ─────────────
+// ─── Reference resolution for annotation positioning ────────────────────────
+// All annotation coordinates are stored as viewport fractions (0–1 range),
+// scaled from the viewport CENTER outward. This ensures that:
+//
+// 1. Symmetric content remains symmetric across different viewport sizes
+// 2. Responsive margins don't affect relative positioning
+// 3. Annotations maintain correct spatial relationships on all screens
+//
+// Center-based scaling formula:
+//   x_pixel = (viewport_width / 2) + (x_fraction - 0.5) × viewport_width
+//
+// Example: labelAnchor.x = 0.75
+//   At 1396w: (1396/2) + (0.25 × 1396) = 698 + 349 = 1047px
+//   At 1908w: (1908/2) + (0.25 × 1908) = 954 + 477 = 1431px
+//   Offset from center scales proportionally (349px vs 477px)
+//
+// Benefits over edge-based scaling:
+// - Page margins/padding don't cause displacement
+// - Wider viewports expand content symmetrically from center
+// - Positioning remains stable across different layouts
+// ─────────────────────────────────────────────────────────────────────────────
 
 const LABEL_FONT_SIZE = 15
 const LABEL_LINE_HEIGHT = 22
@@ -272,8 +292,11 @@ function labelBoxStyle(ann) {
   const W = vw.value
   const H = vh.value
   const bw = ann.boxWidth || DEFAULT_BOX_W
-  const bx = Math.min(ann.labelAnchor.x * W, W - bw - 8)
-  const by = ann.labelAnchor.y * H + currentScrollY
+  // Scale from viewport center to preserve symmetric spacing across different viewports
+  const centerX = W / 2
+  const bx = Math.min(centerX + (ann.labelAnchor.x - 0.5) * W, W - bw - 8)
+  const centerY = H / 2
+  const by = centerY + (ann.labelAnchor.y - 0.5) * H + currentScrollY
   const h = labelBoxHeight(ann)
   return {
     left: `${bx}px`,
@@ -287,8 +310,11 @@ function tipHandleStyle(ann) {
   const W = vw.value
   const H = vh.value
   const tip = ann.arrowPath[3]
-  const tx = tip[0] * W - 10
-  const ty = tip[1] * H + currentScrollY - 10
+  // Scale from viewport center to preserve symmetric spacing
+  const centerX = W / 2
+  const centerY = H / 2
+  const tx = centerX + (tip[0] - 0.5) * W - 10
+  const ty = centerY + (tip[1] - 0.5) * H + currentScrollY - 10
   return { left: `${tx}px`, top: `${ty}px` }
 }
 
@@ -297,8 +323,11 @@ const textEditorStyle = computed(() => {
   const W = vw.value
   const H = vh.value
   const bw = textEditAnn.value.boxWidth || DEFAULT_BOX_W
-  const bx = Math.min(textEditAnn.value.labelAnchor.x * W, W - bw - 8)
-  const by = textEditAnn.value.labelAnchor.y * H + currentScrollY
+  // Scale from viewport center to preserve symmetric spacing
+  const centerX = W / 2
+  const centerY = H / 2
+  const bx = Math.min(centerX + (textEditAnn.value.labelAnchor.x - 0.5) * W, W - bw - 8)
+  const by = centerY + (textEditAnn.value.labelAnchor.y - 0.5) * H + currentScrollY
   return { left: `${bx}px`, top: `${by}px` }
 })
 
@@ -307,12 +336,15 @@ const textEditorStyle = computed(() => {
 function getBoxEdge(ann, W, H, scrollY) {
   const bw = ann.boxWidth || DEFAULT_BOX_W
   const bh = labelBoxHeight(ann)
-  const bx = Math.min(ann.labelAnchor.x * W, W - bw - 8)
-  const by = ann.labelAnchor.y * H + (scrollY ?? 0)
+  // Scale from viewport center to preserve symmetric spacing
+  const centerX = W / 2
+  const centerY = H / 2
+  const bx = Math.min(centerX + (ann.labelAnchor.x - 0.5) * W, W - bw - 8)
+  const by = centerY + (ann.labelAnchor.y - 0.5) * H + (scrollY ?? 0)
 
   const tip = ann.arrowPath[3]
-  const tx = tip[0] * W
-  const ty = tip[1] * H + (scrollY ?? 0)
+  const tx = centerX + (tip[0] - 0.5) * W
+  const ty = centerY + (tip[1] - 0.5) * H + (scrollY ?? 0)
 
   const cx = bx + bw / 2
   const cy = by + bh / 2
@@ -343,22 +375,25 @@ function recalcArrowFromEdge(ann) {
   const info = getBoxEdge(ann, W, H, currentScrollY)
   const tip = ann.arrowPath[3]
 
-  const tailXFrac = info.x / W
-  const tailYFrac = (info.y - currentScrollY) / H
+  // Convert from center-based scaling back to fractions
+  const centerX = W / 2
+  const centerY = H / 2
+  const tailXFrac = (info.x - centerX) / W + 0.5
+  const tailYFrac = (info.y - centerY - currentScrollY) / H + 0.5
 
   ann.arrowPath[0] = [tailXFrac, tailYFrac]
 
-  const tipXPx = tip[0] * W
-  const tipYPx = tip[1] * H + currentScrollY
+  const tipXPx = centerX + (tip[0] - 0.5) * W
+  const tipYPx = centerY + (tip[1] - 0.5) * H + currentScrollY
 
   if (info.edge === 'top' || info.edge === 'bottom') {
     const midY = (info.y + tipYPx) / 2
-    ann.arrowPath[1] = [tailXFrac, (midY - currentScrollY) / H]
-    ann.arrowPath[2] = [tip[0], (midY - currentScrollY) / H]
+    ann.arrowPath[1] = [tailXFrac, (midY - centerY - currentScrollY) / H + 0.5]
+    ann.arrowPath[2] = [tip[0], (midY - centerY - currentScrollY) / H + 0.5]
   } else {
     const midX = (info.x + tipXPx) / 2
-    ann.arrowPath[1] = [midX / W, tailYFrac]
-    ann.arrowPath[2] = [midX / W, tip[1]]
+    ann.arrowPath[1] = [(midX - centerX) / W + 0.5, tailYFrac]
+    ann.arrowPath[2] = [(midX - centerX) / W + 0.5, tip[1]]
   }
 }
 
@@ -620,11 +655,14 @@ function drawAnnotations() {
   currentAnnotations.forEach((ann) => {
     const bw = ann.boxWidth || DEFAULT_BOX_W
     const bh = labelBoxHeight(ann)
-    const bx = Math.min(ann.labelAnchor.x * W, W - bw - 8)
-    const by = ann.labelAnchor.y * H + currentScrollY
+    // Scale from viewport center to preserve symmetric spacing
+    const centerX = W / 2
+    const centerY = H / 2
+    const bx = Math.min(centerX + (ann.labelAnchor.x - 0.5) * W, W - bw - 8)
+    const by = centerY + (ann.labelAnchor.y - 0.5) * H + currentScrollY
 
     const tip = ann.arrowPath[3]
-    const tipPx = [tip[0] * W, tip[1] * H + currentScrollY]
+    const tipPx = [centerX + (tip[0] - 0.5) * W, centerY + (tip[1] - 0.5) * H + currentScrollY]
 
     const cxBox = bx + bw / 2
     const cyBox = by + bh / 2
@@ -679,8 +717,11 @@ function drawEditorAnnotations() {
   editorAnnotations.value.forEach((ann) => {
     const info = getBoxEdge(ann, W, H, currentScrollY)
     const tip = ann.arrowPath[3]
-    const tipX = tip[0] * W
-    const tipY = tip[1] * H + currentScrollY
+    // Scale from viewport center to preserve symmetric spacing
+    const centerX = W / 2
+    const centerY = H / 2
+    const tipX = centerX + (tip[0] - 0.5) * W
+    const tipY = centerY + (tip[1] - 0.5) * H + currentScrollY
 
     let cp1x, cp1y, cp2x, cp2y
     if (info.edge === 'top' || info.edge === 'bottom') {
