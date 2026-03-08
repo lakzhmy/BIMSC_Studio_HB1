@@ -117,7 +117,7 @@ const effectiveProgrammaticArea: KPIFormulaDef = {
   id: 'effective-programmatic-area',
   name: 'Effective Programmatic Area (EPA)',
   category: 'program',
-  formula: 'AVERAGE(Ar_range) × AVERAGE(Ur_range)',
+  formula: 'SUMPRODUCT(Ar_range, Ur_range)',
   params: ['Ur', 'Ar'],
   unit: 'm²',
   target: 1000000,
@@ -126,18 +126,15 @@ const effectiveProgrammaticArea: KPIFormulaDef = {
   computeAggregate: (rows) => {
     if (rows.length === 0) return 0;
     
-    // Extract parameter values
-    const arValues = rows.map(r => r.Ar || 0);
-    const urValues = rows.map(r => r.Ur || 0);
+    // Calculate SUMPRODUCT: sum of (Ar_i * Ur_i) for each row
+    let sumProduct = 0;
+    for (const row of rows) {
+      const ar = row.Ar || 0;
+      const ur = row.Ur || 0;
+      sumProduct += ar * ur;
+    }
     
-    // Calculate averages using only non-zero values for each parameter
-    const arNonZero = arValues.filter(v => v !== 0);
-    const urNonZero = urValues.filter(v => v !== 0);
-    
-    const avgAr = arNonZero.length > 0 ? arNonZero.reduce((a, b) => a + b, 0) / arNonZero.length : 0;
-    const avgUr = urNonZero.length > 0 ? urNonZero.reduce((a, b) => a + b, 0) / urNonZero.length : 0;
-    
-    return avgAr * avgUr;
+    return sumProduct;
   },
 };
 
