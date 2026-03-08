@@ -160,17 +160,16 @@ const resourceConsumptionIntensityRatio: KPIFormulaDef = {
   computeAggregate: (rows) => {
     if (rows.length === 0) return 0;
     
-    // Calculate average Ur
-    let sumUr = 0;
-    let sumRc = 0;
+    // Extract parameter values
+    const urValues = rows.map(r => r.Ur || 0);
+    const rcValues = rows.map(r => r.Rc || 0);
     
-    for (const p of rows) {
-      sumUr += p.Ur || 0;
-      sumRc += p.Rc || 0;
-    }
+    // Calculate averages using only non-zero values for each parameter
+    const urNonZero = urValues.filter(v => v !== 0);
+    const rcNonZero = rcValues.filter(v => v !== 0);
     
-    const avgUr = sumUr / rows.length;
-    const avgRc = sumRc / rows.length;
+    const avgUr = urNonZero.length > 0 ? urNonZero.reduce((a, b) => a + b, 0) / urNonZero.length : 0;
+    const avgRc = rcNonZero.length > 0 ? rcNonZero.reduce((a, b) => a + b, 0) / rcNonZero.length : 0;
     
     // Return AVERAGE(Ur) × AVERAGE(Rc)
     return avgUr * avgRc;
@@ -183,12 +182,12 @@ const thermalComfortComplianceRate: KPIFormulaDef = {
   id: 'thermal-comfort-compliance-rate',
   name: 'Thermal Comfort Compliance Rate',
   category: 'environment',
-  formula: '100 * normalized_De / (1 + AVERAGE(Ir_range) / 100 + AVERAGE(Wl_range) / 100)',
+  formula: '200*((AVERAGE(De_range)-MIN(De_range))/(MAX(De_range)-MIN(De_range)))/(1+(AVERAGE(Ir_range)/400)+(AVERAGE(Wl_range)/300))',
   params: ['De', 'Ir', 'Wl'],
   unit: '%',
   target: 70,
   logic: 'MAX',
-  compute: (p) => (100 * p.De) / (1 + (p.Ir / 100) + (p.Wl / 100)),
+  compute: (p) => (200 * p.De) / (1 + (p.Ir / 400) + (p.Wl / 300)),
   computeAggregate: (rows) => {
     if (rows.length === 0) return 0;
     
@@ -197,12 +196,16 @@ const thermalComfortComplianceRate: KPIFormulaDef = {
     const irValues = rows.map(r => r.Ir || 0);
     const wlValues = rows.map(r => r.Wl || 0);
     
-    // Calculate averages
-    const avgDe = deValues.reduce((a, b) => a + b, 0) / rows.length;
-    const avgIr = irValues.reduce((a, b) => a + b, 0) / rows.length;
-    const avgWl = wlValues.reduce((a, b) => a + b, 0) / rows.length;
+    // Calculate averages using only non-zero values for each parameter
+    const deNonZero = deValues.filter(v => v !== 0);
+    const irNonZero = irValues.filter(v => v !== 0);
+    const wlNonZero = wlValues.filter(v => v !== 0);
     
-    // Find min/max for De normalization
+    const avgDe = deNonZero.length > 0 ? deNonZero.reduce((a, b) => a + b, 0) / deNonZero.length : 0;
+    const avgIr = irNonZero.length > 0 ? irNonZero.reduce((a, b) => a + b, 0) / irNonZero.length : 0;
+    const avgWl = wlNonZero.length > 0 ? wlNonZero.reduce((a, b) => a + b, 0) / wlNonZero.length : 0;
+    
+    // Find min/max for De normalization (use all values including zeros)
     const minDe = Math.min(...deValues);
     const maxDe = Math.max(...deValues);
     const deRange = maxDe - minDe;
@@ -210,9 +213,9 @@ const thermalComfortComplianceRate: KPIFormulaDef = {
     // Normalize the average De
     const normalizedDe = deRange !== 0 ? (avgDe - minDe) / deRange : 0;
     
-    // Apply formula: 100 * normalized_De / (1 + (Ir/100) + (Wl/100))
-    const denominator = 1 + (avgIr / 100) + (avgWl / 100);
-    return 100 * normalizedDe / denominator;
+    // Apply formula: 200*((AVERAGE(De) - MIN(De)) / (MAX(De) - MIN(De))) / (1 + (Ir/400) + (Wl/300))
+    const denominator = 1 + (avgIr / 400) + (avgWl / 300);
+    return (200 * normalizedDe) / denominator;
   },
 };
 
@@ -236,12 +239,16 @@ const structuralEfficiencyPerformance: KPIFormulaDef = {
     const slValues = rows.map(r => r.Sl || 0);
     const wlValues = rows.map(r => r.Wl || 0);
     
-    // Calculate averages
-    const avgDe = deValues.reduce((a, b) => a + b, 0) / rows.length;
-    const avgSl = slValues.reduce((a, b) => a + b, 0) / rows.length;
-    const avgWl = wlValues.reduce((a, b) => a + b, 0) / rows.length;
+    // Calculate averages using only non-zero values for each parameter
+    const deNonZero = deValues.filter(v => v !== 0);
+    const slNonZero = slValues.filter(v => v !== 0);
+    const wlNonZero = wlValues.filter(v => v !== 0);
     
-    // Find min/max for normalization
+    const avgDe = deNonZero.length > 0 ? deNonZero.reduce((a, b) => a + b, 0) / deNonZero.length : 0;
+    const avgSl = slNonZero.length > 0 ? slNonZero.reduce((a, b) => a + b, 0) / slNonZero.length : 0;
+    const avgWl = wlNonZero.length > 0 ? wlNonZero.reduce((a, b) => a + b, 0) / wlNonZero.length : 0;
+    
+    // Find min/max for normalization (use all values including zeros)
     const minDe = Math.min(...deValues);
     const maxDe = Math.max(...deValues);
     const deRange = maxDe - minDe;
@@ -276,11 +283,14 @@ const solarControlPerformance: KPIFormulaDef = {
     const deValues = rows.map(r => r.De || 0);
     const irValues = rows.map(r => r.Ir || 0);
     
-    // Calculate averages
-    const avgDe = deValues.reduce((a, b) => a + b, 0) / rows.length;
-    const avgIr = irValues.reduce((a, b) => a + b, 0) / rows.length;
+    // Calculate averages using only non-zero values for each parameter
+    const deNonZero = deValues.filter(v => v !== 0);
+    const irNonZero = irValues.filter(v => v !== 0);
     
-    // Find min/max for normalization
+    const avgDe = deNonZero.length > 0 ? deNonZero.reduce((a, b) => a + b, 0) / deNonZero.length : 0;
+    const avgIr = irNonZero.length > 0 ? irNonZero.reduce((a, b) => a + b, 0) / irNonZero.length : 0;
+    
+    // Find min/max for normalization (use all values including zeros)
     const minDe = Math.min(...deValues);
     const maxDe = Math.max(...deValues);
     const deRange = maxDe - minDe;
@@ -297,12 +307,12 @@ const airPurificationEffectiveness: KPIFormulaDef = {
   id: 'air-purification-effectiveness',
   name: 'Air Purification Effectiveness',
   category: 'environment',
-  formula: '100*((AVERAGE(Ep_range)-MIN(Ep_range))/(MAX(Ep_range)-MIN(Ep_range)))*AVERAGE(Ur_range)*(AVERAGE(Fe_range)/100)*AVERAGE(Rc_range)',
+  formula: '600*((AVERAGE(Ep_range)-MIN(Ep_range))/(MAX(Ep_range)-MIN(Ep_range)))*AVERAGE(Ur_range)*AVERAGE(Fe_range)*AVERAGE(Rc_range)',
   params: ['Ep', 'Ur', 'Fe', 'Rc'],
   unit: '%',
   target: 70,
   logic: 'MAX',
-  compute: (p) => (p.Ep * p.Ur * (p.Fe / 100) * p.Rc) / 1000,
+  compute: (p) => (p.Ep * p.Ur * p.Fe * p.Rc) / 1000,
   computeAggregate: (rows) => {
     console.log('🔧 airPurificationEffectiveness computeAggregate called:', { rowCount: rows.length, firstRow: rows[0] });
     
@@ -316,15 +326,20 @@ const airPurificationEffectiveness: KPIFormulaDef = {
     
     console.log('🔧 airPurification extracted values:', { epValues, urValues, feValues, rcValues });
     
-    // Calculate averages
-    const avgEp = epValues.reduce((a, b) => a + b, 0) / rows.length;
-    const avgUr = urValues.reduce((a, b) => a + b, 0) / rows.length;
-    const avgFe = feValues.reduce((a, b) => a + b, 0) / rows.length;
-    const avgRc = rcValues.reduce((a, b) => a + b, 0) / rows.length;
+    // Calculate averages using only non-zero values for each parameter
+    const epNonZero = epValues.filter(v => v !== 0);
+    const urNonZero = urValues.filter(v => v !== 0);
+    const feNonZero = feValues.filter(v => v !== 0);
+    const rcNonZero = rcValues.filter(v => v !== 0);
+    
+    const avgEp = epNonZero.length > 0 ? epNonZero.reduce((a, b) => a + b, 0) / epNonZero.length : 0;
+    const avgUr = urNonZero.length > 0 ? urNonZero.reduce((a, b) => a + b, 0) / urNonZero.length : 0;
+    const avgFe = feNonZero.length > 0 ? feNonZero.reduce((a, b) => a + b, 0) / feNonZero.length : 0;
+    const avgRc = rcNonZero.length > 0 ? rcNonZero.reduce((a, b) => a + b, 0) / rcNonZero.length : 0;
     
     console.log('🔧 airPurification averages:', { avgEp, avgUr, avgFe, avgRc });
     
-    // Find min/max for Ep normalization
+    // Find min/max for Ep normalization (use all values including zeros)
     const minEp = Math.min(...epValues);
     const maxEp = Math.max(...epValues);
     const epRange = maxEp - minEp;
@@ -334,8 +349,8 @@ const airPurificationEffectiveness: KPIFormulaDef = {
     
     console.log('🔧 airPurification normalization:', { minEp, maxEp, epRange, normalizedEp });
     
-    // Apply formula: 100 * ((AVERAGE(Ep) - MIN(Ep)) / (MAX(Ep) - MIN(Ep))) * AVERAGE(Ur) * (AVERAGE(Fe)/100) * AVERAGE(Rc)
-    const result = 100 * normalizedEp * avgUr * (avgFe / 100) * avgRc;
+    // Apply formula: 600 * ((AVERAGE(Ep) - MIN(Ep)) / (MAX(Ep) - MIN(Ep))) * AVERAGE(Ur) * AVERAGE(Fe) * AVERAGE(Rc)
+    const result = 600 * normalizedEp * avgUr * avgFe * avgRc;
     console.log('🔧 airPurification final result:', result);
     
     return result;
@@ -371,11 +386,14 @@ const filtrationEfficiency: KPIFormulaDef = {
     const feValues = rows.map(r => r.Fe || 0);
     const epValues = rows.map(r => r.Ep || 0);
     
-    // Calculate averages
-    const avgFe = feValues.reduce((a, b) => a + b, 0) / rows.length;
-    const avgEp = epValues.reduce((a, b) => a + b, 0) / rows.length;
+    // Calculate averages using only non-zero values for each parameter
+    const feNonZero = feValues.filter(v => v !== 0);
+    const epNonZero = epValues.filter(v => v !== 0);
     
-    // Find min/max for normalization
+    const avgFe = feNonZero.length > 0 ? feNonZero.reduce((a, b) => a + b, 0) / feNonZero.length : 0;
+    const avgEp = epNonZero.length > 0 ? epNonZero.reduce((a, b) => a + b, 0) / epNonZero.length : 0;
+    
+    // Find min/max for normalization (use all values including zeros)
     const minFe = Math.min(...feValues);
     const maxFe = Math.max(...feValues);
     const feRange = maxFe - minFe;
@@ -497,6 +515,7 @@ export function computeAggregateKPIs(
       value,
       unit: def.unit,
       formula: def.formula,
+      target: def.target,
     };
   });
 }

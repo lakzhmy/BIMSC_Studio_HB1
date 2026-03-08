@@ -742,7 +742,7 @@ const dataSummaryCards = computed(() => {
 
 // ─── Radar chart constants & helpers ─────────────────────────────────────────
 
-const RADAR_LABELS = ['EPA', 'PPI', 'RCIR', 'SE', 'SCP', 'FiltEff', 'TCR', 'APE', 'ACNI']
+const RADAR_LABELS = ['EPA', 'PPI', 'RCIR', 'SE', 'SCP', 'FE', 'TCR', 'APE', 'ACNI']
 // Team colour per axis index (0-2 program, 3-5 structure, 6-8 data)
 const RADAR_TEAM_COLORS = ['#3b82f6','#3b82f6','#3b82f6','#10b981','#10b981','#10b981','#ef4444','#ef4444','#ef4444']
 const RADAR_TEAM_NAMES  = ['Program','Program','Program','Structure','Structure','Structure','Data','Data','Data']
