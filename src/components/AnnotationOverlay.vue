@@ -253,27 +253,11 @@ function leaveEditorMode() {
   selectedId.value = null
 }
 
-// ─── Reference resolution for annotation positioning ────────────────────────
-// All annotation coordinates are stored as viewport fractions (0–1 range),
-// scaled from the viewport CENTER outward. This ensures that:
-//
-// 1. Symmetric content remains symmetric across different viewport sizes
-// 2. Responsive margins don't affect relative positioning
-// 3. Annotations maintain correct spatial relationships on all screens
-//
-// Center-based scaling formula:
-//   x_pixel = (viewport_width / 2) + (x_fraction - 0.5) × viewport_width
-//
-// Example: labelAnchor.x = 0.75
-//   At 1396w: (1396/2) + (0.25 × 1396) = 698 + 349 = 1047px
-//   At 1908w: (1908/2) + (0.25 × 1908) = 954 + 477 = 1431px
-//   Offset from center scales proportionally (349px vs 477px)
-//
-// Benefits over edge-based scaling:
-// - Page margins/padding don't cause displacement
-// - Wider viewports expand content symmetrically from center
-// - Positioning remains stable across different layouts
-// ─────────────────────────────────────────────────────────────────────────────
+// ─── Annotation positioning ──────────────────────────────────────────────────
+// Coordinates stored as viewport fractions (0–1). Pixel formula:
+//   x_px = (vw / 2) + (fraction - 0.5) * vw  →  fraction * vw
+// Using live vw/vh means annotations scale proportionally with zoom,
+// so they stay locked to the content they point at.
 
 const LABEL_FONT_SIZE = 15
 const LABEL_LINE_HEIGHT = 22
@@ -291,14 +275,9 @@ function labelBoxHeight(ann) {
 function labelBoxStyle(ann) {
   const W = vw.value
   const H = vh.value
-  const DW = designW.value
-  const DH = designH.value
   const bw = ann.boxWidth || DEFAULT_BOX_W
-  // Spread is fixed in design-viewport pixels; only the center tracks the live viewport
-  const centerX = W / 2
-  const bx = Math.min(centerX + (ann.labelAnchor.x - 0.5) * DW, W - bw - 8)
-  const centerY = H / 2
-  const by = centerY + (ann.labelAnchor.y - 0.5) * DH + currentScrollY
+  const bx = Math.min(W / 2 + (ann.labelAnchor.x - 0.5) * W, W - bw - 8)
+  const by = H / 2 + (ann.labelAnchor.y - 0.5) * H + currentScrollY
   const h = labelBoxHeight(ann)
   return {
     left: `${bx}px`,
@@ -311,13 +290,9 @@ function labelBoxStyle(ann) {
 function tipHandleStyle(ann) {
   const W = vw.value
   const H = vh.value
-  const DW = designW.value
-  const DH = designH.value
   const tip = ann.arrowPath[3]
-  const centerX = W / 2
-  const centerY = H / 2
-  const tx = centerX + (tip[0] - 0.5) * DW - 10
-  const ty = centerY + (tip[1] - 0.5) * DH + currentScrollY - 10
+  const tx = W / 2 + (tip[0] - 0.5) * W - 10
+  const ty = H / 2 + (tip[1] - 0.5) * H + currentScrollY - 10
   return { left: `${tx}px`, top: `${ty}px` }
 }
 
@@ -325,13 +300,9 @@ const textEditorStyle = computed(() => {
   if (!textEditAnn.value) return {}
   const W = vw.value
   const H = vh.value
-  const DW = designW.value
-  const DH = designH.value
   const bw = textEditAnn.value.boxWidth || DEFAULT_BOX_W
-  const centerX = W / 2
-  const centerY = H / 2
-  const bx = Math.min(centerX + (textEditAnn.value.labelAnchor.x - 0.5) * DW, W - bw - 8)
-  const by = centerY + (textEditAnn.value.labelAnchor.y - 0.5) * DH + currentScrollY
+  const bx = Math.min(W / 2 + (textEditAnn.value.labelAnchor.x - 0.5) * W, W - bw - 8)
+  const by = H / 2 + (textEditAnn.value.labelAnchor.y - 0.5) * H + currentScrollY
   return { left: `${bx}px`, top: `${by}px` }
 })
 
@@ -340,16 +311,14 @@ const textEditorStyle = computed(() => {
 function getBoxEdge(ann, W, H, scrollY) {
   const bw = ann.boxWidth || DEFAULT_BOX_W
   const bh = labelBoxHeight(ann)
-  const DW = designW.value
-  const DH = designH.value
   const centerX = W / 2
   const centerY = H / 2
-  const bx = Math.min(centerX + (ann.labelAnchor.x - 0.5) * DW, W - bw - 8)
-  const by = centerY + (ann.labelAnchor.y - 0.5) * DH + (scrollY ?? 0)
+  const bx = Math.min(centerX + (ann.labelAnchor.x - 0.5) * W, W - bw - 8)
+  const by = centerY + (ann.labelAnchor.y - 0.5) * H + (scrollY ?? 0)
 
   const tip = ann.arrowPath[3]
-  const tx = centerX + (tip[0] - 0.5) * DW
-  const ty = centerY + (tip[1] - 0.5) * DH + (scrollY ?? 0)
+  const tx = centerX + (tip[0] - 0.5) * W
+  const ty = centerY + (tip[1] - 0.5) * H + (scrollY ?? 0)
 
   const cx = bx + bw / 2
   const cy = by + bh / 2
@@ -377,30 +346,28 @@ function getEdgeDotClass(ann, edgeName) {
 function recalcArrowFromEdge(ann) {
   const W = vw.value
   const H = vh.value
-  const DW = designW.value
-  const DH = designH.value
   const info = getBoxEdge(ann, W, H, currentScrollY)
   const tip = ann.arrowPath[3]
 
-  // Inverse of: x_px = W/2 + (f - 0.5) * DW  →  f = (x_px - W/2) / DW + 0.5
+  // Inverse of: x_px = W/2 + (f - 0.5) * W  →  f = (x_px - W/2) / W + 0.5
   const centerX = W / 2
   const centerY = H / 2
-  const tailXFrac = (info.x - centerX) / DW + 0.5
-  const tailYFrac = (info.y - centerY - currentScrollY) / DH + 0.5
+  const tailXFrac = (info.x - centerX) / W + 0.5
+  const tailYFrac = (info.y - centerY - currentScrollY) / H + 0.5
 
   ann.arrowPath[0] = [tailXFrac, tailYFrac]
 
-  const tipXPx = centerX + (tip[0] - 0.5) * DW
-  const tipYPx = centerY + (tip[1] - 0.5) * DH + currentScrollY
+  const tipXPx = centerX + (tip[0] - 0.5) * W
+  const tipYPx = centerY + (tip[1] - 0.5) * H + currentScrollY
 
   if (info.edge === 'top' || info.edge === 'bottom') {
     const midY = (info.y + tipYPx) / 2
-    ann.arrowPath[1] = [tailXFrac, (midY - centerY - currentScrollY) / DH + 0.5]
-    ann.arrowPath[2] = [tip[0], (midY - centerY - currentScrollY) / DH + 0.5]
+    ann.arrowPath[1] = [tailXFrac, (midY - centerY - currentScrollY) / H + 0.5]
+    ann.arrowPath[2] = [tip[0], (midY - centerY - currentScrollY) / H + 0.5]
   } else {
     const midX = (info.x + tipXPx) / 2
-    ann.arrowPath[1] = [(midX - centerX) / DW + 0.5, tailYFrac]
-    ann.arrowPath[2] = [(midX - centerX) / DW + 0.5, tip[1]]
+    ann.arrowPath[1] = [(midX - centerX) / W + 0.5, tailYFrac]
+    ann.arrowPath[2] = [(midX - centerX) / W + 0.5, tip[1]]
   }
 }
 
@@ -452,8 +419,8 @@ function onDrag(e) {
   const ann = editorAnnotations.value.find((a) => a.dbId === dragState.annDbId)
   if (!ann) return
 
-  const DW = designW.value
-  const DH = designH.value
+  const DW = vw.value
+  const DH = vh.value
 
   if (dragState.type === 'label') {
     const dx = (e.clientX - dragState.startMouseX) / DW
@@ -551,7 +518,6 @@ async function handleAddNew() {
       color: '#c0392b',
       user_name: userStore.currentUser.name,
     })
-    saveDesignDimensions()
     const source = dbAnnotations.value[route.name] ?? []
     editorAnnotations.value = source.map((a) => ({
       ...a,
@@ -576,7 +542,6 @@ async function persistAnnotation(ann) {
       color: ann.color,
       user_name: userStore.currentUser.name,
     })
-    saveDesignDimensions()
   } catch (err) {
     console.error('[annotations] persist failed:', err)
   }
@@ -616,33 +581,9 @@ const vw = ref(window.innerWidth)
 const vh = ref(window.innerHeight)
 let currentScrollY = window.scrollY
 
-// ─── Design-viewport dimensions ───────────────────────────────────────────────
-// Annotations are authored at a specific viewport size (the "design viewport").
-// We persist it in localStorage so rendering at any later zoom level uses the
-// original reference, keeping every spread offset fixed in CSS pixels.
-// The viewport center (vw/2) is kept live so content that is always mx-auto
-// centered stays correctly aligned at every zoom.
-const DESIGN_LS_KEY = 'ann_design_viewport'
-
-function loadDesignDimensions() {
-  try {
-    const stored = JSON.parse(localStorage.getItem(DESIGN_LS_KEY) || 'null')
-    if (stored?.w > 400 && stored?.h > 300) return stored
-  } catch (_) {}
-  return { w: window.innerWidth, h: window.innerHeight }
-}
-
-function saveDesignDimensions() {
-  const dims = { w: window.innerWidth, h: window.innerHeight }
-  try { localStorage.setItem(DESIGN_LS_KEY, JSON.stringify(dims)) } catch (_) {}
-  designW.value = dims.w
-  designH.value = dims.h
-}
-
-const _design = loadDesignDimensions()
-const designW = ref(_design.w)
-const designH = ref(_design.h)
-// ─────────────────────────────────────────────────────────────────────────────
+// Annotation coordinates are stored as viewport fractions (0–1), scaled from
+// the viewport center. Pixel position = (vw/2) + (fraction - 0.5) * vw.
+// This makes annotations track content proportionally at any zoom level.
 
 function updateSize() {
   vw.value = window.innerWidth
@@ -694,8 +635,6 @@ function drawAnnotations() {
   const currentAnnotations = dbAnnotations.value[route.name] ?? []
   const W = vw.value
   const H = vh.value
-  const DW = designW.value
-  const DH = designH.value
 
   if (!currentAnnotations.length) {
     drawCenteredText(group, 'No annotations for this page yet.', W / 2, currentScrollY + H / 2)
@@ -708,14 +647,13 @@ function drawAnnotations() {
   currentAnnotations.forEach((ann) => {
     const bw = ann.boxWidth || DEFAULT_BOX_W
     const bh = labelBoxHeight(ann)
-    // Spread uses design dimensions; center tracks live viewport (content is always mx-auto centered)
     const centerX = W / 2
     const centerY = H / 2
-    const bx = Math.min(centerX + (ann.labelAnchor.x - 0.5) * DW, W - bw - 8)
-    const by = centerY + (ann.labelAnchor.y - 0.5) * DH + currentScrollY
+    const bx = Math.min(centerX + (ann.labelAnchor.x - 0.5) * W, W - bw - 8)
+    const by = centerY + (ann.labelAnchor.y - 0.5) * H + currentScrollY
 
     const tip = ann.arrowPath[3]
-    const tipPx = [centerX + (tip[0] - 0.5) * DW, centerY + (tip[1] - 0.5) * DH + currentScrollY]
+    const tipPx = [centerX + (tip[0] - 0.5) * W, centerY + (tip[1] - 0.5) * H + currentScrollY]
 
     const cxBox = bx + bw / 2
     const cyBox = by + bh / 2
@@ -762,8 +700,6 @@ function drawEditorAnnotations() {
 
   const W = vw.value
   const H = vh.value
-  const DW = designW.value
-  const DH = designH.value
 
   if (!editorAnnotations.value.length) return
 
@@ -774,8 +710,8 @@ function drawEditorAnnotations() {
     const tip = ann.arrowPath[3]
     const centerX = W / 2
     const centerY = H / 2
-    const tipX = centerX + (tip[0] - 0.5) * DW
-    const tipY = centerY + (tip[1] - 0.5) * DH + currentScrollY
+    const tipX = centerX + (tip[0] - 0.5) * W
+    const tipY = centerY + (tip[1] - 0.5) * H + currentScrollY
 
     let cp1x, cp1y, cp2x, cp2y
     if (info.edge === 'top' || info.edge === 'bottom') {
