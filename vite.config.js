@@ -53,7 +53,8 @@ export default defineConfig(({ mode }) => {
         '/objects': speckleProxy,
         '/streams': speckleProxy,
         '/graphql': speckleProxy,
-        '/auth': backendProxy,
+        '/auth/google': backendProxy,
+        '/auth/callback': backendProxy,
       },
     },
     resolve: {
