@@ -44,7 +44,7 @@
         <div class="border-l border-slate-200 h-4 mx-1"></div>
         <div class="flex items-center gap-1.5">
           <span class="w-3 h-1 inline-block" style="background: linear-gradient(to right, #94a3b8, transparent);"></span>
-          <span class="text-slate-500 italic">Hover a card to see description &amp; formula</span>
+          <span class="text-slate-500 italic">Click on a card to see description &amp; formula</span>
         </div>
       </div>
 
@@ -62,7 +62,8 @@
             <div
               v-for="(kpi, index) in programFilteredKPIs"
               :key="kpi.id"
-              class="group bg-slate-50 rounded-lg border border-slate-100 hover:shadow-md transition-shadow"
+              class="bg-slate-50 rounded-lg border border-slate-100 hover:shadow-md transition-shadow cursor-pointer"
+              @click="toggleCardExpanded('program', kpi.id)"
             >
               <div class="p-4">
                 <div class="flex items-start justify-between mb-2">
@@ -77,8 +78,8 @@
                     </span>
                   </div>
                 </div>
-                <!-- Hover-expand: description + formula -->
-                <div class="max-h-0 overflow-hidden opacity-0 transition-all duration-300 group-hover:max-h-96 group-hover:opacity-100">
+                <!-- Click-expand: description + formula -->
+                <div :class="['max-h-0 overflow-hidden opacity-0 transition-all duration-300', expandedCards.has(`program-${kpi.id}`) ? 'max-h-96 opacity-100' : '']">
                   <div class="bg-slate-100 -mx-4 px-4 py-2 mb-3 border-t border-b border-slate-200">
                     <p class="text-xs text-slate-600 leading-relaxed">{{ kpi.description }}</p>
                     <div class="mt-2 pt-2 border-t border-slate-200">
@@ -120,7 +121,8 @@
             <div
               v-for="(kpi, index) in structureFilteredKPIs"
               :key="kpi.id"
-              class="group bg-slate-50 rounded-lg border border-slate-100 hover:shadow-md transition-shadow"
+              class="bg-slate-50 rounded-lg border border-slate-100 hover:shadow-md transition-shadow cursor-pointer"
+              @click="toggleCardExpanded('structure', kpi.id)"
             >
               <div class="p-4">
                 <div class="flex items-start justify-between mb-2">
@@ -135,8 +137,8 @@
                     </span>
                   </div>
                 </div>
-                <!-- Hover-expand: description + formula -->
-                <div class="max-h-0 overflow-hidden opacity-0 transition-all duration-300 group-hover:max-h-96 group-hover:opacity-100">
+                <!-- Click-expand: description + formula -->
+                <div :class="['max-h-0 overflow-hidden opacity-0 transition-all duration-300', expandedCards.has(`structure-${kpi.id}`) ? 'max-h-96 opacity-100' : '']">
                   <div class="bg-slate-100 -mx-4 px-4 py-2 mb-3 border-t border-b border-slate-200">
                     <p class="text-xs text-slate-600 leading-relaxed">{{ kpi.description }}</p>
                     <div class="mt-2 pt-2 border-t border-slate-200">
@@ -178,7 +180,8 @@
             <div
               v-for="(kpi, index) in dataFilteredKPIs"
               :key="kpi.id"
-              class="group bg-slate-50 rounded-lg border border-slate-100 hover:shadow-md transition-shadow"
+              class="bg-slate-50 rounded-lg border border-slate-100 hover:shadow-md transition-shadow cursor-pointer"
+              @click="toggleCardExpanded('data', kpi.id)"
             >
               <div class="p-4">
                 <div class="flex items-start justify-between mb-2">
@@ -193,8 +196,8 @@
                     </span>
                   </div>
                 </div>
-                <!-- Hover-expand: description + formula -->
-                <div class="max-h-0 overflow-hidden opacity-0 transition-all duration-300 group-hover:max-h-96 group-hover:opacity-100">
+                <!-- Click-expand: description + formula -->
+                <div :class="['max-h-0 overflow-hidden opacity-0 transition-all duration-300', expandedCards.has(`data-${kpi.id}`) ? 'max-h-96 opacity-100' : '']">
                   <div class="bg-slate-100 -mx-4 px-4 py-2 mb-3 border-t border-b border-slate-200">
                     <p class="text-xs text-slate-600 leading-relaxed">{{ kpi.description }}</p>
                     <div class="mt-2 pt-2 border-t border-slate-200">
@@ -439,6 +442,7 @@ const closestWeek = (weeks) => {
 // --- Global state ---
 const isLoading = ref(false)
 const loadError = ref('')
+const expandedCards = ref(new Set())
 
 // --- Sheet data store ---
 const sheetDataByCategory = ref({
@@ -909,6 +913,19 @@ watch(
   },
   { immediate: true }
 )
+
+// ─── Card expansion handler ───────────────────────────────────────────────────
+
+function toggleCardExpanded(category, kpiId) {
+  const cardKey = `${category}-${kpiId}`
+  const newExpanded = new Set(expandedCards.value)
+  if (newExpanded.has(cardKey)) {
+    newExpanded.delete(cardKey)
+  } else {
+    newExpanded.add(cardKey)
+  }
+  expandedCards.value = newExpanded
+}
 
 // ─── Data loading ─────────────────────────────────────────────────────────────
 
