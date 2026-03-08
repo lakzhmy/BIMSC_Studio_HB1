@@ -440,7 +440,8 @@ export async function fetchStructureParams(): Promise<{
 
 /**
  * Fetch the raw PRG_PAR_* parameters sheet and return typed rows.
- * Sheet layout: Week | Scenario | PRG_PAR_Area | ... | PRG_PAR_GeometryWeight
+ * Sheet layout: program | PRG_PAR_Area | PRG_PAR_UseRatio | ...
+ * Note: Rows with "Total" in column A are ignored.
  */
 export async function fetchProgramParams(): Promise<{
   rows: ParamValues[];
@@ -458,6 +459,10 @@ export async function fetchProgramParams(): Promise<{
   for (let i = 1; i < csvRows.length; i++) {
     const row = csvRows[i];
     if (!row || row.length < 2) continue;
+
+    // Skip the "Total" row
+    const rowLabel = row[0]?.trim() || '';
+    if (rowLabel.toLowerCase() === 'total') continue;
 
     const raw: Record<string, number | string> = {};
     for (let j = 0; j < paramNames.length; j++) {

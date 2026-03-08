@@ -32,6 +32,7 @@ export const PARAMETERS: ParameterDef[] = [
   // ── Program ──────────────────────────────────────────────────────────────
   { name: 'PRG_PAR_Area',                    variable: 'Ar',  domain: 'PRG', label: 'Area' },
   { name: 'PRG_PAR_UseRatio',                variable: 'Ur',  domain: 'PRG', label: 'Use Ratio' },
+  { name: 'PRG_PAR_ResourceConsRatio',       variable: 'Rc',  domain: 'PRG', label: 'Resource Consumption Ratio' },
   { name: 'PRG_PAR_GeometryWeight',          variable: 'Wr',  domain: 'PRG', label: 'Geometry Weight' },
   { name: 'PRG_PAR_MeanDistToExit',          variable: 'Da',  domain: 'PRG', label: 'Mean Distance to Exit' },
   { name: 'PRG_PAR_IdealDistToExit',         variable: 'Di',  domain: 'PRG', label: 'Ideal Distance to Exit' },
@@ -150,42 +151,29 @@ const resourceConsumptionIntensityRatio: KPIFormulaDef = {
   id: 'resource-consumption-intensity-ratio',
   name: 'Resource Consumption Intensity Ratio (RCIR)',
   category: 'program',
-  formula: 'AVERAGE(Ur) × AVERAGE((Wr - Wr_min) / (Wr_max - Wr_min))',
-  params: ['Ur', 'Wr'],
+  formula: 'AVERAGE(Ur_range)*AVERAGE(Rc_range)',
+  params: ['Ur', 'Rc'],
   unit: 'unitless [0.0-1.0]',
   target: 0.6,
   logic: 'MIN',
-  compute: (p) => p.Ur * p.Wr,
+  compute: (p) => p.Ur * p.Rc,
   computeAggregate: (rows) => {
     if (rows.length === 0) return 0;
     
     // Calculate average Ur
     let sumUr = 0;
-    const wrValues: number[] = [];
+    let sumRc = 0;
     
     for (const p of rows) {
       sumUr += p.Ur || 0;
-      wrValues.push(p.Wr || 0);
+      sumRc += p.Rc || 0;
     }
     
     const avgUr = sumUr / rows.length;
+    const avgRc = sumRc / rows.length;
     
-    // Find min and max Wr
-    const minWr = Math.min(...wrValues);
-    const maxWr = Math.max(...wrValues);
-    const wrRange = maxWr - minWr;
-    
-    // Calculate normalized average Wr: AVERAGE((Wr - min) / (max - min))
-    let sumNormalizedWr = 0;
-    for (const wr of wrValues) {
-      const normalized = wrRange !== 0 ? (wr - minWr) / wrRange : 0;
-      sumNormalizedWr += normalized;
-    }
-    
-    const avgNormalizedWr = sumNormalizedWr / rows.length;
-    
-    // Return AVERAGE(Ur) × AVERAGE((Wr - Wr_min) / (Wr_max - Wr_min))
-    return avgUr * avgNormalizedWr;
+    // Return AVERAGE(Ur) × AVERAGE(Rc)
+    return avgUr * avgRc;
   },
 };
 
@@ -309,12 +297,12 @@ const airPurificationEffectiveness: KPIFormulaDef = {
   id: 'air-purification-effectiveness',
   name: 'Air Purification Effectiveness',
   category: 'environment',
-  formula: '100 * normalized_Ep * AVERAGE(Ur_range) * (AVERAGE(Fe_range)/100) * normalized_Wr',
-  params: ['Ep', 'Ur', 'Fe', 'Wr'],
+  formula: '100*((AVERAGE(Ep_range)-MIN(Ep_range))/(MAX(Ep_range)-MIN(Ep_range)))*AVERAGE(Ur_range)*(AVERAGE(Fe_range)/100)*AVERAGE(Rc_range)',
+  params: ['Ep', 'Ur', 'Fe', 'Rc'],
   unit: '%',
   target: 70,
   logic: 'MAX',
-  compute: (p) => (p.Ep * p.Ur * (p.Fe / 100) * (p.Wr / 100)) / 1000,
+  compute: (p) => (p.Ep * p.Ur * (p.Fe / 100) * p.Rc) / 1000,
   computeAggregate: (rows) => {
     console.log('🔧 airPurificationEffectiveness computeAggregate called:', { rowCount: rows.length, firstRow: rows[0] });
     
@@ -324,37 +312,30 @@ const airPurificationEffectiveness: KPIFormulaDef = {
     const epValues = rows.map(r => r.Ep || 0);
     const urValues = rows.map(r => r.Ur || 0);
     const feValues = rows.map(r => r.Fe || 0);
-    const wrValues = rows.map(r => r.Wr || 0);
+    const rcValues = rows.map(r => r.Rc || 0);
     
-    console.log('🔧 airPurification extracted values:', { epValues, urValues, feValues, wrValues });
+    console.log('🔧 airPurification extracted values:', { epValues, urValues, feValues, rcValues });
     
     // Calculate averages
     const avgEp = epValues.reduce((a, b) => a + b, 0) / rows.length;
     const avgUr = urValues.reduce((a, b) => a + b, 0) / rows.length;
     const avgFe = feValues.reduce((a, b) => a + b, 0) / rows.length;
-    const avgWr = wrValues.reduce((a, b) => a + b, 0) / rows.length;
+    const avgRc = rcValues.reduce((a, b) => a + b, 0) / rows.length;
     
-    console.log('🔧 airPurification averages:', { avgEp, avgUr, avgFe, avgWr });
+    console.log('🔧 airPurification averages:', { avgEp, avgUr, avgFe, avgRc });
     
     // Find min/max for Ep normalization
     const minEp = Math.min(...epValues);
     const maxEp = Math.max(...epValues);
     const epRange = maxEp - minEp;
     
-    // Find min/max for Wr normalization
-    const minWr = Math.min(...wrValues);
-    const maxWr = Math.max(...wrValues);
-    const wrRange = maxWr - minWr;
-    
-    // Normalize both Ep and Wr
+    // Normalize Ep
     const normalizedEp = epRange !== 0 ? (avgEp - minEp) / epRange : 0;
-    // If Wr has no variation (wrRange = 0), use 1.0 as normalized value; otherwise normalize it
-    const normalizedWr = wrRange !== 0 ? (avgWr - minWr) / wrRange : 1.0;
     
-    console.log('🔧 airPurification normalization:', { minEp, maxEp, epRange, minWr, maxWr, wrRange, normalizedEp, normalizedWr });
+    console.log('🔧 airPurification normalization:', { minEp, maxEp, epRange, normalizedEp });
     
-    // Apply formula: 100 * normalized_Ep * AVERAGE(Ur) * (AVERAGE(Fe)/100) * normalized_Wr
-    const result = 100 * normalizedEp * avgUr * (avgFe / 100) * normalizedWr;
+    // Apply formula: 100 * ((AVERAGE(Ep) - MIN(Ep)) / (MAX(Ep) - MIN(Ep))) * AVERAGE(Ur) * (AVERAGE(Fe)/100) * AVERAGE(Rc)
+    const result = 100 * normalizedEp * avgUr * (avgFe / 100) * avgRc;
     console.log('🔧 airPurification final result:', result);
     
     return result;
