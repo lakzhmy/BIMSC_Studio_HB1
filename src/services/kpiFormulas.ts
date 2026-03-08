@@ -195,12 +195,12 @@ const thermalComfortComplianceRate: KPIFormulaDef = {
   id: 'thermal-comfort-compliance-rate',
   name: 'Thermal Comfort Compliance Rate',
   category: 'environment',
-  formula: '100*((AVERAGE(De_range)-MIN(De_range))/(MAX(De_range)-MIN(De_range)))/(1+(AVERAGE(Ir_range)/300)+(AVERAGE(Wl_range)/200))',
+  formula: '200*((AVERAGE(De_range)-MIN(De_range))/(MAX(De_range)-MIN(De_range)))/(1+(AVERAGE(Ir_range)/400)+(AVERAGE(Wl_range)/300))',
   params: ['De', 'Ir', 'Wl'],
   unit: '%',
   target: 70,
   logic: 'MAX',
-  compute: (p) => (100 * p.De) / (1 + (p.Ir / 300) + (p.Wl / 200)),
+  compute: (p) => (200 * p.De) / (1 + (p.Ir / 400) + (p.Wl / 300)),
   computeAggregate: (rows) => {
     if (rows.length === 0) return 0;
     
@@ -226,9 +226,9 @@ const thermalComfortComplianceRate: KPIFormulaDef = {
     // Normalize the average De
     const normalizedDe = deRange !== 0 ? (avgDe - minDe) / deRange : 0;
     
-    // Apply formula: 100*((AVERAGE(De) - MIN(De)) / (MAX(De) - MIN(De))) / (1 + (Ir/300) + (Wl/200))
-    const denominator = 1 + (avgIr / 300) + (avgWl / 200);
-    return (100 * normalizedDe) / denominator;
+    // Apply formula: 200*((AVERAGE(De) - MIN(De)) / (MAX(De) - MIN(De))) / (1 + (Ir/400) + (Wl/300))
+    const denominator = 1 + (avgIr / 400) + (avgWl / 300);
+    return (200 * normalizedDe) / denominator;
   },
 };
 
@@ -316,12 +316,12 @@ const airPurificationEffectiveness: KPIFormulaDef = {
   id: 'air-purification-effectiveness',
   name: 'Air Purification Effectiveness',
   category: 'environment',
-  formula: '100*((AVERAGE(Ep_range)-MIN(Ep_range))/(MAX(Ep_range)-MIN(Ep_range)))*AVERAGE(Ur_range)*AVERAGE(Fe_range)*AVERAGE(Rc_range)',
+  formula: '600*((AVERAGE(Ep_range)-MIN(Ep_range))/(MAX(Ep_range)-MIN(Ep_range)))*AVERAGE(Ur_range)*AVERAGE(Fe_range)*AVERAGE(Rc_range)',
   params: ['Ep', 'Ur', 'Fe', 'Rc'],
   unit: '%',
   target: 70,
   logic: 'MAX',
-  compute: (p) => (p.Ep * p.Ur * p.Fe * p.Rc) / 1000,
+  compute: (p) => 600 * p.Ep * p.Ur * p.Fe * p.Rc,
   computeAggregate: (rows) => {
     if (rows.length === 0) return 0;
     
@@ -350,8 +350,8 @@ const airPurificationEffectiveness: KPIFormulaDef = {
     // Normalize Ep
     const normalizedEp = epRange !== 0 ? (avgEp - minEp) / epRange : 0;
     
-    // Apply formula: 100 * ((AVERAGE(Ep) - MIN(Ep)) / (MAX(Ep) - MIN(Ep))) * AVERAGE(Ur) * AVERAGE(Fe) * AVERAGE(Rc)
-    const result = 100 * normalizedEp * avgUr * avgFe * avgRc;
+    // Apply formula: 600 * ((AVERAGE(Ep) - MIN(Ep)) / (MAX(Ep) - MIN(Ep))) * AVERAGE(Ur) * AVERAGE(Fe) * AVERAGE(Rc)
+    const result = 600 * normalizedEp * avgUr * avgFe * avgRc;
     
     return result;
   },
