@@ -44,6 +44,7 @@ export default defineConfig(({ mode }) => {
       proxy: {
         // Local Express API routes (must be listed BEFORE the catch-all /api)
         '/api/users': backendProxy,
+        '/api/annotations': backendProxy,
         '/api/milestones': backendProxy,
         '/api/stress-test': backendProxy,
         '/api/kpi-map': backendProxy,
