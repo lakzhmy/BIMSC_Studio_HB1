@@ -1,24 +1,25 @@
 // Annotation configs per route name.
 //
 // COORDINATE SYSTEM
-//   x  →  fraction of window.innerWidth           (0 = left edge, 1 = right edge)
-//   y  →  fraction of document.documentElement.scrollHeight  (0 = page top, 1 = page bottom)
+//   x  →  fraction of the DESIGN viewport width  (0 = left edge, 1 = right edge)
+//   y  →  fraction of the DESIGN viewport height (0 = top, 1 = bottom)
 //
-// Because y is relative to the full document height (not the viewport height),
-// annotations stay anchored to their UI elements even when you scroll.
-// Annotations below the fold simply aren't visible until you scroll down to them.
+// Coordinates are stored relative to the viewport at authoring time ("design viewport").
+// The design viewport is auto-saved to localStorage when an admin saves any annotation.
+// This keeps annotations correctly aligned at any browser zoom level.
 //
 // arrowPath: [[x1,y1], [cx1,cy1], [cx2,cy2], [x2,y2]]
 //   cubic bezier — index 0 = arrow tail (near label), index 3 = arrowhead tip (on UI element)
 // labelAnchor: { x, y } — top-left corner of the label box
 //
 // TUNING
-//   Open the page, press Space, open DevTools console and run:
+//   Open the page at 100 % zoom, press Space, open DevTools console and run:
 //     el = document.querySelector('.some-selector')
 //     r  = el.getBoundingClientRect()
 //     xFrac = r.left / window.innerWidth
-//     yFrac = (r.top + window.scrollY) / document.documentElement.scrollHeight
+//     yFrac = (r.top + window.scrollY) / window.innerHeight
 //   Use xFrac / yFrac as the arrowhead tip coordinates (index 3 of arrowPath).
+//   Always tune at 100 % browser zoom so the saved design viewport matches.
 
 export const annotations = {
   dashboard: [

@@ -291,12 +291,14 @@ function labelBoxHeight(ann) {
 function labelBoxStyle(ann) {
   const W = vw.value
   const H = vh.value
+  const DW = designW.value
+  const DH = designH.value
   const bw = ann.boxWidth || DEFAULT_BOX_W
-  // Scale from viewport center to preserve symmetric spacing across different viewports
+  // Spread is fixed in design-viewport pixels; only the center tracks the live viewport
   const centerX = W / 2
-  const bx = Math.min(centerX + (ann.labelAnchor.x - 0.5) * W, W - bw - 8)
+  const bx = Math.min(centerX + (ann.labelAnchor.x - 0.5) * DW, W - bw - 8)
   const centerY = H / 2
-  const by = centerY + (ann.labelAnchor.y - 0.5) * H + currentScrollY
+  const by = centerY + (ann.labelAnchor.y - 0.5) * DH + currentScrollY
   const h = labelBoxHeight(ann)
   return {
     left: `${bx}px`,
@@ -309,12 +311,13 @@ function labelBoxStyle(ann) {
 function tipHandleStyle(ann) {
   const W = vw.value
   const H = vh.value
+  const DW = designW.value
+  const DH = designH.value
   const tip = ann.arrowPath[3]
-  // Scale from viewport center to preserve symmetric spacing
   const centerX = W / 2
   const centerY = H / 2
-  const tx = centerX + (tip[0] - 0.5) * W - 10
-  const ty = centerY + (tip[1] - 0.5) * H + currentScrollY - 10
+  const tx = centerX + (tip[0] - 0.5) * DW - 10
+  const ty = centerY + (tip[1] - 0.5) * DH + currentScrollY - 10
   return { left: `${tx}px`, top: `${ty}px` }
 }
 
@@ -322,12 +325,13 @@ const textEditorStyle = computed(() => {
   if (!textEditAnn.value) return {}
   const W = vw.value
   const H = vh.value
+  const DW = designW.value
+  const DH = designH.value
   const bw = textEditAnn.value.boxWidth || DEFAULT_BOX_W
-  // Scale from viewport center to preserve symmetric spacing
   const centerX = W / 2
   const centerY = H / 2
-  const bx = Math.min(centerX + (textEditAnn.value.labelAnchor.x - 0.5) * W, W - bw - 8)
-  const by = centerY + (textEditAnn.value.labelAnchor.y - 0.5) * H + currentScrollY
+  const bx = Math.min(centerX + (textEditAnn.value.labelAnchor.x - 0.5) * DW, W - bw - 8)
+  const by = centerY + (textEditAnn.value.labelAnchor.y - 0.5) * DH + currentScrollY
   return { left: `${bx}px`, top: `${by}px` }
 })
 
@@ -336,15 +340,16 @@ const textEditorStyle = computed(() => {
 function getBoxEdge(ann, W, H, scrollY) {
   const bw = ann.boxWidth || DEFAULT_BOX_W
   const bh = labelBoxHeight(ann)
-  // Scale from viewport center to preserve symmetric spacing
+  const DW = designW.value
+  const DH = designH.value
   const centerX = W / 2
   const centerY = H / 2
-  const bx = Math.min(centerX + (ann.labelAnchor.x - 0.5) * W, W - bw - 8)
-  const by = centerY + (ann.labelAnchor.y - 0.5) * H + (scrollY ?? 0)
+  const bx = Math.min(centerX + (ann.labelAnchor.x - 0.5) * DW, W - bw - 8)
+  const by = centerY + (ann.labelAnchor.y - 0.5) * DH + (scrollY ?? 0)
 
   const tip = ann.arrowPath[3]
-  const tx = centerX + (tip[0] - 0.5) * W
-  const ty = centerY + (tip[1] - 0.5) * H + (scrollY ?? 0)
+  const tx = centerX + (tip[0] - 0.5) * DW
+  const ty = centerY + (tip[1] - 0.5) * DH + (scrollY ?? 0)
 
   const cx = bx + bw / 2
   const cy = by + bh / 2
@@ -372,28 +377,30 @@ function getEdgeDotClass(ann, edgeName) {
 function recalcArrowFromEdge(ann) {
   const W = vw.value
   const H = vh.value
+  const DW = designW.value
+  const DH = designH.value
   const info = getBoxEdge(ann, W, H, currentScrollY)
   const tip = ann.arrowPath[3]
 
-  // Convert from center-based scaling back to fractions
+  // Inverse of: x_px = W/2 + (f - 0.5) * DW  →  f = (x_px - W/2) / DW + 0.5
   const centerX = W / 2
   const centerY = H / 2
-  const tailXFrac = (info.x - centerX) / W + 0.5
-  const tailYFrac = (info.y - centerY - currentScrollY) / H + 0.5
+  const tailXFrac = (info.x - centerX) / DW + 0.5
+  const tailYFrac = (info.y - centerY - currentScrollY) / DH + 0.5
 
   ann.arrowPath[0] = [tailXFrac, tailYFrac]
 
-  const tipXPx = centerX + (tip[0] - 0.5) * W
-  const tipYPx = centerY + (tip[1] - 0.5) * H + currentScrollY
+  const tipXPx = centerX + (tip[0] - 0.5) * DW
+  const tipYPx = centerY + (tip[1] - 0.5) * DH + currentScrollY
 
   if (info.edge === 'top' || info.edge === 'bottom') {
     const midY = (info.y + tipYPx) / 2
-    ann.arrowPath[1] = [tailXFrac, (midY - centerY - currentScrollY) / H + 0.5]
-    ann.arrowPath[2] = [tip[0], (midY - centerY - currentScrollY) / H + 0.5]
+    ann.arrowPath[1] = [tailXFrac, (midY - centerY - currentScrollY) / DH + 0.5]
+    ann.arrowPath[2] = [tip[0], (midY - centerY - currentScrollY) / DH + 0.5]
   } else {
     const midX = (info.x + tipXPx) / 2
-    ann.arrowPath[1] = [(midX - centerX) / W + 0.5, tailYFrac]
-    ann.arrowPath[2] = [(midX - centerX) / W + 0.5, tip[1]]
+    ann.arrowPath[1] = [(midX - centerX) / DW + 0.5, tailYFrac]
+    ann.arrowPath[2] = [(midX - centerX) / DW + 0.5, tip[1]]
   }
 }
 
@@ -445,17 +452,17 @@ function onDrag(e) {
   const ann = editorAnnotations.value.find((a) => a.dbId === dragState.annDbId)
   if (!ann) return
 
-  const W = vw.value
-  const H = vh.value
+  const DW = designW.value
+  const DH = designH.value
 
   if (dragState.type === 'label') {
-    const dx = (e.clientX - dragState.startMouseX) / W
-    const dy = (e.clientY - dragState.startMouseY) / H
+    const dx = (e.clientX - dragState.startMouseX) / DW
+    const dy = (e.clientY - dragState.startMouseY) / DH
     ann.labelAnchor.x = clamp(dragState.startValX + dx, 0, 1)
     ann.labelAnchor.y = clamp(dragState.startValY + dy, 0, 1)
   } else if (dragState.type === 'tip') {
-    const dx = (e.clientX - dragState.startMouseX) / W
-    const dy = (e.clientY - dragState.startMouseY) / H
+    const dx = (e.clientX - dragState.startMouseX) / DW
+    const dy = (e.clientY - dragState.startMouseY) / DH
     ann.arrowPath[3][0] = clamp(dragState.startValX + dx, 0, 1)
     ann.arrowPath[3][1] = clamp(dragState.startValY + dy, 0, 1)
   } else if (dragState.type === 'resize') {
@@ -544,6 +551,7 @@ async function handleAddNew() {
       color: '#c0392b',
       user_name: userStore.currentUser.name,
     })
+    saveDesignDimensions()
     const source = dbAnnotations.value[route.name] ?? []
     editorAnnotations.value = source.map((a) => ({
       ...a,
@@ -568,6 +576,7 @@ async function persistAnnotation(ann) {
       color: ann.color,
       user_name: userStore.currentUser.name,
     })
+    saveDesignDimensions()
   } catch (err) {
     console.error('[annotations] persist failed:', err)
   }
@@ -607,6 +616,34 @@ const vw = ref(window.innerWidth)
 const vh = ref(window.innerHeight)
 let currentScrollY = window.scrollY
 
+// ─── Design-viewport dimensions ───────────────────────────────────────────────
+// Annotations are authored at a specific viewport size (the "design viewport").
+// We persist it in localStorage so rendering at any later zoom level uses the
+// original reference, keeping every spread offset fixed in CSS pixels.
+// The viewport center (vw/2) is kept live so content that is always mx-auto
+// centered stays correctly aligned at every zoom.
+const DESIGN_LS_KEY = 'ann_design_viewport'
+
+function loadDesignDimensions() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(DESIGN_LS_KEY) || 'null')
+    if (stored?.w > 400 && stored?.h > 300) return stored
+  } catch (_) {}
+  return { w: window.innerWidth, h: window.innerHeight }
+}
+
+function saveDesignDimensions() {
+  const dims = { w: window.innerWidth, h: window.innerHeight }
+  try { localStorage.setItem(DESIGN_LS_KEY, JSON.stringify(dims)) } catch (_) {}
+  designW.value = dims.w
+  designH.value = dims.h
+}
+
+const _design = loadDesignDimensions()
+const designW = ref(_design.w)
+const designH = ref(_design.h)
+// ─────────────────────────────────────────────────────────────────────────────
+
 function updateSize() {
   vw.value = window.innerWidth
   vh.value = window.innerHeight
@@ -623,13 +660,27 @@ function updateScroll() {
   if (editorMode.value) drawEditorAnnotations()
 }
 
+// Watch devicePixelRatio changes (fires on browser zoom even when resize is
+// delayed or batched) to guarantee annotations redraw at the correct scale.
+let _dprMq = null
+function setupDPRWatcher() {
+  if (_dprMq) _dprMq.removeEventListener('change', _dprHandler)
+  _dprMq = window.matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`)
+  _dprMq.addEventListener('change', _dprHandler, { once: true })
+}
+function _dprHandler() { updateSize(); setupDPRWatcher() }
+
 onMounted(() => {
   window.addEventListener('resize', updateSize)
   window.addEventListener('scroll', updateScroll, { passive: true })
+  window.visualViewport?.addEventListener('resize', updateSize)
+  setupDPRWatcher()
 })
 onUnmounted(() => {
   window.removeEventListener('resize', updateSize)
   window.removeEventListener('scroll', updateScroll)
+  window.visualViewport?.removeEventListener('resize', updateSize)
+  if (_dprMq) _dprMq.removeEventListener('change', _dprHandler)
 })
 
 // ─── Read-only drawing ───────────────────────────────────────────────────────
@@ -643,6 +694,8 @@ function drawAnnotations() {
   const currentAnnotations = dbAnnotations.value[route.name] ?? []
   const W = vw.value
   const H = vh.value
+  const DW = designW.value
+  const DH = designH.value
 
   if (!currentAnnotations.length) {
     drawCenteredText(group, 'No annotations for this page yet.', W / 2, currentScrollY + H / 2)
@@ -655,14 +708,14 @@ function drawAnnotations() {
   currentAnnotations.forEach((ann) => {
     const bw = ann.boxWidth || DEFAULT_BOX_W
     const bh = labelBoxHeight(ann)
-    // Scale from viewport center to preserve symmetric spacing
+    // Spread uses design dimensions; center tracks live viewport (content is always mx-auto centered)
     const centerX = W / 2
     const centerY = H / 2
-    const bx = Math.min(centerX + (ann.labelAnchor.x - 0.5) * W, W - bw - 8)
-    const by = centerY + (ann.labelAnchor.y - 0.5) * H + currentScrollY
+    const bx = Math.min(centerX + (ann.labelAnchor.x - 0.5) * DW, W - bw - 8)
+    const by = centerY + (ann.labelAnchor.y - 0.5) * DH + currentScrollY
 
     const tip = ann.arrowPath[3]
-    const tipPx = [centerX + (tip[0] - 0.5) * W, centerY + (tip[1] - 0.5) * H + currentScrollY]
+    const tipPx = [centerX + (tip[0] - 0.5) * DW, centerY + (tip[1] - 0.5) * DH + currentScrollY]
 
     const cxBox = bx + bw / 2
     const cyBox = by + bh / 2
@@ -709,6 +762,8 @@ function drawEditorAnnotations() {
 
   const W = vw.value
   const H = vh.value
+  const DW = designW.value
+  const DH = designH.value
 
   if (!editorAnnotations.value.length) return
 
@@ -717,11 +772,10 @@ function drawEditorAnnotations() {
   editorAnnotations.value.forEach((ann) => {
     const info = getBoxEdge(ann, W, H, currentScrollY)
     const tip = ann.arrowPath[3]
-    // Scale from viewport center to preserve symmetric spacing
     const centerX = W / 2
     const centerY = H / 2
-    const tipX = centerX + (tip[0] - 0.5) * W
-    const tipY = centerY + (tip[1] - 0.5) * H + currentScrollY
+    const tipX = centerX + (tip[0] - 0.5) * DW
+    const tipY = centerY + (tip[1] - 0.5) * DH + currentScrollY
 
     let cp1x, cp1y, cp2x, cp2y
     if (info.edge === 'top' || info.edge === 'bottom') {
