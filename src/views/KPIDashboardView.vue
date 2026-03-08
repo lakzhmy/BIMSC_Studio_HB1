@@ -600,7 +600,11 @@ const programSummaryCards = computed(() => {
 // Average PRG param values
 const averagePrgParams = computed(() => {
   const rows = programParamsData.value?.rows || []
-  if (!rows.length) return {}
+  console.log('📊 averagePrgParams: programParamsData.rows.length =', rows.length)
+  if (!rows.length) {
+    console.log('⚠️  No program param rows')
+    return {}
+  }
   const avgParams = {}
   const paramNames = Object.keys(rows[0])
   for (const param of paramNames) {
@@ -616,7 +620,11 @@ const averagePrgParams = computed(() => {
 // Compute program KPIs from average program parameters
 const programFilteredKPIs = computed(() => {
   const rows = programParamsData.value?.rows || []
-  if (!rows.length) return []
+  console.log('📊 programFilteredKPIs: rows.length =', rows.length)
+  if (!rows.length) {
+    console.log('⚠️  No program rows')
+    return []
+  }
 
   const avgParams = {}
   const paramNames = Object.keys(rows[0])
@@ -658,7 +666,12 @@ const programFilteredKPIs = computed(() => {
 // Average structure params
 const averageStructureParams = computed(() => {
   const rows = structureParamsData.value.rows || []
-  if (!rows.length) return {}
+  console.log('📊 averageStructureParams: structureParamsData.value =', structureParamsData.value)
+  console.log('📊 averageStructureParams: rows.length =', rows.length)
+  if (!rows.length) {
+    console.log('⚠️  No structure param rows - structureParamsData.value:', JSON.stringify(structureParamsData.value, null, 2))
+    return {}
+  }
   const avgParams = {}
   const paramNames = Object.keys(rows[0]?.params || {})
   for (const param of paramNames) {
@@ -675,7 +688,11 @@ const averageStructureParams = computed(() => {
 const dataFilteredKPIs = computed(() => {
   const structParams = averageStructureParams.value
   const prgParams = averagePrgParams.value
-  if (Object.keys(structParams).length === 0 || Object.keys(prgParams).length === 0) return []
+  console.log('🔍 dataFilteredKPIs: structParams keys:', Object.keys(structParams).length, 'prgParams keys:', Object.keys(prgParams).length)
+  if (Object.keys(structParams).length === 0 || Object.keys(prgParams).length === 0) {
+    console.log('⚠️  Early return: missing structParams or prgParams')
+    return []
+  }
 
   const structRows = structureParamsData.value.rows || []
   const mergedRows = structRows.map(row => ({ params: { ...row.params, ...prgParams } }))
@@ -933,6 +950,7 @@ async function loadData() {
   isLoading.value = true
   loadError.value = ''
   try {
+    console.log('📥 loadData starting...')
     const [programData, structureData, strParamsResult, prgParamsResult, formulaTargets] = await Promise.all([
       fetchKPIsByCategory('program'),
       fetchKPIsByCategory('structure'),
@@ -940,12 +958,20 @@ async function loadData() {
       fetchProgramParams(),
       fetchFormulaTargets(),
     ])
+    console.log('✅ All data fetched:', {
+      programData: programData?.length,
+      structureData: structureData?.length,
+      strParamsResult: strParamsResult?.rows?.length,
+      prgParamsResult: prgParamsResult?.rows?.length,
+      formulaTargets: Object.keys(formulaTargets || {}).length,
+    })
     if (formulaTargets && Object.keys(formulaTargets).length > 0) {
       updateKPITargets(formulaTargets)
     }
     sheetDataByCategory.value = { program: programData, structure: structureData, data: null }
     structureParamsData.value = strParamsResult
     programParamsData.value   = prgParamsResult
+    console.log('✅ Data assigned', { structureParamsData: structureParamsData.value?.rows?.length, programParamsData: programParamsData.value?.rows?.length })
   } catch (error) {
     console.error('Failed to load KPI data:', error)
     loadError.value = `Error: ${error instanceof Error ? error.message : String(error)}`

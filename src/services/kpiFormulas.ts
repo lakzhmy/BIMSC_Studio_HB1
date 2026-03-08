@@ -117,12 +117,28 @@ const effectiveProgrammaticArea: KPIFormulaDef = {
   id: 'effective-programmatic-area',
   name: 'Effective Programmatic Area (EPA)',
   category: 'program',
-  formula: 'Ur × Ar',
+  formula: 'AVERAGE(Ar_range) × AVERAGE(Ur_range)',
   params: ['Ur', 'Ar'],
   unit: 'm²',
   target: 1000000,
   logic: 'STRICT',
   compute: (p) => p.Ur * p.Ar,
+  computeAggregate: (rows) => {
+    if (rows.length === 0) return 0;
+    
+    // Extract parameter values
+    const arValues = rows.map(r => r.Ar || 0);
+    const urValues = rows.map(r => r.Ur || 0);
+    
+    // Calculate averages using only non-zero values for each parameter
+    const arNonZero = arValues.filter(v => v !== 0);
+    const urNonZero = urValues.filter(v => v !== 0);
+    
+    const avgAr = arNonZero.length > 0 ? arNonZero.reduce((a, b) => a + b, 0) / arNonZero.length : 0;
+    const avgUr = urNonZero.length > 0 ? urNonZero.reduce((a, b) => a + b, 0) / urNonZero.length : 0;
+    
+    return avgAr * avgUr;
+  },
 };
 
 const programmaticProximityIndex: KPIFormulaDef = {
@@ -182,12 +198,12 @@ const thermalComfortComplianceRate: KPIFormulaDef = {
   id: 'thermal-comfort-compliance-rate',
   name: 'Thermal Comfort Compliance Rate',
   category: 'environment',
-  formula: '200*((AVERAGE(De_range)-MIN(De_range))/(MAX(De_range)-MIN(De_range)))/(1+(AVERAGE(Ir_range)/400)+(AVERAGE(Wl_range)/300))',
+  formula: '100*((AVERAGE(De_range)-MIN(De_range))/(MAX(De_range)-MIN(De_range)))/(1+(AVERAGE(Ir_range)/300)+(AVERAGE(Wl_range)/200))',
   params: ['De', 'Ir', 'Wl'],
   unit: '%',
   target: 70,
   logic: 'MAX',
-  compute: (p) => (200 * p.De) / (1 + (p.Ir / 400) + (p.Wl / 300)),
+  compute: (p) => (100 * p.De) / (1 + (p.Ir / 300) + (p.Wl / 200)),
   computeAggregate: (rows) => {
     if (rows.length === 0) return 0;
     
@@ -213,9 +229,9 @@ const thermalComfortComplianceRate: KPIFormulaDef = {
     // Normalize the average De
     const normalizedDe = deRange !== 0 ? (avgDe - minDe) / deRange : 0;
     
-    // Apply formula: 200*((AVERAGE(De) - MIN(De)) / (MAX(De) - MIN(De))) / (1 + (Ir/400) + (Wl/300))
-    const denominator = 1 + (avgIr / 400) + (avgWl / 300);
-    return (200 * normalizedDe) / denominator;
+    // Apply formula: 100*((AVERAGE(De) - MIN(De)) / (MAX(De) - MIN(De))) / (1 + (Ir/300) + (Wl/200))
+    const denominator = 1 + (avgIr / 300) + (avgWl / 200);
+    return (100 * normalizedDe) / denominator;
   },
 };
 
@@ -307,7 +323,7 @@ const airPurificationEffectiveness: KPIFormulaDef = {
   id: 'air-purification-effectiveness',
   name: 'Air Purification Effectiveness',
   category: 'environment',
-  formula: '600*((AVERAGE(Ep_range)-MIN(Ep_range))/(MAX(Ep_range)-MIN(Ep_range)))*AVERAGE(Ur_range)*AVERAGE(Fe_range)*AVERAGE(Rc_range)',
+  formula: '100*((AVERAGE(Ep_range)-MIN(Ep_range))/(MAX(Ep_range)-MIN(Ep_range)))*AVERAGE(Ur_range)*AVERAGE(Fe_range)*AVERAGE(Rc_range)',
   params: ['Ep', 'Ur', 'Fe', 'Rc'],
   unit: '%',
   target: 70,
@@ -349,8 +365,8 @@ const airPurificationEffectiveness: KPIFormulaDef = {
     
     console.log('🔧 airPurification normalization:', { minEp, maxEp, epRange, normalizedEp });
     
-    // Apply formula: 600 * ((AVERAGE(Ep) - MIN(Ep)) / (MAX(Ep) - MIN(Ep))) * AVERAGE(Ur) * AVERAGE(Fe) * AVERAGE(Rc)
-    const result = 600 * normalizedEp * avgUr * avgFe * avgRc;
+    // Apply formula: 100 * ((AVERAGE(Ep) - MIN(Ep)) / (MAX(Ep) - MIN(Ep))) * AVERAGE(Ur) * AVERAGE(Fe) * AVERAGE(Rc)
+    const result = 100 * normalizedEp * avgUr * avgFe * avgRc;
     console.log('🔧 airPurification final result:', result);
     
     return result;

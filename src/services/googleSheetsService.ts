@@ -393,7 +393,30 @@ export async function fetchStructureParams(): Promise<{
   scenarios: string[];
   rows: StructureParamRow[];
 }> {
-  const csvRows = await fetchSheetByGid(STRUCTURE_PARAMS_GID);
+  // Retry up to 3 times with exponential backoff to wait for IMPORTRANGE to load
+  let csvRows: string[][] = [];
+  let attempts = 0;
+  const maxAttempts = 3;
+  
+  while (attempts < maxAttempts) {
+    csvRows = await fetchSheetByGid(STRUCTURE_PARAMS_GID);
+    
+    // Check if data is still loading (IMPORTRANGE shows "Loading..." placeholder)
+    const headerRow = csvRows[0] || [];
+    const hasLoadingPlaceholder = headerRow.some(cell => (cell || '').includes('Loading'));
+    
+    if (!hasLoadingPlaceholder || attempts === maxAttempts - 1) {
+      // Either data is loaded, or we've maxed out attempts
+      break;
+    }
+    
+    // Wait before retrying (exponential backoff: 500ms, 1000ms)
+    attempts++;
+    const delay = 500 * Math.pow(2, attempts - 1);
+    console.log(`⏳ Structure sheet still loading, retrying in ${delay}ms (attempt ${attempts}/${maxAttempts})...`);
+    await new Promise(resolve => setTimeout(resolve, delay));
+  }
+  
   if (csvRows.length < 2) return { weeks: [], scenarios: [], rows: [] };
 
   const headerRow = csvRows[0];
