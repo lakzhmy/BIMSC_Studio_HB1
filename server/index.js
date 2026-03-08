@@ -520,12 +520,14 @@ app.get('/auth/google', (req, res) => {
 app.get('/auth/callback', async (req, res) => {
   const { code, error } = req.query
 
+  const frontendBase = process.env.FRONTEND_URL || getBaseUrl(req)
+
   if (error) {
-    return res.redirect('/?error=' + encodeURIComponent(error))
+    return res.redirect(`${frontendBase}/?error=` + encodeURIComponent(error))
   }
 
   if (!code) {
-    return res.redirect('/?error=no_code')
+    return res.redirect(`${frontendBase}/?error=no_code`)
   }
 
   const clientId = process.env.GOOGLE_CLIENT_ID
@@ -549,7 +551,7 @@ app.get('/auth/callback', async (req, res) => {
     if (!tokenResponse.ok) {
       const err = await tokenResponse.text()
       console.error('Token exchange failed:', err)
-      return res.redirect('/?error=token_exchange_failed')
+      return res.redirect(`${frontendBase}/?error=token_exchange_failed`)
     }
 
     const tokenData = await tokenResponse.json()
@@ -561,7 +563,7 @@ app.get('/auth/callback', async (req, res) => {
 
     if (!userResponse.ok) {
       console.error('Userinfo fetch failed:', userResponse.status)
-      return res.redirect('/?error=userinfo_failed')
+      return res.redirect(`${frontendBase}/?error=userinfo_failed`)
     }
 
     const userData = await userResponse.json()
@@ -620,10 +622,12 @@ app.get('/auth/callback', async (req, res) => {
       frontendParams.set('avatar_shade', String(dbUser.avatar_shade ?? 2))
     }
 
-    res.redirect(`/auth/success?${frontendParams.toString()}`)
+    const frontendUrl = process.env.FRONTEND_URL || getBaseUrl(req)
+    res.redirect(`${frontendUrl}/auth/success?${frontendParams.toString()}`)
   } catch (err) {
     console.error('OAuth callback error:', err)
-    res.redirect('/?error=server_error')
+    const frontendBase = process.env.FRONTEND_URL || getBaseUrl(req)
+    res.redirect(`${frontendBase}/?error=server_error`)
   }
 })
 
