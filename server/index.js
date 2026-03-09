@@ -25,7 +25,7 @@ if (!hasSpeckleToken) {
 }
 
 // --- Speckle passthrough proxies (registered BEFORE express.json() to preserve POST body) ---
-const specklePassthroughPaths = ['/graphql', '/objects', '/streams']
+const specklePassthroughPaths = ['/graphql', '/objects', '/streams', '/api/v2']
 
 function makeSpeckleProxy(mountPath) {
   return createProxyMiddleware({
