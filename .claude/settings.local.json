@@ -28,7 +28,24 @@
       "Bash(curl -s -w \"\\\\nHTTP %{http_code}, Size: %{size_download} bytes, Time: %{time_total}s\\\\n\" --max-time 15 -o /dev/null \"https://app.speckle.systems/objects/3d70848e9c/6b27d4ab5def9218cdc19845776be693\" -H \"Authorization: Bearer f0deee84fe551eab83ddb6d24e2b83d947b45827d7\")",
       "Bash(curl -s --max-time 20 \"https://app.speckle.systems/graphql\" -H \"Content-Type: application/json\" -H \"Authorization: Bearer f0deee84fe551eab83ddb6d24e2b83d947b45827d7\" -d '{\"\"query\"\":\"\"{ stream\\(id: \\\\\"\"3d70848e9c\\\\\"\"\\) { branches\\(limit: 100\\) { items { name commits\\(limit: 1\\) { totalCount items { id referencedObject createdAt } } } } } }\"\"}')",
       "WebFetch(domain:speckle.community)",
-      "Bash(npx vite build)"
+      "Bash(npx vite build)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(findstr :5174)",
+      "Bash(findstr \":5173 \")",
+      "Bash(findstr \"5173\")",
+      "Bash(findstr \"5174\")",
+      "Bash(taskkill /PID 245928 /F)",
+      "Bash(npx vite build --mode development)",
+      "Bash(tasklist /FI \"IMAGENAME eq node.exe\" /FO CSV)",
+      "Bash(findstr node)",
+      "Bash(findstr \"LISTENING\")",
+      "Bash(findstr \"5173\\\\|5174\")",
+      "Bash(findstr LISTENING)",
+      "Bash(findstr 5173)",
+      "Bash(findstr 5174)",
+      "Bash(taskkill //PID 245928 //F)",
+      "Bash(curl -s http://localhost:5174/api/gradient-sets)",
+      "Bash(curl -s http://localhost:5173/api/gradient-sets)"
     ]
   }
 }

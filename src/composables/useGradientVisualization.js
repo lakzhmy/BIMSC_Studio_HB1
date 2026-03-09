@@ -1,11 +1,7 @@
 import { ref, shallowRef } from 'vue'
 import {
-  Viewer,
-  DefaultViewerParams,
   SpeckleLoader,
   UrlHelper,
-  CameraController,
-  FilteringExtension,
   ViewerEvent,
 } from '@speckle/viewer'
 import {
@@ -14,7 +10,7 @@ import {
   fetchObjectChildren,
 } from '@/services/speckleService'
 
-export function useGradientVisualization(viewerContainerRef) {
+export function useGradientVisualization() {
   // --- Active config (set dynamically via initialize) ---
   let activeProjectId = null
   let activeVizModelId = null
@@ -34,6 +30,39 @@ export function useGradientVisualization(viewerContainerRef) {
 
   let viewer = null
   let filteringExtension = null
+  let clickHandlerRegistered = false
+
+  // --- Accept shared viewer from outside ---
+  function setViewer(v, fe) {
+    viewer = v
+    filteringExtension = fe
+
+    // Register click handler once
+    if (!clickHandlerRegistered && viewer) {
+      viewer.on(ViewerEvent.ObjectClicked, (selectionEvent) => {
+        if (!isActive.value) return // ignore clicks when not in gradient mode
+        if (!selectionEvent || !selectionEvent.hits || selectionEvent.hits.length === 0) {
+          tooltipData.value = null
+          return
+        }
+        const hit = selectionEvent.hits[0]
+        const nodeId = hit.node?.model?.raw?.id
+        if (nodeId && gradientMap.value.has(nodeId)) {
+          const info = gradientMap.value.get(nodeId)
+          tooltipData.value = {
+            property_value: info.property_value,
+            bucket_label: info.bucket_label,
+            gradient_value: info.gradient_value,
+            screenX: selectionEvent.event?.clientX ?? 0,
+            screenY: selectionEvent.event?.clientY ?? 0,
+          }
+        } else {
+          tooltipData.value = null
+        }
+      })
+      clickHandlerRegistered = true
+    }
+  }
 
   // --- Color ramp: light yellow → deep red ---
   function gradientToColor(t) {
@@ -42,38 +71,6 @@ export function useGradientVisualization(viewerContainerRef) {
     const g = Math.round(255 * (1 - clamped))
     const b = Math.round(80 * (1 - clamped))
     return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`
-  }
-
-  // --- Viewer (created once, reused across set switches) ---
-  async function ensureViewer() {
-    if (viewer) return
-    if (!viewerContainerRef.value) return
-
-    viewer = new Viewer(viewerContainerRef.value, DefaultViewerParams)
-    await viewer.init()
-    viewer.createExtension(CameraController)
-    filteringExtension = viewer.createExtension(FilteringExtension)
-
-    viewer.on(ViewerEvent.ObjectClicked, (selectionEvent) => {
-      if (!selectionEvent || !selectionEvent.hits || selectionEvent.hits.length === 0) {
-        tooltipData.value = null
-        return
-      }
-      const hit = selectionEvent.hits[0]
-      const nodeId = hit.node?.model?.raw?.id
-      if (nodeId && gradientMap.value.has(nodeId)) {
-        const info = gradientMap.value.get(nodeId)
-        tooltipData.value = {
-          property_value: info.property_value,
-          bucket_label: info.bucket_label,
-          gradient_value: info.gradient_value,
-          screenX: selectionEvent.event?.clientX ?? 0,
-          screenY: selectionEvent.event?.clientY ?? 0,
-        }
-      } else {
-        tooltipData.value = null
-      }
-    })
   }
 
   // --- Initialization: fetch all versions and their root data ---
@@ -113,8 +110,7 @@ export function useGradientVisualization(viewerContainerRef) {
       }
       visualizationVersions.value = vizWithRoots
 
-      // 5. Create viewer if needed (reuse if already exists), then load latest version
-      await ensureViewer()
+      // 5. Load latest version
       isActive.value = true
       await loadVersion(0)
     } catch (err) {
@@ -278,11 +274,10 @@ export function useGradientVisualization(viewerContainerRef) {
     return gradientMap.value.get(objectId) || null
   }
 
-  function dispose() {
-    if (viewer && typeof viewer.dispose === 'function') {
-      viewer.dispose()
-      viewer = null
-      filteringExtension = null
+  // Reset state without touching the shared viewer
+  function reset() {
+    if (filteringExtension) {
+      filteringExtension.removeUserObjectColors()
     }
     isActive.value = false
     gradientMap.value = new Map()
@@ -292,6 +287,7 @@ export function useGradientVisualization(viewerContainerRef) {
     activeProjectId = null
     activeVizModelId = null
     activeManifestModelId = null
+    legendData.value = { global_min: 0, global_max: 1, property_name: '' }
   }
 
   return {
@@ -305,10 +301,11 @@ export function useGradientVisualization(viewerContainerRef) {
     loadingProgress,
     errorMessage,
     tooltipData,
+    setViewer,
     initialize,
     loadVersion,
     getObjectInfo,
     gradientToColor,
-    dispose,
+    reset,
   }
 }
