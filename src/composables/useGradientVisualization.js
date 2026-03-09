@@ -44,14 +44,11 @@ export function useGradientVisualization(viewerContainerRef) {
     return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`
   }
 
-  // --- Viewer ---
-  async function initViewer() {
+  // --- Viewer (created once, reused across set switches) ---
+  async function ensureViewer() {
+    if (viewer) return
     if (!viewerContainerRef.value) return
-    if (viewer) {
-      viewer.dispose()
-      viewer = null
-      filteringExtension = null
-    }
+
     viewer = new Viewer(viewerContainerRef.value, DefaultViewerParams)
     await viewer.init()
     viewer.createExtension(CameraController)
@@ -88,6 +85,7 @@ export function useGradientVisualization(viewerContainerRef) {
 
     isLoading.value = true
     errorMessage.value = ''
+    tooltipData.value = null
     loadingProgress.value = 'Fetching manifest versions...'
 
     try {
@@ -115,8 +113,8 @@ export function useGradientVisualization(viewerContainerRef) {
       }
       visualizationVersions.value = vizWithRoots
 
-      // 5. Init viewer and load the latest version
-      await initViewer()
+      // 5. Create viewer if needed (reuse if already exists), then load latest version
+      await ensureViewer()
       isActive.value = true
       await loadVersion(0)
     } catch (err) {
@@ -157,8 +155,11 @@ export function useGradientVisualization(viewerContainerRef) {
         return
       }
 
-      // Unload existing objects
+      // Clear previous colors and unload existing objects
       loadingProgress.value = 'Loading 3D objects...'
+      if (filteringExtension) {
+        filteringExtension.removeUserObjectColors()
+      }
       await viewer.unloadAll()
 
       // Load visualization objects through proxy (private project — needs auth)
@@ -243,9 +244,6 @@ export function useGradientVisualization(viewerContainerRef) {
     walkTree(root)
 
     console.log(`[gradient] Tree nodes matched: ${treeIdToGradient.size}, unmatched: ${unmatchedTreeIds.length}`)
-    if (unmatchedTreeIds.length > 0) {
-      console.log('[gradient] Sample unmatched:', unmatchedTreeIds.slice(0, 5))
-    }
 
     // Group by rounded gradient value for efficiency
     const buckets = new Map()

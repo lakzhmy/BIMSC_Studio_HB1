@@ -132,15 +132,13 @@ async function fetchGradientSets() {
   }
 }
 
-// --- Switch to a different gradient set ---
+// --- Switch to a different gradient set (reuses the same viewer) ---
 async function switchGradientSet(gs) {
   if (activeSetId.value === gs.id && gradientHasLoaded.value) return
 
   activeSetId.value = gs.id
-  gradientHasLoaded.value = false
   gradientSliderValue.value = 0
 
-  disposeGradient()
   await initGradient({
     project_id: gs.project_id,
     visualization_model_id: gs.visualization_model_id,
