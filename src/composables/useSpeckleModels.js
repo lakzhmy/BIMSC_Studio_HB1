@@ -13,7 +13,7 @@ import {
   getLatestModels,
 } from '@/services/speckleService'
 
-const STREAM_ID = '3d70848e9c'
+const STREAM_ID = '08c875bbe4'
 const SPECKLE_SERVER = 'https://app.speckle.systems'
 
 export function useSpeckleModels(viewerContainerRef) {

@@ -1,4 +1,4 @@
-const STREAM_ID = '3d70848e9c'
+const STREAM_ID = '08c875bbe4'
 const GRAPHQL_ENDPOINT = '/graphql'
 
 /**
@@ -101,4 +101,118 @@ export function getModelsAtDate(models, targetDate) {
       return version ? { model, version } : null
     })
     .filter(Boolean)
+}
+
+/**
+ * Fetches versions of a specific model within a project.
+ * Uses newer Speckle GraphQL terminology (project/model/versions).
+ */
+export async function fetchModelVersions(projectId, modelId, limit = 5) {
+  const query = `
+    query {
+      project(id: "${projectId}") {
+        model(id: "${modelId}") {
+          versions(limit: ${limit}) {
+            items {
+              id
+              referencedObject
+              message
+              createdAt
+            }
+          }
+        }
+      }
+    }
+  `
+
+  const response = await fetch(GRAPHQL_ENDPOINT, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query }),
+  })
+
+  if (!response.ok) {
+    throw new Error(`GraphQL request failed: ${response.status} ${response.statusText}`)
+  }
+
+  const json = await response.json()
+
+  if (json.errors) {
+    throw new Error(`GraphQL errors: ${json.errors.map(e => e.message).join(', ')}`)
+  }
+
+  return json.data.project.model.versions.items
+}
+
+/**
+ * Fetches a root object's data blob from Speckle.
+ * Used to read metadata like global_min, global_max, source_version_id, etc.
+ */
+export async function fetchRootObject(projectId, objectId) {
+  const query = `
+    query {
+      stream(id: "${projectId}") {
+        object(id: "${objectId}") {
+          data
+        }
+      }
+    }
+  `
+
+  const response = await fetch(GRAPHQL_ENDPOINT, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query }),
+  })
+
+  if (!response.ok) {
+    throw new Error(`GraphQL request failed: ${response.status} ${response.statusText}`)
+  }
+
+  const json = await response.json()
+
+  if (json.errors) {
+    throw new Error(`GraphQL errors: ${json.errors.map(e => e.message).join(', ')}`)
+  }
+
+  return json.data.stream.object.data
+}
+
+/**
+ * Fetches children of an object (e.g., the @elements wrapper objects
+ * containing gradient_value, property_value, bucket_label, and @element references).
+ */
+export async function fetchObjectChildren(projectId, objectId, depth = 2, limit = 1000) {
+  const query = `
+    query {
+      stream(id: "${projectId}") {
+        object(id: "${objectId}") {
+          children(depth: ${depth}, limit: ${limit}) {
+            objects {
+              id
+              data
+            }
+          }
+        }
+      }
+    }
+  `
+
+  const response = await fetch(GRAPHQL_ENDPOINT, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query }),
+  })
+
+  if (!response.ok) {
+    throw new Error(`GraphQL request failed: ${response.status} ${response.statusText}`)
+  }
+
+  const json = await response.json()
+
+  if (json.errors) {
+    throw new Error(`GraphQL errors: ${json.errors.map(e => e.message).join(', ')}`)
+  }
+
+  return json.data.stream.object.children.objects
 }
