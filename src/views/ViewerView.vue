@@ -1,67 +1,100 @@
 <template>
   <main class="py-8 px-6">
-    <div class="max-w-7xl mx-auto">
+    <div class="max-w-7xl mx-auto space-y-6">
 
-      <!-- Viewer widget -->
-      <div class="bg-white rounded-lg border border-slate-200 overflow-hidden flex flex-col" style="height: 700px;">
-        <div ref="viewerContainer" class="flex-1 relative">
+      <!-- ========== LIVE VIEW WIDGET (top) — iframe embed ========== -->
+      <div class="bg-white rounded-lg border border-slate-200 overflow-hidden flex flex-col" style="height: 1000px;">
+
+        <!-- Header bar (outside iframe) -->
+        <div class="px-4 py-3 border-b border-slate-100 flex-shrink-0">
+          <h1 class="text-lg font-semibold text-slate-900 leading-tight">Live Model View</h1>
+        </div>
+
+        <!-- Iframe container — clip right-side line with overflow + extra width -->
+        <div class="flex-1 relative overflow-hidden">
+          <iframe
+            :src="liveIframeSrc"
+            class="absolute inset-0 border-0"
+            style="width: calc(100% + 4px); height: 100%;"
+            allow="fullscreen"
+            loading="lazy"
+          ></iframe>
+        </div>
+
+        <!-- Timeline bar (outside iframe) -->
+        <div v-if="snapPoints.length > 1" class="px-4 py-3 border-t border-slate-100 flex-shrink-0">
+          <div class="flex items-center gap-3">
+            <span class="text-[10px] text-slate-400 whitespace-nowrap">Timeline</span>
+            <div class="flex-1 flex items-center justify-between relative py-2">
+              <div class="absolute left-1.5 right-1.5 h-0.5 bg-slate-300 top-1/2 -translate-y-1/2"></div>
+              <button
+                v-for="(point, i) in snapPoints"
+                :key="i"
+                @click="onSnapPointClick(point, i)"
+                class="w-3 h-3 rounded-full border-2 relative z-10 transition-all hover:scale-125 focus:outline-none"
+                :class="activeSnapIndex === i
+                  ? 'bg-blue-600 border-blue-600 scale-125'
+                  : 'bg-white border-slate-400 hover:border-blue-400'"
+                :title="point.label"
+              ></button>
+            </div>
+            <span class="text-xs font-medium text-slate-900 bg-slate-100 px-2 py-1 rounded whitespace-nowrap min-w-[100px] text-center">
+              {{ activeSnapLabel }}
+            </span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ========== GRADIENT VISUALIZATION WIDGET (bottom) ========== -->
+      <div class="bg-white rounded-lg border border-slate-200 overflow-hidden flex flex-col" style="height: 1000px;">
+        <div ref="gradientViewerContainer" class="flex-1 relative">
 
           <!-- Loading overlay -->
           <div v-if="isFetchingSets" class="absolute inset-0 flex items-center justify-center gap-2 text-slate-600 text-sm z-10">
             <span class="spinner" aria-hidden="true"></span>
-            <span>Loading viewer...</span>
+            <span>Loading gradient sets...</span>
           </div>
-          <div v-else-if="activeLoading && !hasLoaded" class="absolute inset-0 flex items-center justify-center gap-2 text-slate-600 text-sm z-10">
+          <div v-else-if="gradientLoading && !gradientHasLoaded" class="absolute inset-0 flex items-center justify-center gap-2 text-slate-600 text-sm z-10">
             <span class="spinner" aria-hidden="true"></span>
-            <span>{{ activeLoadingProgress || 'Initializing...' }}</span>
+            <span>{{ gradientLoadingProgress || 'Initializing...' }}</span>
           </div>
-          <div v-else-if="activeError && !activeLoading" class="absolute inset-0 flex items-center justify-center text-red-600 text-sm px-6 text-center z-10">
-            {{ activeError }}
+          <div v-else-if="gradientError && !gradientLoading" class="absolute inset-0 flex items-center justify-center text-red-600 text-sm px-6 text-center z-10">
+            {{ gradientError }}
+          </div>
+          <div v-else-if="!gradientHasLoaded && !isFetchingSets" class="absolute inset-0 flex items-center justify-center text-slate-400 text-sm z-10">
+            Select a gradient set to visualize
           </div>
 
           <!-- Top-left header -->
           <div class="absolute top-4 left-4 z-10 pointer-events-none">
-            <h1 class="text-lg font-semibold text-slate-900 leading-tight">
-              {{ viewMode === 'live' ? 'Live Model View' : 'Gradient Visualization' }}
-            </h1>
-            <p v-if="viewMode === 'live' && liveStreamName" class="text-xs text-slate-500 mt-0.5">{{ liveStreamName }}</p>
-            <p v-if="viewMode !== 'live' && gradientLegend.property_name" class="text-xs text-slate-500 mt-0.5">{{ gradientLegend.property_name }}</p>
+            <h1 class="text-lg font-semibold text-slate-900 leading-tight">Gradient Visualization</h1>
+            <p v-if="gradientLegend.property_name" class="text-xs text-slate-500 mt-0.5">{{ gradientLegend.property_name }}</p>
           </div>
 
-          <!-- Top-right: mode selector buttons -->
+          <!-- Top-right: gradient set buttons -->
           <div class="absolute top-4 right-4 z-10 flex items-center gap-1 flex-wrap justify-end">
-            <!-- Live View button (always first) -->
-            <button
-              @click="switchToLiveView"
-              class="px-3 py-1 text-xs font-medium rounded-md transition-colors"
-              :class="viewMode === 'live'
-                ? 'bg-blue-600 text-white'
-                : 'bg-white/90 backdrop-blur text-slate-600 hover:bg-slate-100 border border-slate-200'"
-              :disabled="isSwitching"
-            >Live View</button>
-
-            <!-- Gradient set buttons -->
             <button
               v-for="gs in gradientSets"
               :key="gs.id"
               @click="switchToGradientSet(gs)"
               class="px-3 py-1 text-xs font-medium rounded-md transition-colors"
-              :class="viewMode === gs.id
+              :class="activeGradientSetId === gs.id
                 ? 'bg-blue-600 text-white'
                 : 'bg-white/90 backdrop-blur text-slate-600 hover:bg-slate-100 border border-slate-200'"
-              :disabled="isSwitching"
+              :disabled="isSwitchingGradient"
             >{{ gs.name }}</button>
           </div>
 
-          <!-- Non-blocking loading indicator (when switching after first load) -->
-          <div v-if="hasLoaded && activeLoadingProgress" class="absolute top-14 right-4 z-10 flex items-center gap-2 bg-white/90 backdrop-blur rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-600">
+          <!-- Non-blocking loading indicator -->
+          <div v-if="gradientHasLoaded && gradientLoadingProgress" class="absolute top-14 right-4 z-10 flex items-center gap-2 bg-white/90 backdrop-blur rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-600">
             <span class="spinner-sm" aria-hidden="true"></span>
-            <span>{{ activeLoadingProgress }}</span>
+            <span>{{ gradientLoadingProgress }}</span>
           </div>
 
-          <!-- Tooltip on object click (gradient mode only) -->
+          <!-- Tooltip on object click -->
           <div
-            v-if="viewMode !== 'live' && gradientTooltip"
+            v-if="gradientTooltip"
             class="absolute z-20 bg-white rounded-lg border border-slate-200 shadow-lg px-3 py-2 text-xs pointer-events-none"
             :style="{ left: tooltipLeft + 'px', top: tooltipTop + 'px' }"
           >
@@ -69,12 +102,12 @@
             <div class="text-slate-500 mt-0.5">Bucket: {{ gradientTooltip.bucket_label }}</div>
           </div>
 
-          <!-- Bottom controls -->
-          <div class="absolute bottom-0 left-0 right-0 z-10 p-3 bg-gradient-to-t from-white/90 to-white/0">
+          <!-- Bottom controls: legend + timeline -->
+          <div v-if="gradientHasLoaded" class="absolute bottom-0 left-0 right-0 z-10 p-3 bg-gradient-to-t from-white/90 to-white/0">
             <div class="bg-white/80 backdrop-blur rounded-lg border border-slate-200 px-4 py-3 space-y-3">
 
-              <!-- Gradient Legend (gradient mode only) -->
-              <div v-if="viewMode !== 'live' && gradientLegend.property_name">
+              <!-- Gradient Legend -->
+              <div v-if="gradientLegend.property_name">
                 <div class="text-xs font-medium text-slate-700 mb-1">{{ gradientLegend.property_name }}</div>
                 <div class="flex items-center gap-2">
                   <span class="text-[10px] text-slate-500">{{ gradientLegend.global_min }}</span>
@@ -83,8 +116,8 @@
                 </div>
               </div>
 
-              <!-- Gradient Timeline (gradient mode with multiple versions) -->
-              <div v-if="viewMode !== 'live' && gradientManifestVersions.length > 1" class="flex items-center gap-2">
+              <!-- Gradient Timeline -->
+              <div v-if="gradientManifestVersions.length > 1" class="flex items-center gap-2">
                 <span class="text-[10px] text-slate-400 whitespace-nowrap">Timeline</span>
                 <input
                   :value="gradientSliderValue"
@@ -97,23 +130,6 @@
                 />
                 <span class="text-xs font-medium text-slate-900 bg-slate-100 px-2 py-1 rounded whitespace-nowrap">
                   {{ gradientTimelineLabel }}
-                </span>
-              </div>
-
-              <!-- Live View Timeline (live mode with version history) -->
-              <div v-if="viewMode === 'live' && liveTimeline.length > 1" class="flex items-center gap-2">
-                <span class="text-[10px] text-slate-400 whitespace-nowrap">Timeline</span>
-                <input
-                  :value="liveSliderValue"
-                  @input="onLiveSliderInput"
-                  type="range"
-                  :min="0"
-                  :max="100"
-                  step="1"
-                  class="flex-1 h-1.5 bg-slate-200 rounded-full appearance-none cursor-pointer"
-                />
-                <span class="text-xs font-medium text-slate-900 bg-slate-100 px-2 py-1 rounded whitespace-nowrap">
-                  {{ liveTimelineLabel }}
                 </span>
               </div>
 
@@ -136,32 +152,24 @@ import {
   FilteringExtension,
 } from '@speckle/viewer'
 import { useGradientVisualization } from '@/composables/useGradientVisualization'
-import { useSpeckleModels } from '@/composables/useSpeckleModels'
+import {
+  fetchAllModelsAndVersions,
+  transformModelsData,
+} from '@/services/speckleService'
 
-const viewerContainer = ref(null)
-const viewMode = ref('live') // 'live' | gradient set id
-const hasLoaded = ref(false)
+// --- Refs ---
+const gradientViewerContainer = ref(null)
+
+const gradientHasLoaded = ref(false)
 const isFetchingSets = ref(false)
-const isSwitching = ref(false)
+const isSwitchingGradient = ref(false)
+const activeGradientSetId = ref(null)
 const gradientSets = ref([])
 
-// Shared viewer instance — created once, never disposed until unmount
-let sharedViewer = null
-let sharedFilteringExt = null
+let gradientViewer = null
+let gradientFilteringExt = null
 
-async function createSharedViewer() {
-  if (sharedViewer || !viewerContainer.value) return
-  sharedViewer = new Viewer(viewerContainer.value, DefaultViewerParams)
-  await sharedViewer.init()
-  sharedViewer.createExtension(CameraController)
-  sharedFilteringExt = sharedViewer.createExtension(FilteringExtension)
-
-  // Hand the shared viewer to both composables
-  gradientSetViewer(sharedViewer, sharedFilteringExt)
-  liveSetViewer(sharedViewer)
-}
-
-// --- Gradient composable (no viewer creation inside) ---
+// --- Gradient composable ---
 const {
   manifestVersions: gradientManifestVersions,
   legendData: gradientLegend,
@@ -175,34 +183,85 @@ const {
   reset: resetGradient,
 } = useGradientVisualization()
 
-// --- Live view composable (no viewer creation inside) ---
-const {
-  isFetchingModels: liveFetching,
-  errorMessage: liveError,
-  loadingProgress: liveLoadingProgress,
-  streamName: liveStreamName,
-  models: liveModels,
-  dateRange: liveDateRange,
-  timeline: liveTimeline,
-  historyDateLabel: liveHistoryDateLabel,
-  setViewer: liveSetViewer,
-  fetchModels: liveFetchModels,
-  showCurrentModels: liveShowCurrent,
-  showHistoryAtPosition: liveShowHistory,
-} = useSpeckleModels()
+// --- Live view: iframe + snap-point version switching ---
+const SPECKLE_PROJECT = '08c875bbe4'
+const SPECKLE_MODEL = 'hyperbuilding01'
+const SPECKLE_BASE_URL = `https://app.speckle.systems/projects/${SPECKLE_PROJECT}/models/$${SPECKLE_MODEL}`
+const EMBED_PARAMS = '#embed=%7B%22isEnabled%22%3Atrue%7D'
 
-// --- Unified loading/error state ---
-const activeLoading = computed(() =>
-  viewMode.value === 'live' ? liveFetching.value : gradientLoading.value
-)
+const snapPoints = ref([])
+const activeSnapIndex = ref(-1)
 
-const activeLoadingProgress = computed(() =>
-  viewMode.value === 'live' ? liveLoadingProgress.value : gradientLoadingProgress.value
-)
+const liveIframeSrc = computed(() => {
+  const idx = activeSnapIndex.value
+  if (idx === -1 || idx === snapPoints.value.length - 1 || !snapPoints.value[idx]) {
+    // Latest version — no @versionId
+    return SPECKLE_BASE_URL + EMBED_PARAMS
+  }
+  const versionId = snapPoints.value[idx].version.id
+  return `${SPECKLE_BASE_URL}@${versionId}${EMBED_PARAMS}`
+})
 
-const activeError = computed(() =>
-  viewMode.value === 'live' ? liveError.value : gradientError.value
-)
+const activeSnapLabel = computed(() => {
+  if (activeSnapIndex.value === -1 || activeSnapIndex.value === snapPoints.value.length - 1) {
+    return 'Current'
+  }
+  const point = snapPoints.value[activeSnapIndex.value]
+  return point ? point.label : ''
+})
+
+function onSnapPointClick(point, index) {
+  if (activeSnapIndex.value === index) return
+  activeSnapIndex.value = index
+  // iframe src updates reactively via liveIframeSrc computed
+}
+
+// Fetch versions for snap-point timeline (lightweight GraphQL only, no 3D loading)
+async function fetchLiveSnapPoints() {
+  try {
+    const stream = await fetchAllModelsAndVersions()
+    const data = transformModelsData(stream)
+    // Filter to hyperbuilding01
+    const filtered = data.models.filter(m => m.name.toLowerCase().includes(SPECKLE_MODEL))
+    const allVersions = filtered
+      .flatMap(m => m.versions.map(v => ({ model: m, version: v })))
+      .sort((a, b) => a.version.createdAt - b.version.createdAt)
+
+    if (allVersions.length === 0) return
+
+    const count = 6
+    if (allVersions.length <= count) {
+      snapPoints.value = allVersions.map((entry, i) => ({
+        index: i,
+        model: entry.model,
+        version: entry.version,
+        date: entry.version.createdAt,
+        label: entry.version.createdAt.toLocaleDateString('en-US', {
+          year: 'numeric', month: 'short', day: 'numeric',
+        }),
+      }))
+    } else {
+      const points = []
+      for (let i = 0; i < count; i++) {
+        const idx = Math.round(i * (allVersions.length - 1) / (count - 1))
+        const entry = allVersions[idx]
+        points.push({
+          index: idx,
+          model: entry.model,
+          version: entry.version,
+          date: entry.version.createdAt,
+          label: entry.version.createdAt.toLocaleDateString('en-US', {
+            year: 'numeric', month: 'short', day: 'numeric',
+          }),
+        })
+      }
+      snapPoints.value = points
+    }
+    activeSnapIndex.value = snapPoints.value.length - 1
+  } catch (err) {
+    console.error('Failed to fetch live snap points:', err)
+  }
+}
 
 // --- Fetch gradient sets from API ---
 async function fetchGradientSets() {
@@ -216,49 +275,6 @@ async function fetchGradientSets() {
   }
 }
 
-// --- Live view controls ---
-const liveSliderValue = ref(100) // 0-100, default to latest (100 = position 1.0)
-let liveModelsFetched = false
-
-const liveTimelineLabel = computed(() => {
-  if (liveSliderValue.value >= 100) return 'Current'
-  return liveHistoryDateLabel.value || ''
-})
-
-async function switchToLiveView() {
-  if (viewMode.value === 'live') return
-  isSwitching.value = true
-  viewMode.value = 'live'
-
-  // Clear gradient state (removes colors, unloads handled by live loader)
-  resetGradient()
-
-  try {
-    if (!liveModelsFetched) {
-      await liveFetchModels('hyperbuilding01')
-      liveModelsFetched = true
-    }
-    liveSliderValue.value = 100
-    await liveShowCurrent()
-    hasLoaded.value = true
-  } catch (err) {
-    console.error('Failed to switch to live view:', err)
-  } finally {
-    isSwitching.value = false
-  }
-}
-
-function onLiveSliderInput(event) {
-  const val = Number(event.target.value)
-  liveSliderValue.value = val
-  const position = val / 100
-  if (val >= 100) {
-    liveShowCurrent()
-  } else {
-    liveShowHistory(position)
-  }
-}
-
 // --- Gradient controls ---
 const gradientSliderValue = ref(0)
 
@@ -269,47 +285,55 @@ const gradientTimelineLabel = computed(() => {
   return formatDate(new Date(versions[idx].createdAt))
 })
 
-async function switchToGradientSet(gs) {
-  if (viewMode.value === gs.id && hasLoaded.value) return
-  isSwitching.value = true
-  viewMode.value = gs.id
+async function ensureGradientViewer() {
+  if (gradientViewer) return
+  if (!gradientViewerContainer.value) return
+  gradientViewer = new Viewer(gradientViewerContainer.value, DefaultViewerParams)
+  await gradientViewer.init()
+  gradientViewer.createExtension(CameraController)
+  gradientFilteringExt = gradientViewer.createExtension(FilteringExtension)
+  gradientSetViewer(gradientViewer, gradientFilteringExt)
+}
 
-  // Reset gradient state (clears old colors) — viewer.unloadAll() called inside initGradient
+async function switchToGradientSet(gs) {
+  if (activeGradientSetId.value === gs.id && gradientHasLoaded.value) return
+  isSwitchingGradient.value = true
+  activeGradientSetId.value = gs.id
+
   resetGradient()
   gradientSliderValue.value = 0
 
   try {
+    await ensureGradientViewer()
     await initGradient({
       project_id: gs.project_id,
       visualization_model_id: gs.visualization_model_id,
       manifest_model_id: gs.manifest_model_id,
     })
-    hasLoaded.value = true
+    gradientHasLoaded.value = true
   } catch (err) {
     console.error('Failed to switch to gradient set:', err)
   } finally {
-    isSwitching.value = false
+    isSwitchingGradient.value = false
   }
 }
 
 function onGradientSliderInput(event) {
   const idx = Number(event.target.value)
   gradientSliderValue.value = idx
-  loadGradientVersion(idx).then(() => {
-    hasLoaded.value = true
-  })
+  loadGradientVersion(idx)
 }
 
-// --- Tooltip positioning (gradient mode, relative to viewer container) ---
+// --- Tooltip positioning ---
 const tooltipLeft = computed(() => {
-  if (!gradientTooltip.value || !viewerContainer.value) return 0
-  const rect = viewerContainer.value.getBoundingClientRect()
+  if (!gradientTooltip.value || !gradientViewerContainer.value) return 0
+  const rect = gradientViewerContainer.value.getBoundingClientRect()
   return gradientTooltip.value.screenX - rect.left + 12
 })
 
 const tooltipTop = computed(() => {
-  if (!gradientTooltip.value || !viewerContainer.value) return 0
-  const rect = viewerContainer.value.getBoundingClientRect()
+  if (!gradientTooltip.value || !gradientViewerContainer.value) return 0
+  const rect = gradientViewerContainer.value.getBoundingClientRect()
   return gradientTooltip.value.screenY - rect.top - 40
 })
 
@@ -325,26 +349,25 @@ function formatDate(date) {
 
 // --- Lifecycle ---
 onMounted(async () => {
+  // Fetch snap points for the live view timeline (lightweight GraphQL, no 3D)
+  fetchLiveSnapPoints()
+
+  // Fetch gradient sets, then auto-load the first one
   isFetchingSets.value = true
-  await fetchGradientSets()
-  isFetchingSets.value = false
-
-  // Create shared viewer once
-  await createSharedViewer()
-
-  // Default: load live view
-  await liveFetchModels('hyperbuilding01')
-  liveModelsFetched = true
-  await liveShowCurrent()
-  hasLoaded.value = true
+  fetchGradientSets().then(() => {
+    isFetchingSets.value = false
+    if (gradientSets.value.length > 0) {
+      switchToGradientSet(gradientSets.value[0])
+    }
+  })
 })
 
 onUnmounted(() => {
   resetGradient()
-  if (sharedViewer && typeof sharedViewer.dispose === 'function') {
-    sharedViewer.dispose()
-    sharedViewer = null
-    sharedFilteringExt = null
+  if (gradientViewer && typeof gradientViewer.dispose === 'function') {
+    gradientViewer.dispose()
+    gradientViewer = null
+    gradientFilteringExt = null
   }
 })
 </script>

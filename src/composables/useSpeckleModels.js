@@ -173,6 +173,51 @@ export function useSpeckleModels() {
     }
   }
 
+  // --- Snap points: evenly distributed versions for the timeline ---
+  function getVersionSnapPoints(count = 6) {
+    // Collect all versions across all models, sorted oldest → newest
+    const allVersions = models.value
+      .flatMap(m => m.versions.map(v => ({ model: m, version: v })))
+      .sort((a, b) => a.version.createdAt - b.version.createdAt)
+
+    if (allVersions.length === 0) return []
+    if (allVersions.length <= count) {
+      return allVersions.map((entry, i) => ({
+        index: i,
+        model: entry.model,
+        version: entry.version,
+        date: entry.version.createdAt,
+        label: entry.version.createdAt.toLocaleDateString('en-US', {
+          year: 'numeric', month: 'short', day: 'numeric',
+        }),
+      }))
+    }
+
+    // Pick evenly spaced indices
+    const points = []
+    for (let i = 0; i < count; i++) {
+      const idx = Math.round(i * (allVersions.length - 1) / (count - 1))
+      const entry = allVersions[idx]
+      points.push({
+        index: idx,
+        model: entry.model,
+        version: entry.version,
+        date: entry.version.createdAt,
+        label: entry.version.createdAt.toLocaleDateString('en-US', {
+          year: 'numeric', month: 'short', day: 'numeric',
+        }),
+      })
+    }
+    return points
+  }
+
+  // Load a specific snap point (single model+version)
+  async function loadSnapPoint(snapPoint) {
+    if (!viewer) return
+    loadingProgress.value = `Loading: ${snapPoint.model.name}`
+    await loadModelsIntoViewer([{ model: snapPoint.model, version: snapPoint.version }])
+  }
+
   return {
     isFetchingModels,
     errorMessage,
@@ -192,6 +237,8 @@ export function useSpeckleModels() {
     fetchModels,
     showCurrentModels,
     showHistoryAtPosition,
+    getVersionSnapPoints,
+    loadSnapPoint,
     toggleModelVisibility,
     isModelVisible,
   }

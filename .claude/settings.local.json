@@ -45,7 +45,13 @@
       "Bash(findstr 5174)",
       "Bash(taskkill //PID 245928 //F)",
       "Bash(curl -s http://localhost:5174/api/gradient-sets)",
-      "Bash(curl -s http://localhost:5173/api/gradient-sets)"
+      "Bash(curl -s http://localhost:5173/api/gradient-sets)",
+      "Bash(taskkill //PID 284056 //F)",
+      "Bash(where vite)",
+      "Bash(npx which vite)",
+      "Bash(ls \"C:\\\\IaaC\\\\BIMSC\\\\BIMSC_Studio\\\\BIMSC_Studio_HB1\\\\BIMSC_Studio_HB1\\\\node_modules\\\\.bin\\\\vite\"*)",
+      "Bash(where node)",
+      "WebFetch(domain:app.speckle.systems)"
     ]
   }
 }
