@@ -376,6 +376,18 @@ app.delete('/api/kpi-map/edges/:id', async (req, res) => {
   }
 })
 
+// --- Gradient Visualization Sets ---
+
+app.get('/api/gradient-sets', async (req, res) => {
+  try {
+    const result = await query('SELECT * FROM gradient_sets ORDER BY sort_order, id')
+    res.json(result.rows)
+  } catch (err) {
+    console.error('[db] gradient_sets fetch failed:', err.message)
+    res.status(500).json({ error: 'Failed to fetch gradient sets' })
+  }
+})
+
 // --- Annotations CRUD ---
 
 const ANNOTATION_ADMINS = [

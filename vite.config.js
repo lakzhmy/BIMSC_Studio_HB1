@@ -48,6 +48,7 @@ export default defineConfig(({ mode }) => {
         '/api/milestones': backendProxy,
         '/api/stress-test': backendProxy,
         '/api/kpi-map': backendProxy,
+        '/api/gradient-sets': backendProxy,
         // Everything else under /api goes to Speckle
         '/api': speckleProxy,
         '/objects': speckleProxy,

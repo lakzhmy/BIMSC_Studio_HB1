@@ -7,7 +7,11 @@
         <div ref="viewerContainer" class="flex-1 relative">
 
           <!-- Loading overlay -->
-          <div v-if="gradientLoading && !gradientHasLoaded" class="absolute inset-0 flex items-center justify-center gap-2 text-slate-600 text-sm z-10">
+          <div v-if="isFetchingSets" class="absolute inset-0 flex items-center justify-center gap-2 text-slate-600 text-sm z-10">
+            <span class="spinner" aria-hidden="true"></span>
+            <span>Loading gradient sets...</span>
+          </div>
+          <div v-else-if="gradientLoading && !gradientHasLoaded" class="absolute inset-0 flex items-center justify-center gap-2 text-slate-600 text-sm z-10">
             <span class="spinner" aria-hidden="true"></span>
             <span>{{ gradientLoadingProgress || 'Initializing gradient view...' }}</span>
           </div>
@@ -21,8 +25,22 @@
             <p v-if="gradientLegend.property_name" class="text-xs text-slate-500 mt-0.5">{{ gradientLegend.property_name }}</p>
           </div>
 
-          <!-- Top-right: non-blocking loading indicator -->
-          <div v-if="gradientHasLoaded && gradientLoadingProgress" class="absolute top-4 right-4 z-10 flex items-center gap-2 bg-white/90 backdrop-blur rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-600">
+          <!-- Top-right: set selector buttons -->
+          <div v-if="gradientSets.length > 1" class="absolute top-4 right-4 z-10 flex items-center gap-1">
+            <button
+              v-for="gs in gradientSets"
+              :key="gs.id"
+              @click="switchGradientSet(gs)"
+              class="px-3 py-1 text-xs font-medium rounded-md transition-colors"
+              :class="activeSetId === gs.id
+                ? 'bg-blue-600 text-white'
+                : 'bg-white/90 backdrop-blur text-slate-600 hover:bg-slate-100 border border-slate-200'"
+              :disabled="gradientLoading"
+            >{{ gs.name }}</button>
+          </div>
+
+          <!-- Non-blocking loading indicator (when switching sets after first load) -->
+          <div v-if="gradientHasLoaded && gradientLoadingProgress" class="absolute top-14 right-4 z-10 flex items-center gap-2 bg-white/90 backdrop-blur rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-600">
             <span class="spinner-sm" aria-hidden="true"></span>
             <span>{{ gradientLoadingProgress }}</span>
           </div>
@@ -82,6 +100,9 @@ import { useGradientVisualization } from '@/composables/useGradientVisualization
 
 const viewerContainer = ref(null)
 const gradientHasLoaded = ref(false)
+const isFetchingSets = ref(false)
+const gradientSets = ref([])
+const activeSetId = ref(null)
 
 // --- Gradient composable ---
 const {
@@ -95,6 +116,38 @@ const {
   loadVersion: loadGradientVersion,
   dispose: disposeGradient,
 } = useGradientVisualization(viewerContainer)
+
+// --- Fetch gradient sets from API ---
+async function fetchGradientSets() {
+  isFetchingSets.value = true
+  try {
+    const res = await fetch('/api/gradient-sets')
+    if (!res.ok) throw new Error(`Failed to fetch gradient sets: ${res.status}`)
+    gradientSets.value = await res.json()
+  } catch (err) {
+    console.error('Failed to fetch gradient sets:', err)
+    gradientSets.value = []
+  } finally {
+    isFetchingSets.value = false
+  }
+}
+
+// --- Switch to a different gradient set ---
+async function switchGradientSet(gs) {
+  if (activeSetId.value === gs.id && gradientHasLoaded.value) return
+
+  activeSetId.value = gs.id
+  gradientHasLoaded.value = false
+  gradientSliderValue.value = 0
+
+  disposeGradient()
+  await initGradient({
+    project_id: gs.project_id,
+    visualization_model_id: gs.visualization_model_id,
+    manifest_model_id: gs.manifest_model_id,
+  })
+  gradientHasLoaded.value = true
+}
 
 // --- Gradient controls ---
 const gradientSliderValue = ref(0)
@@ -139,8 +192,10 @@ function formatDate(date) {
 
 // --- Lifecycle ---
 onMounted(async () => {
-  await initGradient()
-  gradientHasLoaded.value = true
+  await fetchGradientSets()
+  if (gradientSets.value.length > 0) {
+    await switchGradientSet(gradientSets.value[0])
+  }
 })
 
 onUnmounted(() => {

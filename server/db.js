@@ -118,6 +118,32 @@ export async function initDb() {
   `)
   console.log('[db] annotations table ready')
 
+  await query(`
+    CREATE TABLE IF NOT EXISTS gradient_sets (
+      id                    SERIAL PRIMARY KEY,
+      name                  TEXT NOT NULL,
+      property_name         TEXT NOT NULL,
+      project_id            TEXT NOT NULL,
+      visualization_model_id TEXT NOT NULL,
+      manifest_model_id     TEXT NOT NULL,
+      sort_order            INTEGER DEFAULT 0,
+      created_at            TIMESTAMPTZ DEFAULT NOW()
+    )
+  `)
+  console.log('[db] gradient_sets table ready')
+
+  // Seed gradient sets if table is empty
+  const { rows: gsCount } = await query('SELECT count(*)::int AS c FROM gradient_sets')
+  if (gsCount[0].c === 0) {
+    await query(`
+      INSERT INTO gradient_sets (name, property_name, project_id, visualization_model_id, manifest_model_id, sort_order) VALUES
+        ('Distance to Exit',       'PRG_PAR_MeanDistToExit',  'f91adc2f08', '470a5c84fa', '31f0fc18e2', 1),
+        ('Geometry Weight',        'PRG_PAR_GeometryWeight',  'f91adc2f08', '5def7c760f', 'a1819c4ed1', 2),
+        ('Ideal Distance to Exit', 'PRG_PAR_IdealDistToExit', 'f91adc2f08', '9b72254e73', '9ae5c82ef9', 3)
+    `)
+    console.log('[db] gradient_sets seeded with 3 defaults')
+  }
+
   // Seed annotations if table is empty
   const { rows: annCount } = await query('SELECT count(*)::int AS c FROM annotations')
   if (annCount[0].c === 0) {

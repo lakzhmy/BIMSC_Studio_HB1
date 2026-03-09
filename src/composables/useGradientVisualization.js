@@ -14,11 +14,12 @@ import {
   fetchObjectChildren,
 } from '@/services/speckleService'
 
-const TARGET_PROJECT_ID = import.meta.env.VITE_SPECKLE_TARGET_PROJECT_ID
-const VIZ_MODEL_ID = import.meta.env.VITE_SPECKLE_VISUALIZATION_MODEL_ID
-const MANIFEST_MODEL_ID = import.meta.env.VITE_SPECKLE_MANIFEST_MODEL_ID
-
 export function useGradientVisualization(viewerContainerRef) {
+  // --- Active config (set dynamically via initialize) ---
+  let activeProjectId = null
+  let activeVizModelId = null
+  let activeManifestModelId = null
+
   // --- State ---
   const isActive = ref(false)
   const manifestVersions = shallowRef([])
@@ -79,24 +80,29 @@ export function useGradientVisualization(viewerContainerRef) {
   }
 
   // --- Initialization: fetch all versions and their root data ---
-  async function initialize() {
+  // config: { project_id, visualization_model_id, manifest_model_id }
+  async function initialize(config) {
+    activeProjectId = config.project_id
+    activeVizModelId = config.visualization_model_id
+    activeManifestModelId = config.manifest_model_id
+
     isLoading.value = true
     errorMessage.value = ''
     loadingProgress.value = 'Fetching manifest versions...'
 
     try {
       // 1. Fetch manifest versions
-      const rawManifest = await fetchModelVersions(TARGET_PROJECT_ID, MANIFEST_MODEL_ID, 5)
+      const rawManifest = await fetchModelVersions(activeProjectId, activeManifestModelId, 5)
 
       // 2. Fetch visualization versions
       loadingProgress.value = 'Fetching visualization versions...'
-      const rawViz = await fetchModelVersions(TARGET_PROJECT_ID, VIZ_MODEL_ID, 10)
+      const rawViz = await fetchModelVersions(activeProjectId, activeVizModelId, 10)
 
       // 3. Fetch root objects for manifest versions to get source_version_id and property_name
       loadingProgress.value = 'Loading metadata...'
       const manifestWithRoots = []
       for (const v of rawManifest) {
-        const rootData = await fetchRootObject(TARGET_PROJECT_ID, v.referencedObject)
+        const rootData = await fetchRootObject(activeProjectId, v.referencedObject)
         manifestWithRoots.push({ ...v, rootData })
       }
       manifestVersions.value = manifestWithRoots
@@ -104,7 +110,7 @@ export function useGradientVisualization(viewerContainerRef) {
       // 4. Fetch root objects for visualization versions to get source_version_id
       const vizWithRoots = []
       for (const v of rawViz) {
-        const rootData = await fetchRootObject(TARGET_PROJECT_ID, v.referencedObject)
+        const rootData = await fetchRootObject(activeProjectId, v.referencedObject)
         vizWithRoots.push({ ...v, rootData })
       }
       visualizationVersions.value = vizWithRoots
@@ -156,7 +162,7 @@ export function useGradientVisualization(viewerContainerRef) {
       await viewer.unloadAll()
 
       // Load visualization objects through proxy (private project — needs auth)
-      const proxyUrl = `${window.location.origin}/streams/${TARGET_PROJECT_ID}/objects/${vizVersion.referencedObject}`
+      const proxyUrl = `${window.location.origin}/streams/${activeProjectId}/objects/${vizVersion.referencedObject}`
       const urls = await UrlHelper.getResourceUrls(proxyUrl)
 
       for (const url of urls) {
@@ -186,7 +192,7 @@ export function useGradientVisualization(viewerContainerRef) {
 
   // --- Build gradient map from object children ---
   async function buildGradientMap(rootObjectId) {
-    const children = await fetchObjectChildren(TARGET_PROJECT_ID, rootObjectId, 2, 5000)
+    const children = await fetchObjectChildren(activeProjectId, rootObjectId, 2, 5000)
     const map = new Map()
 
     for (const child of children) {
@@ -285,6 +291,9 @@ export function useGradientVisualization(viewerContainerRef) {
     tooltipData.value = null
     manifestVersions.value = []
     visualizationVersions.value = []
+    activeProjectId = null
+    activeVizModelId = null
+    activeManifestModelId = null
   }
 
   return {
