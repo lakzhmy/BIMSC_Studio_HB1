@@ -1,10 +1,7 @@
 import { ref, computed } from 'vue'
 import {
-  Viewer,
-  DefaultViewerParams,
   SpeckleLoader,
   UrlHelper,
-  CameraController,
 } from '@speckle/viewer'
 import {
   fetchAllModelsAndVersions,
@@ -16,7 +13,7 @@ import {
 const STREAM_ID = '08c875bbe4'
 const SPECKLE_SERVER = 'https://app.speckle.systems'
 
-export function useSpeckleModels(viewerContainerRef) {
+export function useSpeckleModels() {
   // --- State ---
   const isFetchingModels = ref(false)
   const errorMessage = ref('')
@@ -34,6 +31,11 @@ export function useSpeckleModels(viewerContainerRef) {
   const hiddenModelIds = ref(new Set())
 
   let viewer = null
+
+  // --- Accept shared viewer from outside ---
+  function setViewer(v) {
+    viewer = v
+  }
 
   // --- Computed ---
   const historyDate = computed(() => {
@@ -53,15 +55,7 @@ export function useSpeckleModels(viewerContainerRef) {
   const modelCount = computed(() => models.value.length)
 
   // --- Viewer Management ---
-  async function initViewer() {
-    if (!viewerContainerRef.value || viewer) return
-    viewer = new Viewer(viewerContainerRef.value, DefaultViewerParams)
-    await viewer.init()
-    viewer.createExtension(CameraController)
-  }
-
   async function loadModelsIntoViewer(modelEntries) {
-    if (!viewer) await initViewer()
     if (!viewer) return
 
     errorMessage.value = ''
@@ -142,13 +136,29 @@ export function useSpeckleModels(viewerContainerRef) {
   }
 
   // --- Initialization ---
-  async function fetchModels() {
+  async function fetchModels(modelNameFilter) {
     try {
       isFetchingModels.value = true
       errorMessage.value = ''
       // Model discovery still uses the /graphql proxy (lightweight, token injected server-side)
       const stream = await fetchAllModelsAndVersions()
       const data = transformModelsData(stream)
+
+      // Optional: filter to a single model by name (case-insensitive partial match)
+      if (modelNameFilter) {
+        const filter = modelNameFilter.toLowerCase()
+        data.models = data.models.filter(m => m.name.toLowerCase().includes(filter))
+        // Recompute dateRange and timeline from filtered models
+        const allDates = data.models
+          .flatMap(m => m.versions.map(v => v.createdAt))
+          .sort((a, b) => a - b)
+        data.dateRange =
+          allDates.length > 0
+            ? { min: allDates[0], max: allDates[allDates.length - 1] }
+            : { min: new Date(), max: new Date() }
+        data.timeline = allDates
+      }
+
       streamName.value = data.streamName
       models.value = data.models
       dateRange.value = data.dateRange
@@ -163,11 +173,49 @@ export function useSpeckleModels(viewerContainerRef) {
     }
   }
 
-  function dispose() {
-    if (viewer && typeof viewer.dispose === 'function') {
-      viewer.dispose()
-      viewer = null
+  // --- Snap points: evenly distributed versions for the timeline ---
+  function getVersionSnapPoints(count = 6) {
+    // Collect all versions across all models, sorted oldest → newest
+    const allVersions = models.value
+      .flatMap(m => m.versions.map(v => ({ model: m, version: v })))
+      .sort((a, b) => a.version.createdAt - b.version.createdAt)
+
+    if (allVersions.length === 0) return []
+    if (allVersions.length <= count) {
+      return allVersions.map((entry, i) => ({
+        index: i,
+        model: entry.model,
+        version: entry.version,
+        date: entry.version.createdAt,
+        label: entry.version.createdAt.toLocaleDateString('en-US', {
+          year: 'numeric', month: 'short', day: 'numeric',
+        }),
+      }))
     }
+
+    // Pick evenly spaced indices
+    const points = []
+    for (let i = 0; i < count; i++) {
+      const idx = Math.round(i * (allVersions.length - 1) / (count - 1))
+      const entry = allVersions[idx]
+      points.push({
+        index: idx,
+        model: entry.model,
+        version: entry.version,
+        date: entry.version.createdAt,
+        label: entry.version.createdAt.toLocaleDateString('en-US', {
+          year: 'numeric', month: 'short', day: 'numeric',
+        }),
+      })
+    }
+    return points
+  }
+
+  // Load a specific snap point (single model+version)
+  async function loadSnapPoint(snapPoint) {
+    if (!viewer) return
+    loadingProgress.value = `Loading: ${snapPoint.model.name}`
+    await loadModelsIntoViewer([{ model: snapPoint.model, version: snapPoint.version }])
   }
 
   return {
@@ -185,12 +233,13 @@ export function useSpeckleModels(viewerContainerRef) {
     historyDate,
     historyDateLabel,
     modelCount,
+    setViewer,
     fetchModels,
-    initViewer,
     showCurrentModels,
     showHistoryAtPosition,
+    getVersionSnapPoints,
+    loadSnapPoint,
     toggleModelVisibility,
     isModelVisible,
-    dispose,
   }
 }
