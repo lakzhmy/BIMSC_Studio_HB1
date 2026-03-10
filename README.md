@@ -1,6 +1,7 @@
 # BIMSC Studio HB1 — Lung Tower
 
-A Vue 3 single-page application for architectural BIM project management, designed for the **Lung Tower** studio project at MACAD. The app supports three studio teams (Structure, Program, Data) with Google OAuth authentication, KPI tracking from live Google Sheets data, a Speckle-powered 3D BIM viewer, and an animated blob avatar identity system.
+Hello People!
+This is a Vue 3 single-page application for architectural BIM project management, designed for the **Lung Tower** studio project at MACAD. The app supports three studio teams (Structure, Program, Data) with Google OAuth authentication, KPI tracking from live Google Sheets data, a Speckle-powered 3D BIM viewer, and an animated blob avatar identity system.
 
 ### Live App
 
