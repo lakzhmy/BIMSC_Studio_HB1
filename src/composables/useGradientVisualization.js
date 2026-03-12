@@ -63,12 +63,12 @@ export function useGradientVisualization() {
     }
   }
 
-  // --- Color ramp: light yellow → deep red ---
+  // --- Color ramp: light blue (#60b5f0) → red (#f06050) ---
   function gradientToColor(t) {
     const clamped = Math.max(0, Math.min(1, t))
-    const r = 255
-    const g = Math.round(255 * (1 - clamped))
-    const b = Math.round(80 * (1 - clamped))
+    const r = Math.round(96 + (240 - 96) * clamped)   // 96 → 240
+    const g = Math.round(181 + (96 - 181) * clamped)   // 181 → 96
+    const b = Math.round(240 + (80 - 240) * clamped)   // 240 → 80
     return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`
   }
 
