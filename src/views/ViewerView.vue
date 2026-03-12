@@ -72,13 +72,13 @@
             <p v-if="gradientLegend.property_name" class="text-xs text-slate-500 mt-0.5">{{ gradientLegend.property_name }}</p>
           </div>
 
-          <!-- Top-right: gradient set buttons -->
-          <div class="absolute top-4 right-4 z-10 flex items-center gap-1 flex-wrap justify-end">
+          <!-- Top-right: gradient set buttons (vertical) -->
+          <div class="absolute top-4 right-4 z-10 flex flex-col gap-1">
             <button
               v-for="gs in gradientSets"
               :key="gs.id"
               @click="switchToGradientSet(gs)"
-              class="px-3 py-1 text-xs font-medium rounded-md transition-colors"
+              class="px-3 py-1.5 text-xs font-medium rounded-md transition-colors text-center w-40"
               :class="activeGradientSetId === gs.id
                 ? 'bg-blue-600 text-white'
                 : 'bg-white/90 backdrop-blur text-slate-600 hover:bg-slate-100 border border-slate-200'"
@@ -87,7 +87,7 @@
           </div>
 
           <!-- Non-blocking loading indicator -->
-          <div v-if="gradientHasLoaded && gradientLoadingProgress" class="absolute top-14 right-4 z-10 flex items-center gap-2 bg-white/90 backdrop-blur rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-600">
+          <div v-if="gradientHasLoaded && gradientLoadingProgress" class="absolute top-16 left-4 z-10 flex items-center gap-2 bg-white/90 backdrop-blur rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-600">
             <span class="spinner-sm" aria-hidden="true"></span>
             <span>{{ gradientLoadingProgress }}</span>
           </div>
@@ -102,22 +102,28 @@
             <div class="text-slate-500 mt-0.5">Bucket: {{ gradientTooltip.bucket_label }}</div>
           </div>
 
-          <!-- Bottom controls: legend + timeline -->
-          <div v-if="gradientHasLoaded" class="absolute bottom-0 left-0 right-0 z-10 p-3 bg-gradient-to-t from-white/90 to-white/0">
-            <div class="bg-white/80 backdrop-blur rounded-lg border border-slate-200 px-4 py-3 space-y-3">
-
-              <!-- Gradient Legend -->
-              <div v-if="gradientLegend.property_name">
-                <div class="text-xs font-medium text-slate-700 mb-1">{{ gradientLegend.property_name }}</div>
-                <div class="flex items-center gap-2">
-                  <span class="text-[10px] text-slate-500">{{ gradientLegend.global_min }}</span>
-                  <div class="flex-1 h-3 rounded-full gradient-bar"></div>
-                  <span class="text-[10px] text-slate-500">{{ gradientLegend.global_max }}</span>
+          <!-- Bottom-left: bucket legend -->
+          <div v-if="gradientHasLoaded && gradientLegend.property_name" class="absolute bottom-3 left-3 z-10">
+            <div class="bg-white/80 backdrop-blur rounded-lg border border-slate-200 px-3 py-2.5">
+              <div class="text-xs font-medium text-slate-700">{{ gradientLegend.property_name }}</div>
+              <div v-if="activeGradientUnit" class="text-[10px] text-slate-400 mt-0.5">{{ activeGradientUnit }}</div>
+              <div class="space-y-0.5 mt-1.5">
+                <div
+                  v-for="(bucket, i) in gradientLegend.buckets"
+                  :key="i"
+                  class="flex items-center gap-2 text-[11px]"
+                >
+                  <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" :style="{ backgroundColor: bucket.color }"></span>
+                  <span class="text-slate-700">{{ bucket.bucket_label }}</span>
                 </div>
               </div>
+            </div>
+          </div>
 
-              <!-- Gradient Timeline -->
-              <div v-if="gradientManifestVersions.length > 1" class="flex items-center gap-2">
+          <!-- Bottom-center: timeline -->
+          <div v-if="gradientHasLoaded && gradientManifestVersions.length > 1" class="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 w-full max-w-md px-3">
+            <div class="bg-white/80 backdrop-blur rounded-lg border border-slate-200 px-4 py-2.5">
+              <div class="flex items-center gap-2">
                 <span class="text-[10px] text-slate-400 whitespace-nowrap">Timeline</span>
                 <input
                   :value="gradientSliderValue"
@@ -132,7 +138,6 @@
                   {{ gradientTimelineLabel }}
                 </span>
               </div>
-
             </div>
           </div>
 
@@ -278,6 +283,11 @@ async function fetchGradientSets() {
 // --- Gradient controls ---
 const gradientSliderValue = ref(0)
 
+const activeGradientUnit = computed(() => {
+  const gs = gradientSets.value.find(s => s.id === activeGradientSetId.value)
+  return gs?.unit || ''
+})
+
 const gradientTimelineLabel = computed(() => {
   const versions = gradientManifestVersions.value
   const idx = gradientSliderValue.value
@@ -403,10 +413,6 @@ input[type='range']::-moz-range-thumb {
   cursor: pointer;
   box-shadow: 0 1px 4px rgba(15, 23, 42, 0.2);
   border: none;
-}
-
-.gradient-bar {
-  background: linear-gradient(to right, #ffff50, #ff8800, #ff0000);
 }
 
 .spinner {

@@ -126,9 +126,17 @@ export async function initDb() {
       project_id            TEXT NOT NULL,
       visualization_model_id TEXT NOT NULL,
       manifest_model_id     TEXT NOT NULL,
+      unit                  TEXT NOT NULL DEFAULT '',
       sort_order            INTEGER DEFAULT 0,
       created_at            TIMESTAMPTZ DEFAULT NOW()
     )
+  `)
+  // Add unit column if it doesn't exist (migration for existing tables)
+  await query(`
+    DO $$ BEGIN
+      ALTER TABLE gradient_sets ADD COLUMN IF NOT EXISTS unit TEXT NOT NULL DEFAULT '';
+    EXCEPTION WHEN duplicate_column THEN NULL;
+    END $$
   `)
   console.log('[db] gradient_sets table ready')
 
@@ -136,12 +144,16 @@ export async function initDb() {
   const { rows: gsCount } = await query('SELECT count(*)::int AS c FROM gradient_sets')
   if (gsCount[0].c === 0) {
     await query(`
-      INSERT INTO gradient_sets (name, property_name, project_id, visualization_model_id, manifest_model_id, sort_order) VALUES
-        ('Distance to Exit',       'PRG_PAR_MeanDistToExit',  'f91adc2f08', '470a5c84fa', '31f0fc18e2', 1),
-        ('Geometry Weight',        'PRG_PAR_GeometryWeight',  'f91adc2f08', '5def7c760f', 'a1819c4ed1', 2),
-        ('Ideal Distance to Exit', 'PRG_PAR_IdealDistToExit', 'f91adc2f08', '9b72254e73', '9ae5c82ef9', 3)
+      INSERT INTO gradient_sets (name, property_name, project_id, visualization_model_id, manifest_model_id, unit, sort_order) VALUES
+        ('Distance to Exit',       'PRG_PAR_MeanDistToExit',  'f91adc2f08', '470a5c84fa', '31f0fc18e2', 'm', 1),
+        ('Geometry Weight',        'PRG_PAR_GeometryWeight',  'f91adc2f08', '5def7c760f', 'a1819c4ed1', 'kg', 2),
+        ('Ideal Distance to Exit', 'PRG_PAR_IdealDistToExit', 'f91adc2f08', '9b72254e73', '9ae5c82ef9', 'm', 3)
     `)
     console.log('[db] gradient_sets seeded with 3 defaults')
+  } else {
+    // Backfill units for existing rows that are missing them
+    await query(`UPDATE gradient_sets SET unit = 'm'  WHERE unit = '' AND property_name LIKE '%Dist%'`)
+    await query(`UPDATE gradient_sets SET unit = 'kg' WHERE unit = '' AND property_name LIKE '%Weight%'`)
   }
 
   // Seed annotations if table is empty

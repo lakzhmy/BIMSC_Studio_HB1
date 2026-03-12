@@ -22,7 +22,7 @@ export function useGradientVisualization() {
   const visualizationVersions = shallowRef([])
   const selectedVersionIndex = ref(0)
   const gradientMap = ref(new Map())
-  const legendData = ref({ global_min: 0, global_max: 1, property_name: '' })
+  const legendData = ref({ data_min: 0, data_max: 1, property_name: '', buckets: [] })
   const isLoading = ref(false)
   const loadingProgress = ref('')
   const errorMessage = ref('')
@@ -52,7 +52,6 @@ export function useGradientVisualization() {
           tooltipData.value = {
             property_value: info.property_value,
             bucket_label: info.bucket_label,
-            gradient_value: info.gradient_value,
             screenX: selectionEvent.event?.clientX ?? 0,
             screenY: selectionEvent.event?.clientY ?? 0,
           }
@@ -167,16 +166,35 @@ export function useGradientVisualization() {
         await viewer.loadObject(loader, true)
       }
 
-      // Build gradient map from children
+      // Read bucket definitions from manifest root data
+      loadingProgress.value = 'Loading bucket definitions...'
+      const rawBuckets = manifest.rootData?.buckets ?? []
+      const buckets = rawBuckets
+        .map((b, i) => ({
+          bucket_label: b.bucket_label,
+          range_low: b.range_low,
+          range_high: b.range_high,
+          color_position: rawBuckets.length > 1 ? i / (rawBuckets.length - 1) : 0,
+          element_count: b.element_count,
+        }))
+        .sort((a, b) => a.range_low - b.range_low)
+
+      console.log(`[gradient] Loaded ${buckets.length} buckets from manifest root`)
+
+      // Build gradient map using bucket_index from visualization children
       loadingProgress.value = 'Applying colors...'
-      await buildGradientMap(vizVersion.referencedObject)
+      await buildGradientMap(vizVersion.referencedObject, buckets)
       applyColors()
 
-      // Update legend
+      // Update legend with bucket data from manifest
       legendData.value = {
-        global_min: vizVersion.rootData?.global_min ?? 0,
-        global_max: vizVersion.rootData?.global_max ?? 1,
+        data_min: manifest.rootData?.data_min ?? 0,
+        data_max: manifest.rootData?.data_max ?? 1,
         property_name: manifest.rootData?.property_name ?? '',
+        buckets: buckets.map(b => ({
+          ...b,
+          color: gradientToColor(b.color_position),
+        })),
       }
     } catch (err) {
       errorMessage.value = err instanceof Error ? err.message : 'Failed to load version'
@@ -187,29 +205,49 @@ export function useGradientVisualization() {
     }
   }
 
-  // --- Build gradient map from object children ---
-  async function buildGradientMap(rootObjectId) {
+  // --- Find which bucket a property value belongs to ---
+  function findBucketByValue(buckets, propertyValue) {
+    for (let i = 0; i < buckets.length; i++) {
+      const b = buckets[i]
+      if (i === buckets.length - 1) {
+        if (propertyValue >= b.range_low && propertyValue <= b.range_high) return b
+      } else {
+        if (propertyValue >= b.range_low && propertyValue < b.range_high) return b
+      }
+    }
+    return null
+  }
+
+  // --- Build gradient map from visualization children + manifest buckets ---
+  async function buildGradientMap(rootObjectId, buckets) {
     const children = await fetchObjectChildren(activeProjectId, rootObjectId, 2, 5000)
     const map = new Map()
 
     for (const child of children) {
       const data = child.data
-      if (data && data.gradient_value !== undefined) {
-        // The @element reference contains the geometry object ID
+      if (data && data.property_value !== undefined) {
         const elementRef = data['@element']
         const geometryId =
           elementRef?.referencedId || elementRef?.[0]?.referencedId || null
 
         if (geometryId) {
+          // Prefer bucket_index, fall back to range lookup
+          let bucket = null
+          if (data.bucket_index !== undefined && buckets[data.bucket_index]) {
+            bucket = buckets[data.bucket_index]
+          } else {
+            bucket = findBucketByValue(buckets, data.property_value)
+          }
           map.set(geometryId, {
-            gradient_value: data.gradient_value,
+            color_position: bucket ? bucket.color_position : 0,
             property_value: data.property_value,
-            bucket_label: data.bucket_label,
+            bucket_label: bucket ? bucket.bucket_label : 'Unknown',
           })
         }
       }
     }
 
+    console.log(`[gradient] Gradient map: ${map.size} elements mapped to ${buckets.length} buckets`)
     gradientMap.value = map
   }
 
@@ -241,19 +279,19 @@ export function useGradientVisualization() {
 
     console.log(`[gradient] Tree nodes matched: ${treeIdToGradient.size}, unmatched: ${unmatchedTreeIds.length}`)
 
-    // Group by rounded gradient value for efficiency
-    const buckets = new Map()
+    // Group by bucket color_position (one color per bucket)
+    const colorBuckets = new Map()
     for (const [treeId, info] of treeIdToGradient) {
-      const rounded = Math.round(info.gradient_value * 100) / 100
-      if (!buckets.has(rounded)) {
-        buckets.set(rounded, [])
+      const pos = info.color_position
+      if (!colorBuckets.has(pos)) {
+        colorBuckets.set(pos, [])
       }
-      buckets.get(rounded).push(treeId)
+      colorBuckets.get(pos).push(treeId)
     }
 
     const colorGroups = []
-    for (const [gradientVal, objectIds] of buckets) {
-      const color = hexToArgb(gradientToColor(gradientVal))
+    for (const [colorPos, objectIds] of colorBuckets) {
+      const color = hexToArgb(gradientToColor(colorPos))
       colorGroups.push({ objectIds, color })
     }
 
@@ -287,7 +325,7 @@ export function useGradientVisualization() {
     activeProjectId = null
     activeVizModelId = null
     activeManifestModelId = null
-    legendData.value = { global_min: 0, global_max: 1, property_name: '' }
+    legendData.value = { data_min: 0, data_max: 1, property_name: '', buckets: [] }
   }
 
   return {
