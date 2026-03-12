@@ -263,6 +263,7 @@
               <text text-anchor="middle" :fill-opacity="nodeFillOpacity(node)" style="transition: fill-opacity 0.25s;">
                 <tspan x="0" dy="36" style="font-size: 11px; fill: #475569; font-weight: 500;">{{ nodeLabelLine1(node) }}</tspan>
                 <tspan x="0" dy="13" style="font-size: 11px; fill: #475569; font-weight: 500;">{{ nodeLabelLine2(node) }}</tspan>
+                <tspan v-if="nodeLabelLine3(node)" x="0" dy="13" style="font-size: 11px; fill: #475569; font-weight: 500;">{{ nodeLabelLine3(node) }}</tspan>
               </text>
             </g>
           </g>
@@ -835,17 +836,37 @@ function chipClass(active, color) {
 function nodeLabelLine1(node) {
   const words = node.label.split(' ')
   let line = ''
+  let wordCount = 0
   for (const w of words) {
-    if (line && (line + ' ' + w).length > 15) break
+    if (line && (line + ' ' + w).length > 18) break
     line += (line ? ' ' : '') + w
+    wordCount++
   }
   return line
 }
 
 function nodeLabelLine2(node) {
   const l1 = nodeLabelLine1(node)
-  const rest = node.label.slice(l1.length).trim()
-  return rest.length > 18 ? rest.slice(0, 16) + '…' : rest
+  const remaining = node.label.slice(l1.length).trim()
+  
+  const words = remaining.split(' ')
+  let line = ''
+  for (const w of words) {
+    if (line && (line + ' ' + w).length > 18) break
+    line += (line ? ' ' : '') + w
+  }
+  return line
+}
+
+function nodeLabelLine3(node) {
+  const l1 = nodeLabelLine1(node)
+  const l2 = nodeLabelLine2(node)
+  let consumed = l1.length
+  if (l2.length > 0) consumed += l2.length + 1
+  const remaining = node.label.slice(consumed).trim()
+  
+  if (remaining.length > 22) return remaining.slice(0, 20) + '…'
+  return remaining
 }
 </script>
 
