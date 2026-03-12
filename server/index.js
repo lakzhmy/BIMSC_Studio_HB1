@@ -33,13 +33,15 @@ function makeSpeckleProxy(mountPath) {
     changeOrigin: true,
     secure: true,
     pathRewrite: (reqPath) => mountPath + reqPath,
-    onProxyReq: (proxyReq) => {
-      if (hasSpeckleToken) {
-        proxyReq.setHeader('Authorization', `Bearer ${speckleToken}`)
-      }
-    },
-    onProxyRes: (proxyRes, req) => {
-      console.log(`[speckle] ${req.method} ${req.url} -> ${proxyRes.statusCode}`)
+    on: {
+      proxyReq: (proxyReq) => {
+        if (hasSpeckleToken) {
+          proxyReq.setHeader('Authorization', `Bearer ${speckleToken}`)
+        }
+      },
+      proxyRes: (proxyRes, req) => {
+        console.log(`[speckle] ${req.method} ${req.url} -> ${proxyRes.statusCode}`)
+      },
     },
   })
 }
