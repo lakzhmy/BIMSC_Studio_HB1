@@ -53,6 +53,23 @@
           </div>
         </div>
 
+        <!-- Track legend -->
+        <div class="flex items-center gap-5 text-[11px] text-slate-500 mb-1">
+          <span class="font-medium text-slate-400 uppercase tracking-wider text-[9px]">Tracks</span>
+          <div class="flex items-center gap-1.5">
+            <span class="inline-block w-5 border-t-2 border-green-500"></span>
+            <span>Structure</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="inline-block w-5 border-t-2 border-blue-500"></span>
+            <span>Program</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="inline-block w-5 border-t-2 border-red-400"></span>
+            <span>Data</span>
+          </div>
+        </div>
+
         <div ref="exportEl" class="relative overflow-visible pt-8">
           <div class="w-full pt-12">
             <div class="relative h-28 overflow-visible isolate">

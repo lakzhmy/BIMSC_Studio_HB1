@@ -20,25 +20,25 @@
       <div v-if="!isLoading && !loadError" class="flex items-center gap-4 flex-wrap text-xs bg-white border border-slate-100 rounded-lg px-4 py-2.5">
         <span class="text-slate-400 font-medium text-[10px] uppercase tracking-wider">Status</span>
         <div class="flex items-center gap-1.5">
-          <span class="w-2 h-2 rounded-full bg-green-500 inline-block flex-none"></span>
-          <span class="text-slate-600">Within target range</span>
+          <span class="w-2 h-2 rounded-full bg-teal-500 inline-block flex-none"></span>
+          <span class="text-slate-600">Within target</span>
         </div>
         <div class="flex items-center gap-1.5">
-          <span class="w-2 h-2 rounded-full bg-red-500 inline-block flex-none"></span>
-          <span class="text-slate-600">Outside target range</span>
+          <span class="text-amber-500 font-bold text-[12px] leading-none">▲</span>
+          <span class="text-slate-600">Outside target</span>
         </div>
         <div class="border-l border-slate-200 h-4 mx-1"></div>
         <span class="text-slate-400 font-medium text-[10px] uppercase tracking-wider">Logic</span>
         <div class="flex items-center gap-1.5">
-          <span class="bg-purple-100 text-purple-700 text-[9px] px-1.5 py-0.5 rounded font-medium">MAX</span>
+          <span class="bg-slate-100 text-slate-600 text-[9px] px-1.5 py-0.5 rounded font-medium">MAX ↑</span>
           <span class="text-slate-600">higher is better</span>
         </div>
         <div class="flex items-center gap-1.5">
-          <span class="bg-blue-100 text-blue-700 text-[9px] px-1.5 py-0.5 rounded font-medium">MIN</span>
+          <span class="bg-slate-100 text-slate-600 text-[9px] px-1.5 py-0.5 rounded font-medium">MIN ↓</span>
           <span class="text-slate-600">lower is better</span>
         </div>
         <div class="flex items-center gap-1.5">
-          <span class="bg-amber-100 text-amber-700 text-[9px] px-1.5 py-0.5 rounded font-medium">STRICT</span>
+          <span class="bg-slate-100 text-slate-600 text-[9px] px-1.5 py-0.5 rounded font-medium">STRICT ⊙</span>
           <span class="text-slate-600">within ±10% of target</span>
         </div>
         <div class="border-l border-slate-200 h-4 mx-1"></div>
@@ -72,9 +72,9 @@
                     <p class="text-[11px] text-slate-500">{{ kpi.unit }}</p>
                   </div>
                   <div class="flex items-center gap-1 flex-shrink-0">
-                    <div :class="['w-2 h-2 rounded-full', programSummaryCards[index] ? (programSummaryCards[index].withinMargin ? 'bg-green-500' : 'bg-red-500') : 'bg-slate-300']"></div>
+                    <div :class="['w-2 h-2 rounded-full', programSummaryCards[index] ? (programSummaryCards[index].withinMargin ? 'bg-teal-500' : 'bg-amber-400') : 'bg-slate-300']"></div>
                     <span :class="['text-[9px] px-1.5 py-0.5 rounded font-medium', getLogicBadgeColor(kpi.logic)]">
-                      {{ kpi.logic }}
+                      {{ getLogicBadgeLabel(kpi.logic) }}
                     </span>
                   </div>
                 </div>
@@ -92,14 +92,13 @@
                 <template v-if="programSummaryCards[index]">
                   <div class="text-[11px] text-slate-500">Target: {{ programSummaryCards[index].displayTarget }}</div>
                   <div class="flex items-center gap-2 mt-1 mb-3">
-                    <span :class="['text-[10px] px-2 py-0.5 rounded-full border', programSummaryCards[index].withinMargin ? 'bg-green-100 text-green-700 border-green-200' : 'bg-red-100 text-red-700 border-red-200']">
+                    <span :class="['text-[10px] px-2 py-0.5 rounded-full border', programSummaryCards[index].withinMargin ? 'bg-teal-50 text-teal-700 border-teal-200' : 'bg-amber-50 text-amber-700 border-amber-200']">
                       {{ programSummaryCards[index].delta > 0 ? '+' : '' }}{{ programSummaryCards[index].displayDelta }}
                     </span>
                   </div>
                   <div class="relative h-2 rounded-full bg-slate-200 overflow-visible">
                     <div class="absolute left-0 top-0 h-full rounded-full" :style="{ width: `${programSummaryCards[index].bulletValuePct}%`, backgroundColor: programSummaryCards[index].color }"></div>
-                    <div class="absolute top-0 h-full w-0.5 bg-slate-500" :style="{ left: `${programSummaryCards[index].bulletTargetPct}%` }"></div>
-                    <div class="absolute top-0 h-2 w-2 bg-yellow-400 shadow-sm" :style="{ left: `calc(${programSummaryCards[index].bulletTargetPct}% - 4px)`, transform: 'rotate(45deg)' }"></div>
+                    <div class="absolute -top-1 bottom-0 w-0.5 bg-slate-500 rounded" style="height: 16px;" :style="{ left: `${programSummaryCards[index].bulletTargetPct}%` }"></div>
                     <div class="absolute -top-5 text-[10px] text-slate-600" :style="{ left: `calc(${programSummaryCards[index].bulletTargetPct}% - 8px)` }">{{ programSummaryCards[index].displayTarget }}</div>
                   </div>
                 </template>
@@ -131,9 +130,9 @@
                     <p class="text-[11px] text-slate-500">{{ kpi.unit }}</p>
                   </div>
                   <div class="flex items-center gap-1 flex-shrink-0">
-                    <div :class="['w-2 h-2 rounded-full', structureSummaryCards[index] ? (structureSummaryCards[index].withinMargin ? 'bg-green-500' : 'bg-red-500') : 'bg-slate-300']"></div>
+                    <div :class="['w-2 h-2 rounded-full', structureSummaryCards[index] ? (structureSummaryCards[index].withinMargin ? 'bg-teal-500' : 'bg-amber-400') : 'bg-slate-300']"></div>
                     <span :class="['text-[9px] px-1.5 py-0.5 rounded font-medium', getLogicBadgeColor(kpi.logic)]">
-                      {{ kpi.logic }}
+                      {{ getLogicBadgeLabel(kpi.logic) }}
                     </span>
                   </div>
                 </div>
@@ -151,14 +150,13 @@
                 <template v-if="structureSummaryCards[index]">
                   <div class="text-[11px] text-slate-500">Target: {{ structureSummaryCards[index].displayTarget }}</div>
                   <div class="flex items-center gap-2 mt-1 mb-3">
-                    <span :class="['text-[10px] px-2 py-0.5 rounded-full border', structureSummaryCards[index].withinMargin ? 'bg-green-100 text-green-700 border-green-200' : 'bg-red-100 text-red-700 border-red-200']">
+                    <span :class="['text-[10px] px-2 py-0.5 rounded-full border', structureSummaryCards[index].withinMargin ? 'bg-teal-50 text-teal-700 border-teal-200' : 'bg-amber-50 text-amber-700 border-amber-200']">
                       {{ structureSummaryCards[index].delta > 0 ? '+' : '' }}{{ structureSummaryCards[index].displayDelta }}
                     </span>
                   </div>
                   <div class="relative h-2 rounded-full bg-slate-200 overflow-visible">
                     <div class="absolute left-0 top-0 h-full rounded-full" :style="{ width: `${structureSummaryCards[index].bulletValuePct}%`, backgroundColor: structureSummaryCards[index].color }"></div>
-                    <div class="absolute top-0 h-full w-0.5 bg-slate-500" :style="{ left: `${structureSummaryCards[index].bulletTargetPct}%` }"></div>
-                    <div class="absolute top-0 h-2 w-2 bg-yellow-400 shadow-sm" :style="{ left: `calc(${structureSummaryCards[index].bulletTargetPct}% - 4px)`, transform: 'rotate(45deg)' }"></div>
+                    <div class="absolute -top-1 bottom-0 w-0.5 bg-slate-500 rounded" style="height: 16px;" :style="{ left: `${structureSummaryCards[index].bulletTargetPct}%` }"></div>
                     <div class="absolute -top-5 text-[10px] text-slate-600" :style="{ left: `calc(${structureSummaryCards[index].bulletTargetPct}% - 8px)` }">{{ structureSummaryCards[index].displayTarget }}</div>
                   </div>
                 </template>
@@ -190,9 +188,9 @@
                     <p class="text-[11px] text-slate-500">{{ kpi.unit }}</p>
                   </div>
                   <div class="flex items-center gap-1 flex-shrink-0">
-                    <div :class="['w-2 h-2 rounded-full', dataSummaryCards[index] ? (dataSummaryCards[index].withinMargin ? 'bg-green-500' : 'bg-red-500') : 'bg-slate-300']"></div>
+                    <div :class="['w-2 h-2 rounded-full', dataSummaryCards[index] ? (dataSummaryCards[index].withinMargin ? 'bg-teal-500' : 'bg-amber-400') : 'bg-slate-300']"></div>
                     <span :class="['text-[9px] px-1.5 py-0.5 rounded font-medium', getLogicBadgeColor(kpi.logic)]">
-                      {{ kpi.logic }}
+                      {{ getLogicBadgeLabel(kpi.logic) }}
                     </span>
                   </div>
                 </div>
@@ -210,14 +208,13 @@
                 <template v-if="dataSummaryCards[index]">
                   <div class="text-[11px] text-slate-500">Target: {{ dataSummaryCards[index].displayTarget }}</div>
                   <div class="flex items-center gap-2 mt-1 mb-3">
-                    <span :class="['text-[10px] px-2 py-0.5 rounded-full border', dataSummaryCards[index].withinMargin ? 'bg-green-100 text-green-700 border-green-200' : 'bg-red-100 text-red-700 border-red-200']">
+                    <span :class="['text-[10px] px-2 py-0.5 rounded-full border', dataSummaryCards[index].withinMargin ? 'bg-teal-50 text-teal-700 border-teal-200' : 'bg-amber-50 text-amber-700 border-amber-200']">
                       {{ dataSummaryCards[index].delta > 0 ? '+' : '' }}{{ dataSummaryCards[index].displayDelta }}
                     </span>
                   </div>
                   <div class="relative h-2 rounded-full bg-slate-200 overflow-visible">
                     <div class="absolute left-0 top-0 h-full rounded-full" :style="{ width: `${dataSummaryCards[index].bulletValuePct}%`, backgroundColor: dataSummaryCards[index].color }"></div>
-                    <div class="absolute top-0 h-full w-0.5 bg-slate-500" :style="{ left: `${dataSummaryCards[index].bulletTargetPct}%` }"></div>
-                    <div class="absolute top-0 h-2 w-2 bg-yellow-400 shadow-sm" :style="{ left: `calc(${dataSummaryCards[index].bulletTargetPct}% - 4px)`, transform: 'rotate(45deg)' }"></div>
+                    <div class="absolute -top-1 bottom-0 w-0.5 bg-slate-500 rounded" style="height: 16px;" :style="{ left: `${dataSummaryCards[index].bulletTargetPct}%` }"></div>
                     <div class="absolute -top-5 text-[10px] text-slate-600" :style="{ left: `calc(${dataSummaryCards[index].bulletTargetPct}% - 8px)` }">{{ dataSummaryCards[index].displayTarget }}</div>
                   </div>
                 </template>
@@ -292,8 +289,14 @@
                   v-for="(ringPts, ri) in radarRings"
                   :key="`ring-${ri}`"
                   :points="ringPts"
-                  fill="none" stroke="#f1f5f9" stroke-width="1"
+                  fill="none" stroke="#e2e8f0" stroke-width="1"
                 />
+                <!-- Ring % labels at top of each ring -->
+                <text v-for="(frac, ri) in [0.25, 0.5, 0.75, 1.0]" :key="`rlbl-${ri}`"
+                  :x="RADAR_CX" :y="RADAR_CY - frac * RADAR_MAX_R - 3"
+                  text-anchor="middle" dominant-baseline="auto"
+                  fill="#94a3b8" font-size="7" font-weight="500"
+                >{{ Math.round(frac * 100) }}%</text>
 
                 <!-- Axes — dimmed when their team is filtered out -->
                 <line
@@ -332,7 +335,7 @@
                     :r="hoveredRadarIdx === dot.i ? 6 : 4"
                     :fill="dot.color"
                     :fill-opacity="hoveredRadarIdx === dot.i ? 1 : 0.75"
-                    style="transition: r 0.15s, fill-opacity 0.15s;"
+                    style="transition: r 0.2s cubic-bezier(0.34,1.56,0.64,1), fill-opacity 0.15s;"
                   />
                   <!-- Invisible larger hit area -->
                   <circle :cx="dot.x" :cy="dot.y" r="14" fill="transparent" />
@@ -378,9 +381,9 @@
                     </div>
                   </div>
                   <div class="mt-4 pt-3 border-t border-slate-200 flex items-center gap-1.5 flex-wrap">
-                    <span class="text-[9px] px-1.5 py-0.5 rounded font-medium" :class="getLogicBadgeColor(hoveredKPIInfo.logic)">{{ hoveredKPIInfo.logic }}</span>
-                    <span class="text-[9px] font-medium" :class="hoveredKPIInfo.withinMargin ? 'text-green-600' : 'text-red-500'">
-                      {{ hoveredKPIInfo.withinMargin ? '✓ on target' : '✗ off target' }}
+                    <span class="text-[9px] px-1.5 py-0.5 rounded font-medium" :class="getLogicBadgeColor(hoveredKPIInfo.logic)">{{ getLogicBadgeLabel(hoveredKPIInfo.logic) }}</span>
+                    <span class="text-[9px] font-medium" :class="hoveredKPIInfo.withinMargin ? 'text-teal-600' : 'text-amber-500'">
+                      {{ hoveredKPIInfo.withinMargin ? '✓ on target' : '▲ off target' }}
                     </span>
                   </div>
                 </div>
@@ -405,7 +408,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, onUnmounted } from 'vue'
 import { fetchKPIsByCategory, fetchStructureParams, fetchProgramParams, fetchFormulaTargets } from '@/services/googleSheetsService'
 import { KPI_BY_CATEGORY, computeKPI, updateKPITargets, evaluateKPIStatus } from '@/services/kpiFormulas'
 import { useUserStore } from '@/stores/userStore'
@@ -417,11 +420,12 @@ const formatNumberDE = (value) => {
   return new Intl.NumberFormat('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(value))
 }
 
-// --- Logic type badge helper ---
-const getLogicBadgeColor = (logic) => {
-  if (logic === 'MIN') return 'bg-blue-100 text-blue-700'
-  if (logic === 'MAX') return 'bg-purple-100 text-purple-700'
-  return 'bg-amber-100 text-amber-700' // STRICT
+// --- Logic type badge helpers ---
+const getLogicBadgeColor = () => 'bg-slate-100 text-slate-600'
+const getLogicBadgeLabel = (logic) => {
+  if (logic === 'MAX') return 'MAX ↑'
+  if (logic === 'MIN') return 'MIN ↓'
+  return 'STRICT ⊙'
 }
 
 // --- Current calendar week (Jan 12 2026 = Week 1, +7 days per week) ---
@@ -759,10 +763,32 @@ const RADAR_N = 9
 
 // Team filter state
 const activeRadarTeams = ref(new Set(['program', 'structure', 'data']))
+
+// Radar entrance animation
+const radarAnimProgress = ref(0)
+let radarAnimFrame = null
+function animateRadar(duration = 650) {
+  if (radarAnimFrame) cancelAnimationFrame(radarAnimFrame)
+  radarAnimProgress.value = 0
+  const start = performance.now()
+  function step(now) {
+    const t = Math.min((now - start) / duration, 1)
+    radarAnimProgress.value = 1 - Math.pow(1 - t, 3) // ease-out cubic
+    if (t < 1) {
+      radarAnimFrame = requestAnimationFrame(step)
+    } else {
+      radarAnimFrame = null
+    }
+  }
+  radarAnimFrame = requestAnimationFrame(step)
+}
+onUnmounted(() => { if (radarAnimFrame) cancelAnimationFrame(radarAnimFrame) })
+
 function toggleRadarTeam(team) {
   const s = new Set(activeRadarTeams.value)
   s.has(team) ? s.delete(team) : s.add(team)
   activeRadarTeams.value = s
+  animateRadar(400)
 }
 
 // Hover state
@@ -791,26 +817,27 @@ function axisPoint(i, r) {
 }
 
 // Helper: build a polygon string for one team's sector (other axes collapse to centre)
-function makeTeamRadarPoints(teamAxes) {
+function makeTeamRadarPoints(teamAxes, progress = 1) {
   const all = [...programFilteredKPIs.value, ...structureFilteredKPIs.value, ...dataFilteredKPIs.value]
   if (all.length < RADAR_N) return ''
   return all.map((kpi, i) => {
-    const r = teamAxes.includes(i) ? radarScoreToR(kpiToRadarScore(kpi)) : 0
+    const r = teamAxes.includes(i) ? radarScoreToR(kpiToRadarScore(kpi)) * progress : 0
     const pt = axisPoint(i, r)
     return `${pt.x.toFixed(1)},${pt.y.toFixed(1)}`
   }).join(' ')
 }
 
-const radarProgramPoints   = computed(() => makeTeamRadarPoints([0, 1, 2]))
-const radarStructurePoints = computed(() => makeTeamRadarPoints([3, 4, 5]))
-const radarDataPoints      = computed(() => makeTeamRadarPoints([6, 7, 8]))
+const radarProgramPoints   = computed(() => makeTeamRadarPoints([0, 1, 2], radarAnimProgress.value))
+const radarStructurePoints = computed(() => makeTeamRadarPoints([3, 4, 5], radarAnimProgress.value))
+const radarDataPoints      = computed(() => makeTeamRadarPoints([6, 7, 8], radarAnimProgress.value))
 
-// Dots at each axis's current-score position
+// Dots at each axis's current-score position (animated)
 const radarDotPositions = computed(() => {
   const all = [...programFilteredKPIs.value, ...structureFilteredKPIs.value, ...dataFilteredKPIs.value]
   if (all.length < RADAR_N) return []
+  const p = radarAnimProgress.value
   return all.map((kpi, i) => {
-    const r = radarScoreToR(kpiToRadarScore(kpi))
+    const r = radarScoreToR(kpiToRadarScore(kpi)) * p
     const pt = axisPoint(i, r)
     return { x: pt.x, y: pt.y, color: RADAR_TEAM_COLORS[i], kpi, i }
   })
@@ -908,6 +935,14 @@ watch(() => structureScenarios.value, (newScenarios) => {
 watch(() => [structureWeek.value, structureScenario.value], ([week, scenario]) => {
   if (week && scenario) storeSelection('structure', week, scenario)
 })
+
+// Trigger radar entrance animation when all KPI data is available
+watch(
+  [programFilteredKPIs, structureFilteredKPIs, dataFilteredKPIs],
+  ([prog, str, data]) => {
+    if (prog.length && str.length && data.length) animateRadar()
+  }
+)
 
 watch(
   [programSummaryCards, structureSummaryCards, dataSummaryCards],

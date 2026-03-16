@@ -118,23 +118,23 @@
     <div class="flex gap-4 text-xs flex-wrap">
       <div class="flex items-center gap-2">
         <div class="w-4 h-4 rounded-full" style="background: rgb(239, 68, 68); opacity: 0.7;"></div>
-        <span class="text-slate-600">Red: Air Quality (Data)</span>
+        <span class="text-slate-600">Red: Air Quality <span class="text-slate-400">(Data team)</span></span>
       </div>
       <div class="flex items-center gap-2">
         <div class="w-4 h-4 rounded-full" style="background: rgb(59, 130, 246); opacity: 0.7;"></div>
-        <span class="text-slate-600">Blue: Occupancy (Program)</span>
+        <span class="text-slate-600">Blue: Occupancy <span class="text-slate-400">(Program team)</span></span>
       </div>
       <div class="flex items-center gap-2">
         <div class="w-4 h-4 rounded-full" style="background: rgb(34, 197, 94); opacity: 0.7;"></div>
-        <span class="text-slate-600">Green: Structure Load</span>
+        <span class="text-slate-600">Green: Structural Load <span class="text-slate-400">(Structure team)</span></span>
       </div>
       <div class="flex items-center gap-2">
         <div class="w-4 h-4 rounded-full" style="background: linear-gradient(135deg, rgb(239, 68, 68) 50%, rgb(59, 130, 246) 50%); opacity: 0.7;"></div>
-        <span class="text-slate-600">Purple: Red+Blue overlap</span>
+        <span class="text-slate-600">Purple: Air + Occupancy overlap</span>
       </div>
       <div class="flex items-center gap-2">
         <div class="w-4 h-4 rounded-full" style="background: linear-gradient(135deg, rgb(59, 130, 246) 50%, rgb(34, 197, 94) 50%); opacity: 0.7;"></div>
-        <span class="text-slate-600">Teal: Blue+Green overlap</span>
+        <span class="text-slate-600">Teal: Occupancy + Structure overlap</span>
       </div>
     </div>
   </div>

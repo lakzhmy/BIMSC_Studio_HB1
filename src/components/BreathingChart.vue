@@ -5,7 +5,7 @@
         <h3 class="text-sm font-semibold text-slate-700">Filtration Efficacy</h3>
         <span class="text-slate-400 cursor-help text-xs relative">i
           <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover/info:block z-20 bg-slate-900 text-white text-xs rounded py-2 px-3 whitespace-nowrap">
-            Dirty air (red) declines as clean air (green) increases
+            Dirty air (orange) declines as clean air (teal) increases
           </div>
         </span>
       </div>
@@ -15,19 +15,19 @@
       <svg viewBox="0 0 600 250" class="w-full h-full breathing-animation" preserveAspectRatio="xMidYMid meet">
         <defs>
           <linearGradient id="dirtyAirGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" style="stop-color: rgba(239, 68, 68, 0.3); stop-opacity: 1" />
-            <stop offset="100%" style="stop-color: rgba(239, 68, 68, 0.05); stop-opacity: 1" />
+            <stop offset="0%" style="stop-color: rgba(249, 115, 22, 0.3); stop-opacity: 1" />
+            <stop offset="100%" style="stop-color: rgba(249, 115, 22, 0.05); stop-opacity: 1" />
           </linearGradient>
           <linearGradient id="cleanAirGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" style="stop-color: rgba(34, 197, 94, 0.3); stop-opacity: 1" />
-            <stop offset="100%" style="stop-color: rgba(34, 197, 94, 0.05); stop-opacity: 1" />
+            <stop offset="0%" style="stop-color: rgba(13, 148, 136, 0.3); stop-opacity: 1" />
+            <stop offset="100%" style="stop-color: rgba(13, 148, 136, 0.05); stop-opacity: 1" />
           </linearGradient>
         </defs>
 
         <path
           :d="dirtyAirPath"
           fill="url(#dirtyAirGradient)"
-          stroke="rgba(239, 68, 68, 0.8)"
+          stroke="rgba(249, 115, 22, 0.8)"
           stroke-width="2"
           class="dirty-air-curve"
         />
@@ -35,7 +35,7 @@
         <path
           :d="cleanAirPath"
           fill="url(#cleanAirGradient)"
-          stroke="rgba(34, 197, 94, 0.8)"
+          stroke="rgba(13, 148, 136, 0.8)"
           stroke-width="2"
           class="clean-air-curve"
         />
@@ -47,11 +47,11 @@
     </div>
     <div class="flex gap-6 text-xs">
       <div class="flex items-center gap-2">
-        <div class="w-3 h-3 rounded-full bg-red-500"></div>
+        <div class="w-3 h-3 rounded-full bg-orange-500"></div>
         <span class="text-slate-600">Dirty Air</span>
       </div>
       <div class="flex items-center gap-2">
-        <div class="w-3 h-3 rounded-full bg-green-500"></div>
+        <div class="w-3 h-3 rounded-full bg-teal-500"></div>
         <span class="text-slate-600">Clean Air</span>
       </div>
     </div>
