@@ -44,7 +44,7 @@
         <div class="border-l border-slate-200 h-4 mx-1"></div>
         <div class="flex items-center gap-1.5">
           <span class="w-3 h-1 inline-block" style="background: linear-gradient(to right, #94a3b8, transparent);"></span>
-          <span class="text-slate-500 italic">Click on a card to see description &amp; formula</span>
+          <span class="text-slate-500 italic">Click ▾ on a card to expand description &amp; formula</span>
         </div>
       </div>
 
@@ -66,15 +66,17 @@
               @click="toggleCardExpanded('program', kpi.id)"
             >
               <div class="p-4">
+                <!-- Header: name + badge + chevron -->
                 <div class="flex items-start justify-between mb-2">
                   <div class="flex-1">
                     <h3 class="text-xs font-semibold text-slate-700">{{ kpi.name }}</h3>
                     <p class="text-[11px] text-slate-500">{{ kpi.unit }}</p>
                   </div>
-                  <div class="flex items-center gap-1 flex-shrink-0">
+                  <div class="flex items-center gap-1.5 flex-shrink-0">
                     <span :class="['text-xs px-2 py-0.5 rounded-md font-bold tracking-wide', getLogicBadgeColor(kpi.logic)]">
                       {{ getLogicBadgeLabel(kpi.logic) }}
                     </span>
+                    <span class="text-slate-400 text-[11px] leading-none">{{ expandedCards.has(`program-${kpi.id}`) ? '▴' : '▾' }}</span>
                   </div>
                 </div>
                 <!-- Click-expand: description + formula -->
@@ -87,18 +89,31 @@
                     </div>
                   </div>
                 </div>
-                <div class="text-2xl font-bold text-slate-900 mb-3">{{ formatNumberDE(kpi.value) }}</div>
+                <!-- Large value -->
+                <div class="text-2xl font-bold text-slate-900 mb-2">{{ formatNumberDE(kpi.value) }}</div>
                 <template v-if="programSummaryCards[index]">
-                  <div class="text-[11px] text-slate-500">Target: {{ programSummaryCards[index].displayTarget }}</div>
-                  <div class="flex items-center gap-2 mt-1 mb-3">
-                    <span :class="['text-[10px] px-2 py-0.5 rounded-full border', programSummaryCards[index].withinMargin ? 'bg-teal-50 text-teal-700 border-teal-200' : 'bg-amber-50 text-amber-700 border-amber-200']">
-                      {{ programSummaryCards[index].delta > 0 ? '+' : '' }}{{ programSummaryCards[index].displayDelta }}
+                  <!-- Current → Target comparison row -->
+                  <div class="grid grid-cols-[1fr_auto_1fr] gap-x-2 items-end mb-2">
+                    <div>
+                      <p class="text-[9px] text-slate-400 uppercase tracking-wider mb-0.5">Current</p>
+                      <p class="text-[11px] font-semibold text-slate-700 truncate">{{ programSummaryCards[index].displayValue }}</p>
+                    </div>
+                    <span class="text-slate-300 text-xs pb-0.5">→</span>
+                    <div class="text-right">
+                      <p class="text-[9px] text-slate-400 uppercase tracking-wider mb-0.5">Target</p>
+                      <p class="text-[11px] font-semibold text-slate-500 truncate">{{ programSummaryCards[index].displayTarget }}</p>
+                    </div>
+                  </div>
+                  <!-- Score badge -->
+                  <div class="mb-3">
+                    <span :class="['text-[10px] px-2 py-0.5 rounded-full border font-semibold', programSummaryCards[index].withinMargin ? 'bg-teal-50 text-teal-700 border-teal-200' : 'bg-amber-50 text-amber-700 border-amber-200']">
+                      Score {{ programSummaryCards[index].scorePct }}%
                     </span>
                   </div>
-                  <div class="relative h-2 rounded-full bg-slate-200 overflow-visible">
+                  <!-- Bullet chart (no floating label) -->
+                  <div class="relative h-2 rounded-full bg-slate-200">
                     <div :class="['absolute left-0 top-0 h-full rounded-full', programSummaryCards[index].withinMargin ? 'bg-teal-500' : 'bg-amber-400']" :style="{ width: `${programSummaryCards[index].bulletValuePct}%` }"></div>
-                    <div class="absolute -top-1 bottom-0 w-0.5 bg-slate-500 rounded" style="height: 16px;" :style="{ left: `${programSummaryCards[index].bulletTargetPct}%` }"></div>
-                    <div class="absolute -top-5 text-[10px] text-slate-600" :style="{ left: `calc(${programSummaryCards[index].bulletTargetPct}% - 8px)` }">{{ programSummaryCards[index].displayTarget }}</div>
+                    <div class="absolute -top-1 w-0.5 bg-slate-500 rounded" style="height: 16px;" :style="{ left: `${programSummaryCards[index].bulletTargetPct}%` }"></div>
                   </div>
                 </template>
               </div>
@@ -123,15 +138,17 @@
               @click="toggleCardExpanded('structure', kpi.id)"
             >
               <div class="p-4">
+                <!-- Header: name + badge + chevron -->
                 <div class="flex items-start justify-between mb-2">
                   <div class="flex-1">
                     <h3 class="text-xs font-semibold text-slate-700">{{ kpi.name }}</h3>
                     <p class="text-[11px] text-slate-500">{{ kpi.unit }}</p>
                   </div>
-                  <div class="flex items-center gap-1 flex-shrink-0">
+                  <div class="flex items-center gap-1.5 flex-shrink-0">
                     <span :class="['text-xs px-2 py-0.5 rounded-md font-bold tracking-wide', getLogicBadgeColor(kpi.logic)]">
                       {{ getLogicBadgeLabel(kpi.logic) }}
                     </span>
+                    <span class="text-slate-400 text-[11px] leading-none">{{ expandedCards.has(`structure-${kpi.id}`) ? '▴' : '▾' }}</span>
                   </div>
                 </div>
                 <!-- Click-expand: description + formula -->
@@ -144,18 +161,31 @@
                     </div>
                   </div>
                 </div>
-                <div class="text-2xl font-bold text-slate-900 mb-3">{{ formatNumberDE(kpi.value) }}</div>
+                <!-- Large value -->
+                <div class="text-2xl font-bold text-slate-900 mb-2">{{ formatNumberDE(kpi.value) }}</div>
                 <template v-if="structureSummaryCards[index]">
-                  <div class="text-[11px] text-slate-500">Target: {{ structureSummaryCards[index].displayTarget }}</div>
-                  <div class="flex items-center gap-2 mt-1 mb-3">
-                    <span :class="['text-[10px] px-2 py-0.5 rounded-full border', structureSummaryCards[index].withinMargin ? 'bg-teal-50 text-teal-700 border-teal-200' : 'bg-amber-50 text-amber-700 border-amber-200']">
-                      {{ structureSummaryCards[index].delta > 0 ? '+' : '' }}{{ structureSummaryCards[index].displayDelta }}
+                  <!-- Current → Target comparison row -->
+                  <div class="grid grid-cols-[1fr_auto_1fr] gap-x-2 items-end mb-2">
+                    <div>
+                      <p class="text-[9px] text-slate-400 uppercase tracking-wider mb-0.5">Current</p>
+                      <p class="text-[11px] font-semibold text-slate-700 truncate">{{ structureSummaryCards[index].displayValue }}</p>
+                    </div>
+                    <span class="text-slate-300 text-xs pb-0.5">→</span>
+                    <div class="text-right">
+                      <p class="text-[9px] text-slate-400 uppercase tracking-wider mb-0.5">Target</p>
+                      <p class="text-[11px] font-semibold text-slate-500 truncate">{{ structureSummaryCards[index].displayTarget }}</p>
+                    </div>
+                  </div>
+                  <!-- Score badge -->
+                  <div class="mb-3">
+                    <span :class="['text-[10px] px-2 py-0.5 rounded-full border font-semibold', structureSummaryCards[index].withinMargin ? 'bg-teal-50 text-teal-700 border-teal-200' : 'bg-amber-50 text-amber-700 border-amber-200']">
+                      Score {{ structureSummaryCards[index].scorePct }}%
                     </span>
                   </div>
-                  <div class="relative h-2 rounded-full bg-slate-200 overflow-visible">
+                  <!-- Bullet chart (no floating label) -->
+                  <div class="relative h-2 rounded-full bg-slate-200">
                     <div :class="['absolute left-0 top-0 h-full rounded-full', structureSummaryCards[index].withinMargin ? 'bg-teal-500' : 'bg-amber-400']" :style="{ width: `${structureSummaryCards[index].bulletValuePct}%` }"></div>
-                    <div class="absolute -top-1 bottom-0 w-0.5 bg-slate-500 rounded" style="height: 16px;" :style="{ left: `${structureSummaryCards[index].bulletTargetPct}%` }"></div>
-                    <div class="absolute -top-5 text-[10px] text-slate-600" :style="{ left: `calc(${structureSummaryCards[index].bulletTargetPct}% - 8px)` }">{{ structureSummaryCards[index].displayTarget }}</div>
+                    <div class="absolute -top-1 w-0.5 bg-slate-500 rounded" style="height: 16px;" :style="{ left: `${structureSummaryCards[index].bulletTargetPct}%` }"></div>
                   </div>
                 </template>
               </div>
@@ -180,15 +210,17 @@
               @click="toggleCardExpanded('data', kpi.id)"
             >
               <div class="p-4">
+                <!-- Header: name + badge + chevron -->
                 <div class="flex items-start justify-between mb-2">
                   <div class="flex-1">
                     <h3 class="text-xs font-semibold text-slate-700">{{ kpi.name }}</h3>
                     <p class="text-[11px] text-slate-500">{{ kpi.unit }}</p>
                   </div>
-                  <div class="flex items-center gap-1 flex-shrink-0">
+                  <div class="flex items-center gap-1.5 flex-shrink-0">
                     <span :class="['text-xs px-2 py-0.5 rounded-md font-bold tracking-wide', getLogicBadgeColor(kpi.logic)]">
                       {{ getLogicBadgeLabel(kpi.logic) }}
                     </span>
+                    <span class="text-slate-400 text-[11px] leading-none">{{ expandedCards.has(`data-${kpi.id}`) ? '▴' : '▾' }}</span>
                   </div>
                 </div>
                 <!-- Click-expand: description + formula -->
@@ -201,18 +233,31 @@
                     </div>
                   </div>
                 </div>
-                <div class="text-2xl font-bold text-slate-900 mb-3">{{ formatNumberDE(kpi.value) }}</div>
+                <!-- Large value -->
+                <div class="text-2xl font-bold text-slate-900 mb-2">{{ formatNumberDE(kpi.value) }}</div>
                 <template v-if="dataSummaryCards[index]">
-                  <div class="text-[11px] text-slate-500">Target: {{ dataSummaryCards[index].displayTarget }}</div>
-                  <div class="flex items-center gap-2 mt-1 mb-3">
-                    <span :class="['text-[10px] px-2 py-0.5 rounded-full border', dataSummaryCards[index].withinMargin ? 'bg-teal-50 text-teal-700 border-teal-200' : 'bg-amber-50 text-amber-700 border-amber-200']">
-                      {{ dataSummaryCards[index].delta > 0 ? '+' : '' }}{{ dataSummaryCards[index].displayDelta }}
+                  <!-- Current → Target comparison row -->
+                  <div class="grid grid-cols-[1fr_auto_1fr] gap-x-2 items-end mb-2">
+                    <div>
+                      <p class="text-[9px] text-slate-400 uppercase tracking-wider mb-0.5">Current</p>
+                      <p class="text-[11px] font-semibold text-slate-700 truncate">{{ dataSummaryCards[index].displayValue }}</p>
+                    </div>
+                    <span class="text-slate-300 text-xs pb-0.5">→</span>
+                    <div class="text-right">
+                      <p class="text-[9px] text-slate-400 uppercase tracking-wider mb-0.5">Target</p>
+                      <p class="text-[11px] font-semibold text-slate-500 truncate">{{ dataSummaryCards[index].displayTarget }}</p>
+                    </div>
+                  </div>
+                  <!-- Score badge -->
+                  <div class="mb-3">
+                    <span :class="['text-[10px] px-2 py-0.5 rounded-full border font-semibold', dataSummaryCards[index].withinMargin ? 'bg-teal-50 text-teal-700 border-teal-200' : 'bg-amber-50 text-amber-700 border-amber-200']">
+                      Score {{ dataSummaryCards[index].scorePct }}%
                     </span>
                   </div>
-                  <div class="relative h-2 rounded-full bg-slate-200 overflow-visible">
+                  <!-- Bullet chart (no floating label) -->
+                  <div class="relative h-2 rounded-full bg-slate-200">
                     <div :class="['absolute left-0 top-0 h-full rounded-full', dataSummaryCards[index].withinMargin ? 'bg-teal-500' : 'bg-amber-400']" :style="{ width: `${dataSummaryCards[index].bulletValuePct}%` }"></div>
-                    <div class="absolute -top-1 bottom-0 w-0.5 bg-slate-500 rounded" style="height: 16px;" :style="{ left: `${dataSummaryCards[index].bulletTargetPct}%` }"></div>
-                    <div class="absolute -top-5 text-[10px] text-slate-600" :style="{ left: `calc(${dataSummaryCards[index].bulletTargetPct}% - 8px)` }">{{ dataSummaryCards[index].displayTarget }}</div>
+                    <div class="absolute -top-1 w-0.5 bg-slate-500 rounded" style="height: 16px;" :style="{ left: `${dataSummaryCards[index].bulletTargetPct}%` }"></div>
                   </div>
                 </template>
               </div>
@@ -553,16 +598,16 @@ const structureSummaryCards = computed(() => {
     const status = evaluateKPIStatus(value, target, structureFilteredKPIs.value[index]?.logic || 'STRICT')
     const withinMargin = status.acceptable
     const max = Math.max(value, target) * 1.2 || 1
+    const scorePct = Math.round(Math.min(kpiToRadarScore(kpi), 1) * 100)
     return {
       id: `structure-summary-${kpi.id}`,
       displayValue: formatValue(value),
       displayTarget: formatValue(target),
-      displayDelta: formatValue(Math.abs(delta)),
       delta,
       withinMargin,
+      scorePct,
       bulletValuePct: Math.min((value / max) * 100, 100),
       bulletTargetPct: Math.min((target / max) * 100, 100),
-      color: '#10b981',
     }
   })
 })
@@ -584,16 +629,16 @@ const programSummaryCards = computed(() => {
     const status = evaluateKPIStatus(value, target, programFilteredKPIs.value[index]?.logic || 'STRICT')
     const withinMargin = status.acceptable
     const max = Math.max(value, target) * 1.2 || 1
+    const scorePct = Math.round(Math.min(kpiToRadarScore(kpi), 1) * 100)
     return {
       id: `program-summary-${kpi.id}`,
       displayValue: formatValue(value),
       displayTarget: formatValue(target),
-      displayDelta: formatValue(Math.abs(delta)),
       delta,
       withinMargin,
+      scorePct,
       bulletValuePct: Math.min((value / max) * 100, 100),
       bulletTargetPct: Math.min((target / max) * 100, 100),
-      color: '#3b82f6',
     }
   })
 })
@@ -735,16 +780,16 @@ const dataSummaryCards = computed(() => {
     const delta = value - target
     const status = evaluateKPIStatus(value, target, kpi.logic || 'STRICT')
     const withinMargin = status.acceptable
+    const scorePct = Math.round(Math.min(kpiToRadarScore(kpi), 1) * 100)
     return {
       id: `data-summary-${kpi.id}`,
       displayValue: formatValue(value),
       displayTarget: formatValue(target),
-      displayDelta: formatValue(Math.abs(delta)),
       delta,
       withinMargin,
+      scorePct,
       bulletValuePct: Math.min((value / max) * 100, 100),
       bulletTargetPct: Math.min((target / max) * 100, 100),
-      color: '#ef4444',
     }
   })
 })
