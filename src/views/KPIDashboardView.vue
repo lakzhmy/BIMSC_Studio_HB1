@@ -30,15 +30,15 @@
         <div class="border-l border-slate-200 h-4 mx-1"></div>
         <span class="text-slate-400 font-medium text-[10px] uppercase tracking-wider">Logic</span>
         <div class="flex items-center gap-1.5">
-          <span class="bg-slate-100 text-slate-600 text-[9px] px-1.5 py-0.5 rounded font-medium">MAX ↑</span>
+          <span class="bg-slate-100 text-slate-600 text-[10px] px-2 py-0.5 rounded-md font-bold tracking-wide">MAX ↑</span>
           <span class="text-slate-600">higher is better</span>
         </div>
         <div class="flex items-center gap-1.5">
-          <span class="bg-slate-100 text-slate-600 text-[9px] px-1.5 py-0.5 rounded font-medium">MIN ↓</span>
+          <span class="bg-slate-100 text-slate-600 text-[10px] px-2 py-0.5 rounded-md font-bold tracking-wide">MIN ↓</span>
           <span class="text-slate-600">lower is better</span>
         </div>
         <div class="flex items-center gap-1.5">
-          <span class="bg-slate-100 text-slate-600 text-[9px] px-1.5 py-0.5 rounded font-medium">STRICT ⊙</span>
+          <span class="bg-slate-100 text-slate-600 text-[10px] px-2 py-0.5 rounded-md font-bold tracking-wide">STRICT ⊙</span>
           <span class="text-slate-600">within ±10% of target</span>
         </div>
         <div class="border-l border-slate-200 h-4 mx-1"></div>
@@ -73,7 +73,7 @@
                   </div>
                   <div class="flex items-center gap-1 flex-shrink-0">
                     <div :class="['w-2 h-2 rounded-full', programSummaryCards[index] ? (programSummaryCards[index].withinMargin ? 'bg-teal-500' : 'bg-amber-400') : 'bg-slate-300']"></div>
-                    <span :class="['text-[9px] px-1.5 py-0.5 rounded font-medium', getLogicBadgeColor(kpi.logic)]">
+                    <span :class="['text-[10px] px-2 py-0.5 rounded-md font-bold tracking-wide', getLogicBadgeColor(kpi.logic)]">
                       {{ getLogicBadgeLabel(kpi.logic) }}
                     </span>
                   </div>
@@ -97,7 +97,7 @@
                     </span>
                   </div>
                   <div class="relative h-2 rounded-full bg-slate-200 overflow-visible">
-                    <div class="absolute left-0 top-0 h-full rounded-full" :style="{ width: `${programSummaryCards[index].bulletValuePct}%`, backgroundColor: programSummaryCards[index].color }"></div>
+                    <div class="absolute left-0 top-0 h-full rounded-full bg-slate-400" :style="{ width: `${programSummaryCards[index].bulletValuePct}%` }"></div>
                     <div class="absolute -top-1 bottom-0 w-0.5 bg-slate-500 rounded" style="height: 16px;" :style="{ left: `${programSummaryCards[index].bulletTargetPct}%` }"></div>
                     <div class="absolute -top-5 text-[10px] text-slate-600" :style="{ left: `calc(${programSummaryCards[index].bulletTargetPct}% - 8px)` }">{{ programSummaryCards[index].displayTarget }}</div>
                   </div>
@@ -131,7 +131,7 @@
                   </div>
                   <div class="flex items-center gap-1 flex-shrink-0">
                     <div :class="['w-2 h-2 rounded-full', structureSummaryCards[index] ? (structureSummaryCards[index].withinMargin ? 'bg-teal-500' : 'bg-amber-400') : 'bg-slate-300']"></div>
-                    <span :class="['text-[9px] px-1.5 py-0.5 rounded font-medium', getLogicBadgeColor(kpi.logic)]">
+                    <span :class="['text-[10px] px-2 py-0.5 rounded-md font-bold tracking-wide', getLogicBadgeColor(kpi.logic)]">
                       {{ getLogicBadgeLabel(kpi.logic) }}
                     </span>
                   </div>
@@ -155,7 +155,7 @@
                     </span>
                   </div>
                   <div class="relative h-2 rounded-full bg-slate-200 overflow-visible">
-                    <div class="absolute left-0 top-0 h-full rounded-full" :style="{ width: `${structureSummaryCards[index].bulletValuePct}%`, backgroundColor: structureSummaryCards[index].color }"></div>
+                    <div class="absolute left-0 top-0 h-full rounded-full bg-slate-400" :style="{ width: `${structureSummaryCards[index].bulletValuePct}%` }"></div>
                     <div class="absolute -top-1 bottom-0 w-0.5 bg-slate-500 rounded" style="height: 16px;" :style="{ left: `${structureSummaryCards[index].bulletTargetPct}%` }"></div>
                     <div class="absolute -top-5 text-[10px] text-slate-600" :style="{ left: `calc(${structureSummaryCards[index].bulletTargetPct}% - 8px)` }">{{ structureSummaryCards[index].displayTarget }}</div>
                   </div>
@@ -189,7 +189,7 @@
                   </div>
                   <div class="flex items-center gap-1 flex-shrink-0">
                     <div :class="['w-2 h-2 rounded-full', dataSummaryCards[index] ? (dataSummaryCards[index].withinMargin ? 'bg-teal-500' : 'bg-amber-400') : 'bg-slate-300']"></div>
-                    <span :class="['text-[9px] px-1.5 py-0.5 rounded font-medium', getLogicBadgeColor(kpi.logic)]">
+                    <span :class="['text-[10px] px-2 py-0.5 rounded-md font-bold tracking-wide', getLogicBadgeColor(kpi.logic)]">
                       {{ getLogicBadgeLabel(kpi.logic) }}
                     </span>
                   </div>
@@ -213,7 +213,7 @@
                     </span>
                   </div>
                   <div class="relative h-2 rounded-full bg-slate-200 overflow-visible">
-                    <div class="absolute left-0 top-0 h-full rounded-full" :style="{ width: `${dataSummaryCards[index].bulletValuePct}%`, backgroundColor: dataSummaryCards[index].color }"></div>
+                    <div class="absolute left-0 top-0 h-full rounded-full bg-slate-400" :style="{ width: `${dataSummaryCards[index].bulletValuePct}%` }"></div>
                     <div class="absolute -top-1 bottom-0 w-0.5 bg-slate-500 rounded" style="height: 16px;" :style="{ left: `${dataSummaryCards[index].bulletTargetPct}%` }"></div>
                     <div class="absolute -top-5 text-[10px] text-slate-600" :style="{ left: `calc(${dataSummaryCards[index].bulletTargetPct}% - 8px)` }">{{ dataSummaryCards[index].displayTarget }}</div>
                   </div>
@@ -381,7 +381,7 @@
                     </div>
                   </div>
                   <div class="mt-4 pt-3 border-t border-slate-200 flex items-center gap-1.5 flex-wrap">
-                    <span class="text-[9px] px-1.5 py-0.5 rounded font-medium" :class="getLogicBadgeColor(hoveredKPIInfo.logic)">{{ getLogicBadgeLabel(hoveredKPIInfo.logic) }}</span>
+                    <span class="text-[10px] px-2 py-0.5 rounded-md font-bold tracking-wide" :class="getLogicBadgeColor(hoveredKPIInfo.logic)">{{ getLogicBadgeLabel(hoveredKPIInfo.logic) }}</span>
                     <span class="text-[9px] font-medium" :class="hoveredKPIInfo.withinMargin ? 'text-teal-600' : 'text-amber-500'">
                       {{ hoveredKPIInfo.withinMargin ? '✓ on target' : '▲ off target' }}
                     </span>
