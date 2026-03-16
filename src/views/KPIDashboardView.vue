@@ -89,32 +89,27 @@
                     </div>
                   </div>
                 </div>
-                <!-- Large value -->
-                <div class="text-2xl font-bold text-slate-900 mb-2">{{ formatNumberDE(kpi.value) }}</div>
                 <template v-if="programSummaryCards[index]">
-                  <!-- Current → Target comparison row -->
-                  <div class="grid grid-cols-[1fr_auto_1fr] gap-x-2 items-end mb-2">
-                    <div>
-                      <p class="text-[9px] text-slate-400 uppercase tracking-wider mb-0.5">Current</p>
-                      <p class="text-[11px] font-semibold text-slate-700 truncate">{{ programSummaryCards[index].displayValue }}</p>
-                    </div>
-                    <span class="text-slate-300 text-xs pb-0.5">→</span>
-                    <div class="text-right">
-                      <p class="text-[9px] text-slate-400 uppercase tracking-wider mb-0.5">Target</p>
-                      <p class="text-[11px] font-semibold text-slate-500 truncate">{{ programSummaryCards[index].displayTarget }}</p>
-                    </div>
-                  </div>
-                  <!-- Score badge -->
-                  <div class="mb-3">
-                    <span :class="['text-[10px] px-2 py-0.5 rounded-full border font-semibold', programSummaryCards[index].withinMargin ? 'bg-teal-50 text-teal-700 border-teal-200' : 'bg-amber-50 text-amber-700 border-amber-200']">
-                      Score {{ programSummaryCards[index].scorePct }}%
-                    </span>
-                  </div>
-                  <!-- Bullet chart (no floating label) -->
-                  <div class="relative h-2 rounded-full bg-slate-200">
-                    <div :class="['absolute left-0 top-0 h-full rounded-full', programSummaryCards[index].withinMargin ? 'bg-teal-500' : 'bg-amber-400']" :style="{ width: `${programSummaryCards[index].bulletValuePct}%` }"></div>
-                    <div class="absolute -top-1 w-0.5 bg-slate-500 rounded" style="height: 16px;" :style="{ left: `${programSummaryCards[index].bulletTargetPct}%` }"></div>
-                  </div>
+                  <!-- Arc gauge -->
+                  <svg viewBox="0 0 100 58" class="w-full" style="display: block; height: 100px; overflow: hidden;">
+                    <path d="M 10,50 A 40,40 0 0,1 90,50" fill="none" stroke="#e2e8f0" stroke-width="10" stroke-linecap="round"/>
+                    <path d="M 10,50 A 40,40 0 0,1 90,50"
+                      fill="none"
+                      :stroke="programSummaryCards[index].withinMargin ? '#0d9488' : '#f59e0b'"
+                      stroke-width="10"
+                      stroke-linecap="round"
+                      :stroke-dasharray="GAUGE_ARC_LEN"
+                      :stroke-dashoffset="GAUGE_ARC_LEN * (1 - programSummaryCards[index].gaugeValuePct / 100)"
+                      style="transition: stroke-dashoffset 0.6s cubic-bezier(0.4,0,0.2,1);"/>
+                    <!-- Target marker at 83.3% arc position (= score 100% on 0-120 scale) -->
+                    <line
+                      :x1="gaugeX(34, GAUGE_TARGET_ARC_PCT)" :y1="gaugeY(34, GAUGE_TARGET_ARC_PCT)"
+                      :x2="gaugeX(46, GAUGE_TARGET_ARC_PCT)" :y2="gaugeY(46, GAUGE_TARGET_ARC_PCT)"
+                      stroke="#475569" stroke-width="2.5" stroke-linecap="round"/>
+                    <text x="50" y="44" text-anchor="middle" font-size="9" font-weight="700" fill="#0f172a">{{ formatNumberDE(kpi.value) }}</text>
+                    <text x="50" y="54" text-anchor="middle" font-size="8" font-weight="600" :fill="programSummaryCards[index].withinMargin ? '#0d9488' : '#f59e0b'">{{ programSummaryCards[index].scorePct }}%</text>
+                  </svg>
+                  <p class="text-center text-[10px] text-slate-400 mt-0.5">of {{ programSummaryCards[index].displayTarget }}</p>
                 </template>
               </div>
             </div>
@@ -161,32 +156,27 @@
                     </div>
                   </div>
                 </div>
-                <!-- Large value -->
-                <div class="text-2xl font-bold text-slate-900 mb-2">{{ formatNumberDE(kpi.value) }}</div>
                 <template v-if="structureSummaryCards[index]">
-                  <!-- Current → Target comparison row -->
-                  <div class="grid grid-cols-[1fr_auto_1fr] gap-x-2 items-end mb-2">
-                    <div>
-                      <p class="text-[9px] text-slate-400 uppercase tracking-wider mb-0.5">Current</p>
-                      <p class="text-[11px] font-semibold text-slate-700 truncate">{{ structureSummaryCards[index].displayValue }}</p>
-                    </div>
-                    <span class="text-slate-300 text-xs pb-0.5">→</span>
-                    <div class="text-right">
-                      <p class="text-[9px] text-slate-400 uppercase tracking-wider mb-0.5">Target</p>
-                      <p class="text-[11px] font-semibold text-slate-500 truncate">{{ structureSummaryCards[index].displayTarget }}</p>
-                    </div>
-                  </div>
-                  <!-- Score badge -->
-                  <div class="mb-3">
-                    <span :class="['text-[10px] px-2 py-0.5 rounded-full border font-semibold', structureSummaryCards[index].withinMargin ? 'bg-teal-50 text-teal-700 border-teal-200' : 'bg-amber-50 text-amber-700 border-amber-200']">
-                      Score {{ structureSummaryCards[index].scorePct }}%
-                    </span>
-                  </div>
-                  <!-- Bullet chart (no floating label) -->
-                  <div class="relative h-2 rounded-full bg-slate-200">
-                    <div :class="['absolute left-0 top-0 h-full rounded-full', structureSummaryCards[index].withinMargin ? 'bg-teal-500' : 'bg-amber-400']" :style="{ width: `${structureSummaryCards[index].bulletValuePct}%` }"></div>
-                    <div class="absolute -top-1 w-0.5 bg-slate-500 rounded" style="height: 16px;" :style="{ left: `${structureSummaryCards[index].bulletTargetPct}%` }"></div>
-                  </div>
+                  <!-- Arc gauge -->
+                  <svg viewBox="0 0 100 58" class="w-full" style="display: block; height: 100px; overflow: hidden;">
+                    <path d="M 10,50 A 40,40 0 0,1 90,50" fill="none" stroke="#e2e8f0" stroke-width="10" stroke-linecap="round"/>
+                    <path d="M 10,50 A 40,40 0 0,1 90,50"
+                      fill="none"
+                      :stroke="structureSummaryCards[index].withinMargin ? '#0d9488' : '#f59e0b'"
+                      stroke-width="10"
+                      stroke-linecap="round"
+                      :stroke-dasharray="GAUGE_ARC_LEN"
+                      :stroke-dashoffset="GAUGE_ARC_LEN * (1 - structureSummaryCards[index].gaugeValuePct / 100)"
+                      style="transition: stroke-dashoffset 0.6s cubic-bezier(0.4,0,0.2,1);"/>
+                    <!-- Target marker at 83.3% arc position (= score 100% on 0-120 scale) -->
+                    <line
+                      :x1="gaugeX(34, GAUGE_TARGET_ARC_PCT)" :y1="gaugeY(34, GAUGE_TARGET_ARC_PCT)"
+                      :x2="gaugeX(46, GAUGE_TARGET_ARC_PCT)" :y2="gaugeY(46, GAUGE_TARGET_ARC_PCT)"
+                      stroke="#475569" stroke-width="2.5" stroke-linecap="round"/>
+                    <text x="50" y="44" text-anchor="middle" font-size="9" font-weight="700" fill="#0f172a">{{ formatNumberDE(kpi.value) }}</text>
+                    <text x="50" y="54" text-anchor="middle" font-size="8" font-weight="600" :fill="structureSummaryCards[index].withinMargin ? '#0d9488' : '#f59e0b'">{{ structureSummaryCards[index].scorePct }}%</text>
+                  </svg>
+                  <p class="text-center text-[10px] text-slate-400 mt-0.5">of {{ structureSummaryCards[index].displayTarget }}</p>
                 </template>
               </div>
             </div>
@@ -233,32 +223,27 @@
                     </div>
                   </div>
                 </div>
-                <!-- Large value -->
-                <div class="text-2xl font-bold text-slate-900 mb-2">{{ formatNumberDE(kpi.value) }}</div>
                 <template v-if="dataSummaryCards[index]">
-                  <!-- Current → Target comparison row -->
-                  <div class="grid grid-cols-[1fr_auto_1fr] gap-x-2 items-end mb-2">
-                    <div>
-                      <p class="text-[9px] text-slate-400 uppercase tracking-wider mb-0.5">Current</p>
-                      <p class="text-[11px] font-semibold text-slate-700 truncate">{{ dataSummaryCards[index].displayValue }}</p>
-                    </div>
-                    <span class="text-slate-300 text-xs pb-0.5">→</span>
-                    <div class="text-right">
-                      <p class="text-[9px] text-slate-400 uppercase tracking-wider mb-0.5">Target</p>
-                      <p class="text-[11px] font-semibold text-slate-500 truncate">{{ dataSummaryCards[index].displayTarget }}</p>
-                    </div>
-                  </div>
-                  <!-- Score badge -->
-                  <div class="mb-3">
-                    <span :class="['text-[10px] px-2 py-0.5 rounded-full border font-semibold', dataSummaryCards[index].withinMargin ? 'bg-teal-50 text-teal-700 border-teal-200' : 'bg-amber-50 text-amber-700 border-amber-200']">
-                      Score {{ dataSummaryCards[index].scorePct }}%
-                    </span>
-                  </div>
-                  <!-- Bullet chart (no floating label) -->
-                  <div class="relative h-2 rounded-full bg-slate-200">
-                    <div :class="['absolute left-0 top-0 h-full rounded-full', dataSummaryCards[index].withinMargin ? 'bg-teal-500' : 'bg-amber-400']" :style="{ width: `${dataSummaryCards[index].bulletValuePct}%` }"></div>
-                    <div class="absolute -top-1 w-0.5 bg-slate-500 rounded" style="height: 16px;" :style="{ left: `${dataSummaryCards[index].bulletTargetPct}%` }"></div>
-                  </div>
+                  <!-- Arc gauge -->
+                  <svg viewBox="0 0 100 58" class="w-full" style="display: block; height: 100px; overflow: hidden;">
+                    <path d="M 10,50 A 40,40 0 0,1 90,50" fill="none" stroke="#e2e8f0" stroke-width="10" stroke-linecap="round"/>
+                    <path d="M 10,50 A 40,40 0 0,1 90,50"
+                      fill="none"
+                      :stroke="dataSummaryCards[index].withinMargin ? '#0d9488' : '#f59e0b'"
+                      stroke-width="10"
+                      stroke-linecap="round"
+                      :stroke-dasharray="GAUGE_ARC_LEN"
+                      :stroke-dashoffset="GAUGE_ARC_LEN * (1 - dataSummaryCards[index].gaugeValuePct / 100)"
+                      style="transition: stroke-dashoffset 0.6s cubic-bezier(0.4,0,0.2,1);"/>
+                    <!-- Target marker at 83.3% arc position (= score 100% on 0-120 scale) -->
+                    <line
+                      :x1="gaugeX(34, GAUGE_TARGET_ARC_PCT)" :y1="gaugeY(34, GAUGE_TARGET_ARC_PCT)"
+                      :x2="gaugeX(46, GAUGE_TARGET_ARC_PCT)" :y2="gaugeY(46, GAUGE_TARGET_ARC_PCT)"
+                      stroke="#475569" stroke-width="2.5" stroke-linecap="round"/>
+                    <text x="50" y="44" text-anchor="middle" font-size="9" font-weight="700" fill="#0f172a">{{ formatNumberDE(kpi.value) }}</text>
+                    <text x="50" y="54" text-anchor="middle" font-size="8" font-weight="600" :fill="dataSummaryCards[index].withinMargin ? '#0d9488' : '#f59e0b'">{{ dataSummaryCards[index].scorePct }}%</text>
+                  </svg>
+                  <p class="text-center text-[10px] text-slate-400 mt-0.5">of {{ dataSummaryCards[index].displayTarget }}</p>
                 </template>
               </div>
             </div>
@@ -597,17 +582,14 @@ const structureSummaryCards = computed(() => {
     const delta = value - target
     const status = evaluateKPIStatus(value, target, structureFilteredKPIs.value[index]?.logic || 'STRICT')
     const withinMargin = status.acceptable
-    const max = Math.max(value, target) * 1.2 || 1
     const scorePct = Math.round(Math.min(kpiToRadarScore(kpi), 1) * 100)
+    const gaugeValuePct = Math.min((Math.min(kpiToRadarScore(kpi), 1.2) * 100 / 120) * 100, 100)
     return {
       id: `structure-summary-${kpi.id}`,
-      displayValue: formatValue(value),
       displayTarget: formatValue(target),
-      delta,
       withinMargin,
       scorePct,
-      bulletValuePct: Math.min((value / max) * 100, 100),
-      bulletTargetPct: Math.min((target / max) * 100, 100),
+      gaugeValuePct,
     }
   })
 })
@@ -628,17 +610,14 @@ const programSummaryCards = computed(() => {
     const delta = value - target
     const status = evaluateKPIStatus(value, target, programFilteredKPIs.value[index]?.logic || 'STRICT')
     const withinMargin = status.acceptable
-    const max = Math.max(value, target) * 1.2 || 1
     const scorePct = Math.round(Math.min(kpiToRadarScore(kpi), 1) * 100)
+    const gaugeValuePct = Math.min((Math.min(kpiToRadarScore(kpi), 1.2) * 100 / 120) * 100, 100)
     return {
       id: `program-summary-${kpi.id}`,
-      displayValue: formatValue(value),
       displayTarget: formatValue(target),
-      delta,
       withinMargin,
       scorePct,
-      bulletValuePct: Math.min((value / max) * 100, 100),
-      bulletTargetPct: Math.min((target / max) * 100, 100),
+      gaugeValuePct,
     }
   })
 })
@@ -781,15 +760,13 @@ const dataSummaryCards = computed(() => {
     const status = evaluateKPIStatus(value, target, kpi.logic || 'STRICT')
     const withinMargin = status.acceptable
     const scorePct = Math.round(Math.min(kpiToRadarScore(kpi), 1) * 100)
+    const gaugeValuePct = Math.min((Math.min(kpiToRadarScore(kpi), 1.2) * 100 / 120) * 100, 100)
     return {
       id: `data-summary-${kpi.id}`,
-      displayValue: formatValue(value),
       displayTarget: formatValue(target),
-      delta,
       withinMargin,
       scorePct,
-      bulletValuePct: Math.min((value / max) * 100, 100),
-      bulletTargetPct: Math.min((target / max) * 100, 100),
+      gaugeValuePct,
     }
   })
 })
@@ -802,6 +779,12 @@ const RADAR_TEAM_COLORS = ['#3b82f6','#3b82f6','#3b82f6','#10b981','#10b981','#1
 const RADAR_TEAM_NAMES  = ['Program','Program','Program','Structure','Structure','Structure','Data','Data','Data']
 const RADAR_CX = 250, RADAR_CY = 220, RADAR_MAX_R = 150
 const RADAR_N = 9
+const GAUGE_ARC_LEN = Math.PI * 40 // semicircle arc length for r=40, used by gauge SVG
+// Arc scale is 0-120% score; target (100%) sits at 83.3% of the arc, leaving room for overperformance
+const GAUGE_TARGET_ARC_PCT = (100 / 120) * 100
+// Convert a 0-100% arc position to SVG x,y coordinates on the gauge semicircle (r=40, center=50,50)
+function gaugeX(r, pct) { return 50 + r * Math.cos(Math.PI + (pct / 100) * Math.PI) }
+function gaugeY(r, pct) { return 50 + r * Math.sin(Math.PI + (pct / 100) * Math.PI) }
 
 // Team filter state
 const activeRadarTeams = ref(new Set(['program', 'structure', 'data']))
