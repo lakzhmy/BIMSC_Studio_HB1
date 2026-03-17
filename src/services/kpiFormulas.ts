@@ -644,23 +644,21 @@ export function evaluateKPIStatus(
 
   if (logic === 'MAX') {
     // Higher is better
-    // - If value >= target: green (within or exceeded)
-    // - If value is within 10% below target: still acceptable (withinMargin)
-    // - If value is > 10% below target: red
+    // - acceptable: value must reach or exceed target (green ✓)
+    // - withinMargin: within 10% below target (used for visual nuance only)
     const margin = Math.abs(target) * 0.1;
     const withinMargin = value >= target - margin;
-    const acceptable = value >= target || (value >= target - margin);
+    const acceptable = value >= target;
     return { withinMargin, acceptable };
   }
 
   if (logic === 'MIN') {
     // Lower is better
-    // - If value <= target: green (within or below)
-    // - If value is within 10% above target: still acceptable (withinMargin)
-    // - If value is > 10% above target: red
+    // - acceptable: value must be at or below target (green ✓)
+    // - withinMargin: within 10% above target (used for visual nuance only)
     const margin = Math.abs(target) * 0.1;
     const withinMargin = value <= target + margin;
-    const acceptable = value <= target || (value <= target + margin);
+    const acceptable = value <= target;
     return { withinMargin, acceptable };
   }
 
