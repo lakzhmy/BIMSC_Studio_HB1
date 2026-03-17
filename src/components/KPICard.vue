@@ -16,11 +16,8 @@
             :style="{ color: statusColor }"
             :title="status.acceptable ? 'On target' : 'Off target'"
           >{{ status.acceptable ? '✓' : '▲' }}</span>
-          <!-- Logic chip: status-tinted -->
-          <span
-            class="text-[10px] px-1.5 py-0.5 rounded font-bold tracking-wide border"
-            :style="chipStyle"
-          >
+          <!-- Logic chip: always grey (metadata, not status) -->
+          <span class="text-[10px] px-1.5 py-0.5 rounded font-bold tracking-wide border bg-slate-100 text-slate-400 border-slate-200">
             {{ logicLabel }}
           </span>
           <span class="text-slate-400 text-[11px] leading-none">{{ isExpanded ? '▴' : '▾' }}</span>
@@ -45,7 +42,7 @@
       </div>
 
       <!-- Deviation line -->
-      <p class="text-xs mt-1 opacity-70" :style="{ color: statusColor }">{{ deviation.text }}</p>
+      <p class="text-xs mt-1 text-slate-400">{{ deviation.text }}</p>
 
       <!-- Range indicator -->
       <div class="mt-3">
@@ -54,7 +51,7 @@
         <template v-if="kpi.logic === 'STRICT'">
           <div class="flex items-center justify-between mb-1.5">
             <p class="text-[9px] text-slate-400 uppercase tracking-wider">Acceptable range</p>
-            <span class="text-[9px] font-semibold" :style="{ color: statusColor }">
+            <span class="text-[9px] text-slate-400">
               {{ status.acceptable ? '✓ in range' : '▲ out of range' }}
             </span>
           </div>
@@ -102,10 +99,9 @@
         <template v-else>
           <div class="flex items-center justify-between mb-1.5">
             <p class="text-[9px] text-slate-400 uppercase tracking-wider">
-              <span :style="{ color: statusColor }">{{ kpi.logic === 'MAX' ? '↑' : '↓' }}</span>
-              {{ kpi.logic === 'MAX' ? ' higher is better' : ' lower is better' }}
+              {{ kpi.logic === 'MAX' ? '↑ higher is better' : '↓ lower is better' }}
             </p>
-            <span class="text-[9px] font-semibold" :style="{ color: statusColor }">
+            <span class="text-[9px] text-slate-400">
               {{ status.acceptable ? '✓ on target' : '▲ off target' }}
             </span>
           </div>
