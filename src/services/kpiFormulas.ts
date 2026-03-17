@@ -377,7 +377,7 @@ const filtrationEfficiency: KPIFormulaDef = {
   params: ['Fe', 'Ep'],
   unit: '%',
   target: 80,
-  logic: 'STRICT',
+  logic: 'MAX',
   compute: (p) => p.Fe / (1 + (p.Ep / 100)),
   computeAggregate: (rows) => {
     if (rows.length === 0) return 0;

@@ -73,7 +73,7 @@
             ></div>
             <!-- Tick: target (tall prominent marker, like MAX/MIN) -->
             <div
-              class="absolute w-0.5 h-5 -mt-1.5 rounded -translate-x-1/2"
+              class="absolute top-0 w-0.5 h-5 -mt-1.5 rounded -translate-x-1/2"
               :style="{ left: strictTargetPct + '%', backgroundColor: statusColor }"
             ></div>
             <!-- Tick: high bound -->
