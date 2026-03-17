@@ -58,12 +58,12 @@
               {{ status.acceptable ? '✓ in range' : '▲ out of range' }}
             </span>
           </div>
-          <div class="relative h-7 flex items-center">
+          <div class="relative h-2 flex items-center overflow-visible">
             <!-- Full track: 0 → strictScale -->
-            <div class="absolute inset-x-0 h-1.5 rounded-full top-1/2 -translate-y-1/2 bg-slate-200"></div>
+            <div class="absolute inset-x-0 h-full rounded-full bg-slate-200"></div>
             <!-- Acceptable zone band (filled between low & high ticks) -->
             <div
-              class="absolute h-1.5 rounded-full top-1/2 -translate-y-1/2 transition-all duration-500"
+              class="absolute h-full rounded-full transition-all duration-500"
               :style="{ left: strictLowPct + '%', width: (strictHighPct - strictLowPct) + '%', backgroundColor: statusColor, opacity: 0.18 }"
             ></div>
             <!-- Tick: low bound -->
@@ -71,9 +71,9 @@
               class="absolute w-[2px] h-3 rounded-sm bg-slate-400 -translate-x-1/2 top-1/2 -translate-y-1/2"
               :style="{ left: strictLowPct + '%' }"
             ></div>
-            <!-- Tick: target (taller, bolder, status-colored) -->
+            <!-- Tick: target (tall prominent marker, like MAX/MIN) -->
             <div
-              class="absolute w-[2px] h-5 rounded-sm -translate-x-1/2 top-1/2 -translate-y-1/2"
+              class="absolute w-0.5 h-5 -mt-1.5 rounded -translate-x-1/2"
               :style="{ left: strictTargetPct + '%', backgroundColor: statusColor }"
             ></div>
             <!-- Tick: high bound -->
@@ -83,15 +83,13 @@
             ></div>
             <!-- Value dot: filled (in-range) or hollow ring (out-of-range) -->
             <div
-              class="absolute w-3.5 h-3.5 rounded-full border-2 -translate-x-1/2 top-1/2 -translate-y-1/2 transition-all duration-500 shadow-sm"
+              class="absolute w-3 h-3 rounded-full border-2 -translate-x-1/2 top-1/2 -translate-y-1/2 transition-all duration-500 shadow-sm"
               :style="dotStyle"
             ></div>
           </div>
-          <div class="flex text-[10px] text-slate-400 mt-1 relative" style="height: 14px;">
-            <span class="absolute left-0">0</span>
-            <span class="absolute -translate-x-1/2 text-slate-400" :style="{ left: strictLowPct + '%' }">{{ formatKPIValue(bandLow) }}</span>
-            <span class="absolute -translate-x-1/2 font-semibold text-slate-500" :style="{ left: strictTargetPct + '%' }">{{ formatKPIValue(kpi.target) }}</span>
-            <span class="absolute -translate-x-1/2 text-slate-400" :style="{ left: strictHighPct + '%' }">{{ formatKPIValue(bandHigh) }}</span>
+          <div class="flex justify-between text-[10px] text-slate-400 mt-1">
+            <span>0</span>
+            <span>target {{ formatKPIValue(kpi.target) }}</span>
           </div>
         </template>
 
@@ -116,7 +114,7 @@
               class="absolute top-0 h-5 -mt-1.5 w-0.5 rounded"
               :style="{ left: `${targetBarPct}%`, backgroundColor: statusColor }"
             ></div>
-            <!-- Directional arrow: MAX → ▶ beyond bar end, MIN → ◀ at left of bar -->
+            <!-- Directional arrow: MAX → ▶ beyond bar end, MIN → ◀ beyond bar end pointing left -->
             <svg
               v-if="kpi.logic === 'MAX'"
               class="absolute -translate-y-1/2 top-1/2"
@@ -128,7 +126,7 @@
             <svg
               v-else
               class="absolute -translate-y-1/2 top-1/2"
-              :style="{ left: `calc(${Math.max(fillBarPct - 0.5, 1)}% - 12px)` }"
+              :style="{ left: `calc(${Math.min(fillBarPct + 0.5, 99)}% + 2px)` }"
               width="10" height="12" viewBox="0 0 10 12"
             >
               <polygon points="10,1 0,6 10,11" :fill="statusColor" />
