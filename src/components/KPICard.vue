@@ -1,13 +1,10 @@
 <template>
   <div
-    class="flex rounded-lg border border-slate-100 overflow-hidden bg-slate-50 hover:shadow-md transition-shadow cursor-pointer"
+    class="rounded-lg border border-slate-100 overflow-hidden bg-slate-50 hover:shadow-md transition-shadow cursor-pointer min-h-[180px]"
     @click="$emit('toggle-expand')"
   >
-    <!-- Left strip: team color — thicker to read as a column anchor -->
-    <div class="w-1.5 flex-none" :style="{ backgroundColor: teamColor }"></div>
-
     <!-- Card body -->
-    <div class="flex-1 p-4 min-w-0">
+    <div class="p-4 min-w-0">
 
       <!-- Header row: name + status symbol + logic chip + chevron -->
       <div class="flex items-start justify-between mb-2">
@@ -53,7 +50,7 @@
       <!-- Range indicator -->
       <div class="mt-3">
 
-        <!-- STRICT: number-line with 3 tick markers + value dot -->
+        <!-- STRICT: full-range number-line with acceptable zone + 3 ticks + value dot -->
         <template v-if="kpi.logic === 'STRICT'">
           <div class="flex items-center justify-between mb-1.5">
             <p class="text-[9px] text-slate-400 uppercase tracking-wider">Acceptable range</p>
@@ -61,25 +58,40 @@
               {{ status.acceptable ? '✓ in range' : '▲ out of range' }}
             </span>
           </div>
-          <div class="relative h-6 flex items-center">
-            <!-- Track -->
+          <div class="relative h-7 flex items-center">
+            <!-- Full track: 0 → strictScale -->
             <div class="absolute inset-x-0 h-1.5 rounded-full top-1/2 -translate-y-1/2 bg-slate-200"></div>
+            <!-- Acceptable zone band (filled between low & high ticks) -->
+            <div
+              class="absolute h-1.5 rounded-full top-1/2 -translate-y-1/2 transition-all duration-500"
+              :style="{ left: strictLowPct + '%', width: (strictHighPct - strictLowPct) + '%', backgroundColor: statusColor, opacity: 0.18 }"
+            ></div>
             <!-- Tick: low bound -->
-            <div class="absolute w-0.5 h-2.5 rounded-sm bg-slate-300 -translate-x-1/2 top-1/2 -translate-y-1/2" style="left: 0%"></div>
-            <!-- Tick: target (taller, bolder) -->
-            <div class="absolute w-0.5 h-4 rounded-sm bg-slate-400 -translate-x-1/2 top-1/2 -translate-y-1/2" style="left: 50%"></div>
+            <div
+              class="absolute w-[2px] h-3 rounded-sm bg-slate-400 -translate-x-1/2 top-1/2 -translate-y-1/2"
+              :style="{ left: strictLowPct + '%' }"
+            ></div>
+            <!-- Tick: target (taller, bolder, status-colored) -->
+            <div
+              class="absolute w-[2px] h-5 rounded-sm -translate-x-1/2 top-1/2 -translate-y-1/2"
+              :style="{ left: strictTargetPct + '%', backgroundColor: statusColor }"
+            ></div>
             <!-- Tick: high bound -->
-            <div class="absolute w-0.5 h-2.5 rounded-sm bg-slate-300 -translate-x-1/2 top-1/2 -translate-y-1/2" style="left: 100%"></div>
+            <div
+              class="absolute w-[2px] h-3 rounded-sm bg-slate-400 -translate-x-1/2 top-1/2 -translate-y-1/2"
+              :style="{ left: strictHighPct + '%' }"
+            ></div>
             <!-- Value dot: filled (in-range) or hollow ring (out-of-range) -->
             <div
-              class="absolute w-3 h-3 rounded-full border-2 -translate-x-1/2 top-1/2 -translate-y-1/2 transition-all duration-500"
+              class="absolute w-3.5 h-3.5 rounded-full border-2 -translate-x-1/2 top-1/2 -translate-y-1/2 transition-all duration-500 shadow-sm"
               :style="dotStyle"
             ></div>
           </div>
-          <div class="flex justify-between text-[10px] text-slate-400 mt-1">
-            <span>{{ formatKPIValue(bandLow) }}</span>
-            <span class="text-slate-500 font-semibold text-[9px]">target {{ formatKPIValue(kpi.target) }}</span>
-            <span>{{ formatKPIValue(bandHigh) }}</span>
+          <div class="flex text-[10px] text-slate-400 mt-1 relative" style="height: 14px;">
+            <span class="absolute left-0">0</span>
+            <span class="absolute -translate-x-1/2 text-slate-400" :style="{ left: strictLowPct + '%' }">{{ formatKPIValue(bandLow) }}</span>
+            <span class="absolute -translate-x-1/2 font-semibold text-slate-500" :style="{ left: strictTargetPct + '%' }">{{ formatKPIValue(kpi.target) }}</span>
+            <span class="absolute -translate-x-1/2 text-slate-400" :style="{ left: strictHighPct + '%' }">{{ formatKPIValue(bandHigh) }}</span>
           </div>
         </template>
 
@@ -104,17 +116,23 @@
               class="absolute top-0 h-5 -mt-1.5 w-0.5 rounded"
               :style="{ left: `${targetBarPct}%`, backgroundColor: statusColor }"
             ></div>
-            <!-- Directional arrow: MAX → ▸ at right end of bar, MIN → ◂ at left -->
-            <span
+            <!-- Directional arrow: MAX → ▶ beyond bar end, MIN → ◀ at left of bar -->
+            <svg
               v-if="kpi.logic === 'MAX'"
-              class="absolute text-[9px] leading-none -translate-y-1/2 top-1/2"
-              :style="{ left: `${Math.min(fillBarPct + 1, 100)}%`, color: statusColor }"
-            >&#9656;</span>
-            <span
+              class="absolute -translate-y-1/2 top-1/2"
+              :style="{ left: `calc(${Math.min(fillBarPct + 0.5, 99)}% + 2px)` }"
+              width="10" height="12" viewBox="0 0 10 12"
+            >
+              <polygon points="0,1 10,6 0,11" :fill="statusColor" />
+            </svg>
+            <svg
               v-else
-              class="absolute text-[9px] leading-none -translate-y-1/2 top-1/2 -translate-x-full"
-              :style="{ left: `${Math.max(fillBarPct - 1, 0)}%`, color: statusColor }"
-            >&#9666;</span>
+              class="absolute -translate-y-1/2 top-1/2"
+              :style="{ left: `calc(${Math.max(fillBarPct - 0.5, 1)}% - 12px)` }"
+              width="10" height="12" viewBox="0 0 10 12"
+            >
+              <polygon points="10,1 0,6 10,11" :fill="statusColor" />
+            </svg>
           </div>
           <div class="flex justify-between text-[10px] text-slate-400 mt-1">
             <span>0</span>
@@ -189,15 +207,24 @@ const logicLabel = computed(() => {
 const bandLow = computed(() => getStrictBand(props.kpi.target).low)
 const bandHigh = computed(() => getStrictBand(props.kpi.target).high)
 
+// STRICT: scale from 0 → max(bandHigh*1.1, value*1.1) so PPI shows 0→0.77
+const strictScale = computed(() => {
+  const high = getStrictBand(props.kpi.target).high
+  return Math.max(high * 1.1, Math.abs(props.kpi.value) * 1.1) || 1
+})
+
+const strictLowPct = computed(() => (getStrictBand(props.kpi.target).low / strictScale.value) * 100)
+const strictTargetPct = computed(() => (props.kpi.target / strictScale.value) * 100)
+const strictHighPct = computed(() => (getStrictBand(props.kpi.target).high / strictScale.value) * 100)
+
 const dotPosition = computed(() => {
-  const { low, high } = getStrictBand(props.kpi.target)
-  if (high === low) return 0.5
-  const pos = (props.kpi.value - low) / (high - low)
-  return Math.max(0, Math.min(1, pos))
+  // Position value dot on the full 0→strictScale range
+  const pct = (props.kpi.value / strictScale.value) * 100
+  return Math.max(0, Math.min(100, pct))
 })
 
 const dotStyle = computed(() => ({
-  left: `${dotPosition.value * 100}%`,
+  left: `${dotPosition.value}%`,
   ...(status.value.acceptable
     ? { backgroundColor: statusColor.value, borderColor: 'white' }
     : { backgroundColor: 'white', borderColor: statusColor.value }),
