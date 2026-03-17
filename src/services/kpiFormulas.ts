@@ -448,6 +448,7 @@ export interface ComputedKPI {
   unit: string;
   formula: string;
   target: number;
+  logic: KPILogic;
 }
 
 /**
@@ -482,6 +483,7 @@ export function computeAllKPIs(params: ParamValues): ComputedKPI[] {
     unit: def.unit,
     formula: def.formula,
     target: def.target,
+    logic: def.logic,
   }));
 }
 

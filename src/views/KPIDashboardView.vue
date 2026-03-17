@@ -20,25 +20,25 @@
       <div v-if="!isLoading && !loadError" class="flex items-center gap-4 flex-wrap text-xs bg-white border border-slate-100 rounded-lg px-4 py-2.5">
         <span class="text-slate-400 font-medium text-[10px] uppercase tracking-wider">Status</span>
         <div class="flex items-center gap-1.5">
-          <span class="w-2 h-2 rounded-full bg-teal-500 inline-block flex-none"></span>
-          <span class="text-slate-600">Within target</span>
+          <span class="text-slate-700 font-bold text-[11px] leading-none">✓</span>
+          <span class="text-slate-600">On target</span>
         </div>
         <div class="flex items-center gap-1.5">
-          <span class="text-amber-500 font-bold text-[12px] leading-none">▲</span>
-          <span class="text-slate-600">Outside target</span>
+          <span class="text-slate-700 font-bold text-[11px] leading-none">▲</span>
+          <span class="text-slate-600">Off target</span>
         </div>
         <div class="border-l border-slate-200 h-4 mx-1"></div>
         <span class="text-slate-400 font-medium text-[10px] uppercase tracking-wider">Logic</span>
         <div class="flex items-center gap-1.5">
-          <span class="bg-slate-100 text-slate-600 text-xs px-2 py-0.5 rounded-md font-bold tracking-wide">MAX ↑</span>
+          <span class="bg-slate-100 text-slate-600 border border-slate-200 text-xs px-2 py-0.5 rounded-md font-bold tracking-wide">MAX ↑</span>
           <span class="text-slate-600">higher is better</span>
         </div>
         <div class="flex items-center gap-1.5">
-          <span class="bg-slate-100 text-slate-600 text-xs px-2 py-0.5 rounded-md font-bold tracking-wide">MIN ↓</span>
+          <span class="bg-slate-100 text-slate-600 border border-slate-200 text-xs px-2 py-0.5 rounded-md font-bold tracking-wide">MIN ↓</span>
           <span class="text-slate-600">lower is better</span>
         </div>
         <div class="flex items-center gap-1.5">
-          <span class="bg-slate-100 text-slate-600 text-xs px-2 py-0.5 rounded-md font-bold tracking-wide">STRICT ⊙</span>
+          <span class="bg-slate-100 text-slate-600 border border-slate-200 text-xs px-2 py-0.5 rounded-md font-bold tracking-wide">STRICT ⊙</span>
           <span class="text-slate-600">within ±10% of target</span>
         </div>
         <div class="border-l border-slate-200 h-4 mx-1"></div>
@@ -59,60 +59,13 @@
           </div>
 
           <div v-if="programFilteredKPIs.length > 0" class="space-y-3">
-            <div
-              v-for="(kpi, index) in programFilteredKPIs"
+            <KPICard
+              v-for="kpi in programFilteredKPIs"
               :key="kpi.id"
-              class="bg-slate-50 rounded-lg border border-slate-100 hover:shadow-md transition-shadow cursor-pointer"
-              @click="toggleCardExpanded('program', kpi.id)"
-            >
-              <div class="p-4">
-                <!-- Header: name + badge + chevron -->
-                <div class="flex items-start justify-between mb-2">
-                  <div class="flex-1">
-                    <h3 class="text-xs font-semibold text-slate-700">{{ kpi.name }}</h3>
-                    <p class="text-[11px] text-slate-500">{{ kpi.unit }}</p>
-                  </div>
-                  <div class="flex items-center gap-1.5 flex-shrink-0">
-                    <span :class="['text-xs px-2 py-0.5 rounded-md font-bold tracking-wide', getLogicBadgeColor(kpi.logic)]">
-                      {{ getLogicBadgeLabel(kpi.logic) }}
-                    </span>
-                    <span class="text-slate-400 text-[11px] leading-none">{{ expandedCards.has(`program-${kpi.id}`) ? '▴' : '▾' }}</span>
-                  </div>
-                </div>
-                <!-- Click-expand: description + formula -->
-                <div :class="['max-h-0 overflow-hidden opacity-0 transition-all duration-300', expandedCards.has(`program-${kpi.id}`) ? 'max-h-96 opacity-100' : '']">
-                  <div class="bg-slate-100 -mx-4 px-4 py-2 mb-3 border-t border-b border-slate-200">
-                    <p class="text-xs text-slate-600 leading-relaxed">{{ kpi.description }}</p>
-                    <div class="mt-2 pt-2 border-t border-slate-200">
-                      <p class="text-[9px] text-slate-400 uppercase tracking-wider mb-1">Formula</p>
-                      <code class="text-xs bg-white text-slate-700 rounded border border-slate-200 px-2 py-1 block font-mono">{{ kpi.formula }}</code>
-                    </div>
-                  </div>
-                </div>
-                <template v-if="programSummaryCards[index]">
-                  <!-- Arc gauge -->
-                  <svg viewBox="0 0 100 58" class="w-full" style="display: block; height: 100px; overflow: hidden;">
-                    <path d="M 10,50 A 40,40 0 0,1 90,50" fill="none" stroke="#e2e8f0" stroke-width="10" stroke-linecap="round"/>
-                    <path d="M 10,50 A 40,40 0 0,1 90,50"
-                      fill="none"
-                      :stroke="programSummaryCards[index].withinMargin ? '#0d9488' : '#f59e0b'"
-                      stroke-width="10"
-                      stroke-linecap="round"
-                      :stroke-dasharray="GAUGE_ARC_LEN"
-                      :stroke-dashoffset="GAUGE_ARC_LEN * (1 - programSummaryCards[index].gaugeValuePct / 100)"
-                      style="transition: stroke-dashoffset 0.6s cubic-bezier(0.4,0,0.2,1);"/>
-                    <!-- Target marker at 83.3% arc position (= score 100% on 0-120 scale) -->
-                    <line
-                      :x1="gaugeX(34, GAUGE_TARGET_ARC_PCT)" :y1="gaugeY(34, GAUGE_TARGET_ARC_PCT)"
-                      :x2="gaugeX(46, GAUGE_TARGET_ARC_PCT)" :y2="gaugeY(46, GAUGE_TARGET_ARC_PCT)"
-                      stroke="#475569" stroke-width="2.5" stroke-linecap="round"/>
-                    <text x="50" y="44" text-anchor="middle" font-size="9" font-weight="700" fill="#0f172a">{{ formatNumberDE(kpi.value) }}</text>
-                    <text x="50" y="54" text-anchor="middle" font-size="8" font-weight="600" :fill="programSummaryCards[index].withinMargin ? '#0d9488' : '#f59e0b'">{{ programSummaryCards[index].scorePct }}%</text>
-                  </svg>
-                  <p class="text-center text-[10px] text-slate-400 mt-0.5">of {{ programSummaryCards[index].displayTarget }}</p>
-                </template>
-              </div>
-            </div>
+              :kpi="kpi"
+              :is-expanded="expandedCards.has(`program-${kpi.id}`)"
+              @toggle-expand="toggleCardExpanded('program', kpi.id)"
+            />
           </div>
 
           <p v-else class="text-slate-400 text-sm">No program data available</p>
@@ -126,60 +79,13 @@
           </div>
 
           <div v-if="structureFilteredKPIs.length > 0" class="space-y-3">
-            <div
-              v-for="(kpi, index) in structureFilteredKPIs"
+            <KPICard
+              v-for="kpi in structureFilteredKPIs"
               :key="kpi.id"
-              class="bg-slate-50 rounded-lg border border-slate-100 hover:shadow-md transition-shadow cursor-pointer"
-              @click="toggleCardExpanded('structure', kpi.id)"
-            >
-              <div class="p-4">
-                <!-- Header: name + badge + chevron -->
-                <div class="flex items-start justify-between mb-2">
-                  <div class="flex-1">
-                    <h3 class="text-xs font-semibold text-slate-700">{{ kpi.name }}</h3>
-                    <p class="text-[11px] text-slate-500">{{ kpi.unit }}</p>
-                  </div>
-                  <div class="flex items-center gap-1.5 flex-shrink-0">
-                    <span :class="['text-xs px-2 py-0.5 rounded-md font-bold tracking-wide', getLogicBadgeColor(kpi.logic)]">
-                      {{ getLogicBadgeLabel(kpi.logic) }}
-                    </span>
-                    <span class="text-slate-400 text-[11px] leading-none">{{ expandedCards.has(`structure-${kpi.id}`) ? '▴' : '▾' }}</span>
-                  </div>
-                </div>
-                <!-- Click-expand: description + formula -->
-                <div :class="['max-h-0 overflow-hidden opacity-0 transition-all duration-300', expandedCards.has(`structure-${kpi.id}`) ? 'max-h-96 opacity-100' : '']">
-                  <div class="bg-slate-100 -mx-4 px-4 py-2 mb-3 border-t border-b border-slate-200">
-                    <p class="text-xs text-slate-600 leading-relaxed">{{ kpi.description }}</p>
-                    <div class="mt-2 pt-2 border-t border-slate-200">
-                      <p class="text-[9px] text-slate-400 uppercase tracking-wider mb-1">Formula</p>
-                      <code class="text-xs bg-white text-slate-700 rounded border border-slate-200 px-2 py-1 block font-mono">{{ kpi.formula }}</code>
-                    </div>
-                  </div>
-                </div>
-                <template v-if="structureSummaryCards[index]">
-                  <!-- Arc gauge -->
-                  <svg viewBox="0 0 100 58" class="w-full" style="display: block; height: 100px; overflow: hidden;">
-                    <path d="M 10,50 A 40,40 0 0,1 90,50" fill="none" stroke="#e2e8f0" stroke-width="10" stroke-linecap="round"/>
-                    <path d="M 10,50 A 40,40 0 0,1 90,50"
-                      fill="none"
-                      :stroke="structureSummaryCards[index].withinMargin ? '#0d9488' : '#f59e0b'"
-                      stroke-width="10"
-                      stroke-linecap="round"
-                      :stroke-dasharray="GAUGE_ARC_LEN"
-                      :stroke-dashoffset="GAUGE_ARC_LEN * (1 - structureSummaryCards[index].gaugeValuePct / 100)"
-                      style="transition: stroke-dashoffset 0.6s cubic-bezier(0.4,0,0.2,1);"/>
-                    <!-- Target marker at 83.3% arc position (= score 100% on 0-120 scale) -->
-                    <line
-                      :x1="gaugeX(34, GAUGE_TARGET_ARC_PCT)" :y1="gaugeY(34, GAUGE_TARGET_ARC_PCT)"
-                      :x2="gaugeX(46, GAUGE_TARGET_ARC_PCT)" :y2="gaugeY(46, GAUGE_TARGET_ARC_PCT)"
-                      stroke="#475569" stroke-width="2.5" stroke-linecap="round"/>
-                    <text x="50" y="44" text-anchor="middle" font-size="9" font-weight="700" fill="#0f172a">{{ formatNumberDE(kpi.value) }}</text>
-                    <text x="50" y="54" text-anchor="middle" font-size="8" font-weight="600" :fill="structureSummaryCards[index].withinMargin ? '#0d9488' : '#f59e0b'">{{ structureSummaryCards[index].scorePct }}%</text>
-                  </svg>
-                  <p class="text-center text-[10px] text-slate-400 mt-0.5">of {{ structureSummaryCards[index].displayTarget }}</p>
-                </template>
-              </div>
-            </div>
+              :kpi="kpi"
+              :is-expanded="expandedCards.has(`structure-${kpi.id}`)"
+              @toggle-expand="toggleCardExpanded('structure', kpi.id)"
+            />
           </div>
 
           <p v-else-if="!structureWeek" class="text-slate-400 text-sm">Select a week to view data</p>
@@ -193,60 +99,13 @@
           </div>
 
           <div v-if="dataFilteredKPIs.length > 0" class="space-y-3">
-            <div
-              v-for="(kpi, index) in dataFilteredKPIs"
+            <KPICard
+              v-for="kpi in dataFilteredKPIs"
               :key="kpi.id"
-              class="bg-slate-50 rounded-lg border border-slate-100 hover:shadow-md transition-shadow cursor-pointer"
-              @click="toggleCardExpanded('data', kpi.id)"
-            >
-              <div class="p-4">
-                <!-- Header: name + badge + chevron -->
-                <div class="flex items-start justify-between mb-2">
-                  <div class="flex-1">
-                    <h3 class="text-xs font-semibold text-slate-700">{{ kpi.name }}</h3>
-                    <p class="text-[11px] text-slate-500">{{ kpi.unit }}</p>
-                  </div>
-                  <div class="flex items-center gap-1.5 flex-shrink-0">
-                    <span :class="['text-xs px-2 py-0.5 rounded-md font-bold tracking-wide', getLogicBadgeColor(kpi.logic)]">
-                      {{ getLogicBadgeLabel(kpi.logic) }}
-                    </span>
-                    <span class="text-slate-400 text-[11px] leading-none">{{ expandedCards.has(`data-${kpi.id}`) ? '▴' : '▾' }}</span>
-                  </div>
-                </div>
-                <!-- Click-expand: description + formula -->
-                <div :class="['max-h-0 overflow-hidden opacity-0 transition-all duration-300', expandedCards.has(`data-${kpi.id}`) ? 'max-h-96 opacity-100' : '']">
-                  <div class="bg-slate-100 -mx-4 px-4 py-2 mb-3 border-t border-b border-slate-200">
-                    <p class="text-xs text-slate-600 leading-relaxed">{{ kpi.description }}</p>
-                    <div class="mt-2 pt-2 border-t border-slate-200">
-                      <p class="text-[9px] text-slate-400 uppercase tracking-wider mb-1">Formula</p>
-                      <code class="text-xs bg-white text-slate-700 rounded border border-slate-200 px-2 py-1 block font-mono">{{ kpi.formula }}</code>
-                    </div>
-                  </div>
-                </div>
-                <template v-if="dataSummaryCards[index]">
-                  <!-- Arc gauge -->
-                  <svg viewBox="0 0 100 58" class="w-full" style="display: block; height: 100px; overflow: hidden;">
-                    <path d="M 10,50 A 40,40 0 0,1 90,50" fill="none" stroke="#e2e8f0" stroke-width="10" stroke-linecap="round"/>
-                    <path d="M 10,50 A 40,40 0 0,1 90,50"
-                      fill="none"
-                      :stroke="dataSummaryCards[index].withinMargin ? '#0d9488' : '#f59e0b'"
-                      stroke-width="10"
-                      stroke-linecap="round"
-                      :stroke-dasharray="GAUGE_ARC_LEN"
-                      :stroke-dashoffset="GAUGE_ARC_LEN * (1 - dataSummaryCards[index].gaugeValuePct / 100)"
-                      style="transition: stroke-dashoffset 0.6s cubic-bezier(0.4,0,0.2,1);"/>
-                    <!-- Target marker at 83.3% arc position (= score 100% on 0-120 scale) -->
-                    <line
-                      :x1="gaugeX(34, GAUGE_TARGET_ARC_PCT)" :y1="gaugeY(34, GAUGE_TARGET_ARC_PCT)"
-                      :x2="gaugeX(46, GAUGE_TARGET_ARC_PCT)" :y2="gaugeY(46, GAUGE_TARGET_ARC_PCT)"
-                      stroke="#475569" stroke-width="2.5" stroke-linecap="round"/>
-                    <text x="50" y="44" text-anchor="middle" font-size="9" font-weight="700" fill="#0f172a">{{ formatNumberDE(kpi.value) }}</text>
-                    <text x="50" y="54" text-anchor="middle" font-size="8" font-weight="600" :fill="dataSummaryCards[index].withinMargin ? '#0d9488' : '#f59e0b'">{{ dataSummaryCards[index].scorePct }}%</text>
-                  </svg>
-                  <p class="text-center text-[10px] text-slate-400 mt-0.5">of {{ dataSummaryCards[index].displayTarget }}</p>
-                </template>
-              </div>
-            </div>
+              :kpi="kpi"
+              :is-expanded="expandedCards.has(`data-${kpi.id}`)"
+              @toggle-expand="toggleCardExpanded('data', kpi.id)"
+            />
           </div>
 
           <p v-else-if="!structureWeek" class="text-slate-400 text-sm">Select a week to view data</p>
@@ -439,6 +298,7 @@ import { ref, computed, onMounted, watch, onUnmounted } from 'vue'
 import { fetchKPIsByCategory, fetchStructureParams, fetchProgramParams, fetchFormulaTargets } from '@/services/googleSheetsService'
 import { KPI_BY_CATEGORY, computeKPI, updateKPITargets, evaluateKPIStatus } from '@/services/kpiFormulas'
 import { useUserStore } from '@/stores/userStore'
+import KPICard from '@/components/KPICard.vue'
 
 const userStore = useUserStore()
 
@@ -448,7 +308,7 @@ const formatNumberDE = (value) => {
 }
 
 // --- Logic type badge helpers ---
-const getLogicBadgeColor = () => 'bg-slate-100 text-slate-600'
+const getLogicBadgeColor = () => 'bg-slate-100 text-slate-600 border border-slate-200'
 const getLogicBadgeLabel = (logic) => {
   if (logic === 'MAX') return 'MAX ↑'
   if (logic === 'MIN') return 'MIN ↓'
@@ -566,61 +426,6 @@ const isWithinMargin = (value, target, logic = 'STRICT') => {
   return status.acceptable
 }
 
-const structureSummaryCards = computed(() => {
-  const formatValue = (value) => formatNumberDE(value)
-  const parseNumber = (value) => {
-    if (typeof value === 'number') return value
-    const sanitized = String(value || '').replace(/,/g, '')
-    const match = sanitized.match(/-?\d*\.?\d+/)
-    if (!match) return 0
-    const parsed = Number(match[0])
-    return Number.isNaN(parsed) ? 0 : parsed
-  }
-  return structureFilteredKPIs.value.map((kpi, index) => {
-    const value = parseNumber(kpi.value)
-    const target = kpi.target ?? 0
-    const delta = value - target
-    const status = evaluateKPIStatus(value, target, structureFilteredKPIs.value[index]?.logic || 'STRICT')
-    const withinMargin = status.acceptable
-    const scorePct = Math.round(Math.min(kpiToRadarScore(kpi), 1) * 100)
-    const gaugeValuePct = Math.min((Math.min(kpiToRadarScore(kpi), 1.2) * 100 / 120) * 100, 100)
-    return {
-      id: `structure-summary-${kpi.id}`,
-      displayTarget: formatValue(target),
-      withinMargin,
-      scorePct,
-      gaugeValuePct,
-    }
-  })
-})
-
-const programSummaryCards = computed(() => {
-  const formatValue = (value) => formatNumberDE(value)
-  const parseNumber = (value) => {
-    if (typeof value === 'number') return value
-    const sanitized = String(value || '').replace(/,/g, '')
-    const match = sanitized.match(/-?\d*\.?\d+/)
-    if (!match) return 0
-    const parsed = Number(match[0])
-    return Number.isNaN(parsed) ? 0 : parsed
-  }
-  return programFilteredKPIs.value.map((kpi, index) => {
-    const value = parseNumber(kpi.value)
-    const target = kpi.target ?? 0
-    const delta = value - target
-    const status = evaluateKPIStatus(value, target, programFilteredKPIs.value[index]?.logic || 'STRICT')
-    const withinMargin = status.acceptable
-    const scorePct = Math.round(Math.min(kpiToRadarScore(kpi), 1) * 100)
-    const gaugeValuePct = Math.min((Math.min(kpiToRadarScore(kpi), 1.2) * 100 / 120) * 100, 100)
-    return {
-      id: `program-summary-${kpi.id}`,
-      displayTarget: formatValue(target),
-      withinMargin,
-      scorePct,
-      gaugeValuePct,
-    }
-  })
-})
 
 // Average PRG param values
 const averagePrgParams = computed(() => {
@@ -742,34 +547,6 @@ const dataFilteredKPIs = computed(() => {
   })
 })
 
-const dataSummaryCards = computed(() => {
-  const formatValue = (value) => formatNumberDE(value)
-  const parseNumber = (value) => {
-    if (typeof value === 'number') return value
-    const sanitized = String(value || '').replace(/,/g, '')
-    const match = sanitized.match(/-?\d*\.?\d+/)
-    if (!match) return 0
-    const parsed = Number(match[0])
-    return Number.isNaN(parsed) ? 0 : parsed
-  }
-  return dataFilteredKPIs.value.map((kpi) => {
-    const value = parseNumber(kpi.value)
-    const target = kpi.target ?? 0
-    const max = Math.max(value, target) * 1.2 || 1
-    const delta = value - target
-    const status = evaluateKPIStatus(value, target, kpi.logic || 'STRICT')
-    const withinMargin = status.acceptable
-    const scorePct = Math.round(Math.min(kpiToRadarScore(kpi), 1) * 100)
-    const gaugeValuePct = Math.min((Math.min(kpiToRadarScore(kpi), 1.2) * 100 / 120) * 100, 100)
-    return {
-      id: `data-summary-${kpi.id}`,
-      displayTarget: formatValue(target),
-      withinMargin,
-      scorePct,
-      gaugeValuePct,
-    }
-  })
-})
 
 // ─── Radar chart constants & helpers ─────────────────────────────────────────
 
@@ -779,12 +556,6 @@ const RADAR_TEAM_COLORS = ['#3b82f6','#3b82f6','#3b82f6','#10b981','#10b981','#1
 const RADAR_TEAM_NAMES  = ['Program','Program','Program','Structure','Structure','Structure','Data','Data','Data']
 const RADAR_CX = 250, RADAR_CY = 220, RADAR_MAX_R = 150
 const RADAR_N = 9
-const GAUGE_ARC_LEN = Math.PI * 40 // semicircle arc length for r=40, used by gauge SVG
-// Arc scale is 0-120% score; target (100%) sits at 83.3% of the arc, leaving room for overperformance
-const GAUGE_TARGET_ARC_PCT = (100 / 120) * 100
-// Convert a 0-100% arc position to SVG x,y coordinates on the gauge semicircle (r=40, center=50,50)
-function gaugeX(r, pct) { return 50 + r * Math.cos(Math.PI + (pct / 100) * Math.PI) }
-function gaugeY(r, pct) { return 50 + r * Math.sin(Math.PI + (pct / 100) * Math.PI) }
 
 // Team filter state
 const activeRadarTeams = ref(new Set(['program', 'structure', 'data']))
@@ -818,6 +589,9 @@ function toggleRadarTeam(team) {
 
 // Hover state
 const hoveredRadarIdx = ref(null)
+const hoveredProgramMarker = ref(null)
+const hoveredStructureMarker = ref(null)
+const hoveredDataMarker = ref(null)
 
 function axisAngle(i) {
   return (-90 + i * (360 / RADAR_N)) * Math.PI / 180
@@ -970,13 +744,11 @@ watch(
 )
 
 watch(
-  [programSummaryCards, structureSummaryCards, dataSummaryCards],
-  ([progCards, strCards, dataCards]) => {
-    const progOnTarget  = progCards.filter(c => c.withinMargin).length
-    const strOnTarget   = strCards.filter(c => c.withinMargin).length
-    const dataOnTarget  = dataCards.filter(c => c.withinMargin).length
-    const total    = progCards.length + strCards.length + dataCards.length
-    const onTarget = progOnTarget + strOnTarget + dataOnTarget
+  [programFilteredKPIs, structureFilteredKPIs, dataFilteredKPIs],
+  ([progKPIs, strKPIs, dataKPIs]) => {
+    const allKPIs = [...progKPIs, ...strKPIs, ...dataKPIs]
+    const total    = allKPIs.length
+    const onTarget = allKPIs.filter(k => evaluateKPIStatus(k.value, k.target, k.logic).acceptable).length
     userStore.setKpiHealth({ total, onTarget, warnings: total - onTarget })
   },
   { immediate: true }
