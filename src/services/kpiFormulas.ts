@@ -121,7 +121,7 @@ const effectiveProgrammaticArea: KPIFormulaDef = {
   params: ['Ur', 'Ar'],
   unit: 'm²',
   target: 1000000,
-  logic: 'STRICT',
+  logic: 'MAX',
   compute: (p) => p.Ur * p.Ar,
   computeAggregate: (rows) => {
     if (rows.length === 0) return 0;
@@ -282,7 +282,7 @@ const solarControlPerformance: KPIFormulaDef = {
   formula: '100 * normalized_De / (1 + AVERAGE(Ir_range) / 100)',
   params: ['De', 'Ir'],
   unit: '%',
-  target: 65,
+  target: 60,
   logic: 'MAX',
   compute: (p) => p.De / (1 + (p.Ir / 100)),
   computeAggregate: (rows) => {
@@ -364,7 +364,7 @@ const acousticComfortNoiseImpactIndex: KPIFormulaDef = {
   formula: '(Wl + Sl) / (1 + (De/100))',
   params: ['Wl', 'Sl', 'De'],
   unit: 'dB',
-  target: 35,
+  target: 12,
   logic: 'MIN',
   compute: (p) => (p.Wl + p.Sl) / (1 + (p.De / 100)),
 };
@@ -377,7 +377,7 @@ const filtrationEfficiency: KPIFormulaDef = {
   params: ['Fe', 'Ep'],
   unit: '%',
   target: 80,
-  logic: 'STRICT',
+  logic: 'MAX',
   compute: (p) => p.Fe / (1 + (p.Ep / 100)),
   computeAggregate: (rows) => {
     if (rows.length === 0) return 0;
