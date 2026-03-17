@@ -61,6 +61,11 @@
           <div class="relative h-2 flex items-center overflow-visible">
             <!-- Full track: 0 → strictScale -->
             <div class="absolute inset-x-0 h-full rounded-full bg-slate-200"></div>
+            <!-- Fill bar: 0 → value dot position -->
+            <div
+              class="absolute left-0 top-0 h-full rounded-full transition-all duration-500 opacity-80"
+              :style="{ width: dotPosition + '%', backgroundColor: statusColor }"
+            ></div>
             <!-- Acceptable zone band (filled between low & high ticks) -->
             <div
               class="absolute h-full rounded-full transition-all duration-500"
