@@ -34,6 +34,7 @@ function groupByRoute(rows) {
       labelAnchor,
       boxWidth: labelAnchor.w || 230,
       color: row.color,
+      sortOrder: row.sort_order ?? 0,
     })
   })
   return map

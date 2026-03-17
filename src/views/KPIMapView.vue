@@ -3,7 +3,7 @@
     <main class="flex flex-col gap-3 px-6 py-4 overflow-hidden" style="height: calc(100vh - 108px);">
 
       <!-- ── Top bar ── -->
-      <div class="flex items-center justify-between gap-4 flex-none flex-wrap">
+      <div id="tour-kpi-map-filter" class="flex items-center justify-between gap-4 flex-none flex-wrap">
         <div class="flex items-center gap-3">
           <h1 class="text-2xl font-bold text-slate-900">KPI Map</h1>
           <span class="text-sm text-slate-400 hidden sm:block">— dependency network between design KPIs</span>
@@ -108,6 +108,7 @@
 
       <!-- ── Graph container ── -->
       <div
+        id="tour-kpi-network"
         ref="containerRef"
         class="flex-1 min-h-0 relative bg-white rounded-xl border overflow-hidden transition-colors duration-300"
         :class="editMode ? 'border-orange-300 border-2' : 'border-slate-200'"

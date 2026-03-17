@@ -116,6 +116,13 @@ export async function initDb() {
       UNIQUE(route, ann_id)
     )
   `)
+  // Migration: add sort_order column if it doesn't exist
+  await query(`
+    DO $$ BEGIN
+      ALTER TABLE annotations ADD COLUMN IF NOT EXISTS sort_order INTEGER DEFAULT 0;
+    EXCEPTION WHEN duplicate_column THEN NULL;
+    END $$
+  `)
   console.log('[db] annotations table ready')
 
   await query(`

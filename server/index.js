@@ -448,7 +448,7 @@ app.post('/api/annotations', async (req, res) => {
 // PUT update an annotation (admin only)
 app.put('/api/annotations/:id', async (req, res) => {
   const { id } = req.params
-  const { arrow_path, label, label_anchor, color, user_name } = req.body
+  const { arrow_path, label, label_anchor, color, sort_order, user_name } = req.body
   if (!user_name || !isAnnotationAdmin(user_name)) {
     return res.status(403).json({ error: 'Not authorized to manage annotations' })
   }
@@ -459,13 +459,15 @@ app.put('/api/annotations/:id', async (req, res) => {
         label        = COALESCE($2, label),
         label_anchor = COALESCE($3, label_anchor),
         color        = COALESCE($4, color),
+        sort_order   = COALESCE($5, sort_order),
         updated_at   = NOW()
-       WHERE id = $5 RETURNING *`,
+       WHERE id = $6 RETURNING *`,
       [
         arrow_path ? JSON.stringify(arrow_path) : null,
         label || null,
         label_anchor ? JSON.stringify(label_anchor) : null,
         color || null,
+        sort_order != null ? sort_order : null,
         id,
       ]
     )

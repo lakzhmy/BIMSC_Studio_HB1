@@ -22,7 +22,7 @@
       <div class="grid grid-cols-1 lg:grid-cols-5 gap-6 items-stretch">
 
         <!-- ── Game Area (left 3/5) ─────────────────────────────────────── -->
-        <div class="lg:col-span-3">
+        <div id="tour-stress-game" class="lg:col-span-3">
           <div class="card p-5 flex flex-col gap-4 h-full">
 
             <!-- Status Bar -->
@@ -137,7 +137,7 @@
           </div>
 
           <!-- Calmness Ranking — fills remaining space to match game height -->
-          <div class="card p-4 flex-1 flex flex-col">
+          <div id="tour-stress-leaderboard" class="card p-4 flex-1 flex flex-col">
             <h2 class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Calmness Ranking</h2>
             <div class="space-y-1.5 flex-1">
               <div

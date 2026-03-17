@@ -49,7 +49,7 @@
       </div>
 
       <!-- Row 1: Program | Structure | Data -->
-      <div v-if="!isLoading && !loadError" class="grid lg:grid-cols-3 gap-6 items-stretch">
+      <div v-if="!isLoading && !loadError" id="tour-kpi-table" class="grid lg:grid-cols-3 gap-6 items-stretch">
 
         <!-- Program Widget -->
         <div class="bg-white rounded-lg border border-slate-200 p-6 space-y-4">
@@ -114,7 +114,7 @@
       </div>
 
       <!-- Row 2: Performance Overview -->
-      <div v-if="!isLoading && !loadError" class="bg-white rounded-lg border border-slate-200 p-6 space-y-4">
+      <div v-if="!isLoading && !loadError" id="tour-kpi-radar" class="bg-white rounded-lg border border-slate-200 p-6 space-y-4">
         <div>
           <h2 class="text-lg font-bold text-slate-900">Performance Overview</h2>
           <p class="text-slate-500 text-sm">System-wide KPI balance against targets.</p>

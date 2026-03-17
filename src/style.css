@@ -67,3 +67,73 @@
   }
 }
 
+/* ── Driver.js tour popover theme ─────────────────────────────── */
+.bimsc-tour-popover.driver-popover {
+  background: #1e1e2e;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  color: #e0e0e0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  max-width: 340px;
+}
+
+.bimsc-tour-popover .driver-popover-title {
+  font-family: 'Caveat', cursive;
+  font-size: 1.15rem;
+  color: #c0392b;
+  margin-bottom: 4px;
+}
+
+.bimsc-tour-popover .driver-popover-description {
+  font-size: 0.82rem;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.65);
+  white-space: pre-line;
+}
+
+.bimsc-tour-popover .driver-popover-progress-text {
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 0.72rem;
+}
+
+.bimsc-tour-popover .driver-popover-footer {
+  margin-top: 12px;
+  gap: 6px;
+}
+
+.bimsc-tour-popover .driver-popover-prev-btn,
+.bimsc-tour-popover .driver-popover-next-btn,
+.bimsc-tour-popover .driver-popover-done-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.8);
+  border-radius: 6px;
+  font-size: 0.78rem;
+  padding: 5px 12px;
+  transition: background 0.15s;
+}
+
+.bimsc-tour-popover .driver-popover-next-btn:hover,
+.bimsc-tour-popover .driver-popover-done-btn:hover {
+  background: rgba(192, 57, 43, 0.5);
+  border-color: rgba(192, 57, 43, 0.6);
+  color: #fff;
+}
+
+.bimsc-tour-popover .driver-popover-prev-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.bimsc-tour-popover .driver-popover-close-btn {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.bimsc-tour-popover .driver-popover-close-btn:hover {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* Stage highlight ring */
+.driver-active .driver-overlay {
+  background: rgba(26, 26, 46, 0.65) !important;
+}
+

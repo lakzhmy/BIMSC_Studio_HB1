@@ -3,7 +3,7 @@
     <div class="max-w-7xl mx-auto space-y-6">
 
       <!-- ========== LIVE VIEW WIDGET (top) — iframe embed ========== -->
-      <div class="bg-white rounded-lg border border-slate-200 overflow-hidden flex flex-col" style="height: 1000px;">
+      <div id="tour-viewer-3d" class="bg-white rounded-lg border border-slate-200 overflow-hidden flex flex-col" style="height: 1000px;">
 
         <!-- Header bar (outside iframe) -->
         <div class="px-4 py-3 border-b border-slate-100 flex-shrink-0">

@@ -42,6 +42,7 @@
               </button>
             </div>
             <button
+              id="tour-timeline-add"
               @click="showAddModal = true"
               class="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-semibold bg-slate-900 text-white hover:bg-slate-800 transition-colors shadow-sm"
             >
@@ -72,7 +73,7 @@
 
         <div ref="exportEl" class="relative overflow-visible pt-8">
           <div class="w-full pt-12">
-            <div class="relative h-28 overflow-visible isolate">
+            <div id="tour-timeline-track" class="relative h-28 overflow-visible isolate">
               <svg class="absolute inset-0 w-full h-full z-0 pointer-events-none" viewBox="0 0 100 96" preserveAspectRatio="none">
                 <polyline :points="teamPoints.structure" :style="trackStrokeStyle('structure')" :stroke="trackStrokeColor('structure')" stroke-width="3" fill="none" vector-effect="non-scaling-stroke" />
                 <polyline :points="teamPoints.program" :style="trackStrokeStyle('program')" :stroke="trackStrokeColor('program')" stroke-width="3" fill="none" vector-effect="non-scaling-stroke" />

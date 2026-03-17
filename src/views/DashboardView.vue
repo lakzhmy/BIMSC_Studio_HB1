@@ -6,6 +6,7 @@
         <component
           :is="stat.link ? 'router-link' : 'div'"
           :to="stat.link"
+          :id="stat.tourId"
           class="card p-6 block"
           v-for="stat in quickStats"
           :key="stat.label"
@@ -35,7 +36,7 @@
       </div>
 
       <!-- Team Members Full-width Grid -->
-      <section class="card p-6">
+      <section id="tour-team-members" class="card p-6">
         <div class="flex items-center justify-between mb-6">
           <h2 class="text-xl font-bold text-slate-900">Team Members</h2>
           <router-link to="/stress-test" class="text-sm font-medium text-blue-600 hover:text-blue-700">
@@ -207,25 +208,28 @@ const quickStats = computed(() => {
       value: health.total ? `${health.onTarget}/${health.total} On Target` : '—',
       change: health.total ? `${health.warnings} warning${health.warnings !== 1 ? 's' : ''}` : 'No KPI data',
       link: '/kpi',
-      attention: health.warnings > 0
+      attention: health.warnings > 0,
+      tourId: 'tour-kpi-health',
     },
     {
       label: 'Current Milestone',
       items: teamMilestoneItems,
-      link: '/timeline'
+      link: '/timeline',
+      tourId: 'tour-milestone',
     },
     {
       label: 'Timeline Progress',
       value: weekInfo ? `Week ${weekInfo.week}: ${weekInfo.title}` : '—',
       change: timeline.totalWeeks ? `${todayString.value} · Week ${timeline.currentWeek} of ${timeline.totalWeeks}` : 'Timeline not set',
-      link: '/timeline'
+      link: '/timeline',
     },
     {
       label: 'Team Health',
       value: teamHealthValue.value !== null ? `${teamHealthValue.value}%` : '—',
       change: teamHealthChange.value,
       teamBreakdown: teamHealthBreakdown.value,
-      link: '/stress-test'
+      link: '/stress-test',
+      tourId: 'tour-team-health',
     }
   ]
 })
