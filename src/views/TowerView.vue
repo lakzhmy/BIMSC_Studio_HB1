@@ -272,7 +272,7 @@
         <p class="text-slate-400 text-center mb-16 text-sm tracking-wide uppercase">Structure · Program · Data</p>
 
         <!-- ── STRUCTURE CARD ── -->
-        <div id="tour-tower-structure" class="system-card bg-white rounded-2xl p-8 md:p-10 mb-8 shadow-sm">
+        <div id="tour-tower-structure" class="system-card bg-white rounded-2xl p-8 md:p-10 mb-8 shadow-sm cursor-pointer" @click="scrollToCard('tour-tower-structure')">
           <div class="flex items-center gap-4 mb-10">
             <div class="blob blob-moderate card-blob flex-shrink-0"
               style="width:52px;height:52px;animation-duration:8s;background:linear-gradient(135deg,#6ee7b7 0%,#10b981 60%,#059669 100%);opacity:0.9;"
@@ -471,7 +471,7 @@
         </div>
 
         <!-- ── PROGRAM CARD ── -->
-        <div id="tour-tower-program" class="system-card bg-white rounded-2xl p-8 md:p-10 mb-8 shadow-sm">
+        <div id="tour-tower-program" class="system-card bg-white rounded-2xl p-8 md:p-10 mb-8 shadow-sm cursor-pointer" @click="scrollToCard('tour-tower-program')">
           <div class="flex items-center gap-4 mb-10">
             <div class="blob blob-complex card-blob flex-shrink-0"
               style="width:52px;height:52px;animation-duration:10s;background:linear-gradient(135deg,#93c5fd 0%,#3b82f6 60%,#2563eb 100%);opacity:0.9;"
@@ -612,7 +612,7 @@
         </div>
 
         <!-- ── DATA CARD ── -->
-        <div id="tour-tower-data" ref="kpiSection" class="system-card bg-white rounded-2xl p-8 md:p-10 shadow-sm">
+        <div id="tour-tower-data" ref="kpiSection" class="system-card bg-white rounded-2xl p-8 md:p-10 shadow-sm cursor-pointer" @click="scrollToCard('tour-tower-data')">
           <div class="flex items-center gap-4 mb-10">
             <div class="blob blob-simple card-blob flex-shrink-0"
               style="width:52px;height:52px;animation-duration:12s;background:linear-gradient(135deg,#fca5a5 0%,#ef4444 60%,#dc2626 100%);opacity:0.9;"
@@ -826,6 +826,9 @@ const scrollToConcept = () => {
 }
 const scrollToSystems = () => {
   document.getElementById('tour-tower-systems').scrollIntoView({ behavior: 'smooth' })
+}
+const scrollToCard = (id) => {
+  document.getElementById(id).scrollIntoView({ behavior: 'smooth', block: 'center' })
 }
 
 // ── Framework section reveal ──────────────────────────────────
