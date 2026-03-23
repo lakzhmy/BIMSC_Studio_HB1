@@ -322,12 +322,19 @@ function buildEditableSteps() {
   const routeAnnotations = dbAnnotations.value[selectedRoute.value] ?? []
   editableSteps.value = routeAnnotations.map((a) => {
     const sel = a.selector ?? ''
+    let pickedLabel = sel.startsWith('#') ? sel.slice(1) : sel
+    if (sel) {
+      try {
+        const el = document.querySelector(sel)
+        if (el) pickedLabel = getPickedLabel(el)
+      } catch { /* invalid selector — keep fallback */ }
+    }
     return {
       annId: a.id,
       dbId: a.dbId,
       title: a.title ?? '',
       selector: sel,
-      pickedLabel: sel.startsWith('#') ? sel.slice(1) : sel,
+      pickedLabel,
       side: a.side ?? 'bottom',
       label: a.label ?? '',
     }
