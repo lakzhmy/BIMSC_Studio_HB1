@@ -1,6 +1,45 @@
 <template>
   <Teleport to="body">
+
+    <!-- ── PICKER OVERLAY (shown while picking an element) ─────────────── -->
+    <template v-if="isPicking">
+      <!-- Full-screen capture layer -->
+      <div
+        ref="overlayEl"
+        class="fixed inset-0 z-[10002] cursor-crosshair"
+        @mousemove="onPickerMove"
+        @click.capture.prevent.stop="onPickerClick"
+      />
+
+      <!-- Hover highlight box (pointer-events-none so it doesn't interfere) -->
+      <div
+        v-if="hoverRect"
+        class="pointer-events-none fixed z-[10003] border-2 border-teal-400 rounded"
+        style="transition: top 60ms, left 60ms, width 60ms, height 60ms; box-shadow: 0 0 0 2000px rgba(0,0,0,0.25);"
+        :style="hoverHighlightStyle"
+      />
+
+      <!-- Picker instruction bar -->
+      <div class="fixed top-4 left-1/2 -translate-x-1/2 z-[10004] bg-[#1e1e2e] border border-teal-500/40 rounded-full px-5 py-2.5 flex items-center gap-3 text-xs text-white/80 shadow-2xl select-none">
+        <span class="w-2 h-2 rounded-full bg-teal-400 animate-pulse shrink-0"></span>
+        <span>Hover to highlight · <strong class="text-white">Click</strong> to select element</span>
+        <button
+          @click.stop="cancelPicker"
+          class="ml-2 text-white/40 hover:text-white transition-colors"
+        >✕ Cancel (Esc)</button>
+      </div>
+
+      <!-- Element info chip (shows near cursor) -->
+      <div
+        v-if="hoverRect && hoveredTag"
+        class="pointer-events-none fixed z-[10004] bg-teal-900/90 text-teal-200 text-xs font-mono px-2 py-1 rounded"
+        :style="{ top: (hoverRect.bottom + 6) + 'px', left: hoverRect.left + 'px', maxWidth: '320px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }"
+      >{{ hoveredTag }}</div>
+    </template>
+
+    <!-- ── MAIN PANEL (hidden while picking) ───────────────────────────── -->
     <div
+      v-if="!isPicking"
       class="fixed inset-0 z-[10001] flex items-center justify-center"
       style="background: rgba(0,0,0,0.5);"
       @click.self="$emit('close')"
@@ -20,6 +59,13 @@
 
         <!-- Steps list -->
         <div class="overflow-y-auto flex-1 p-4 space-y-3">
+
+          <!-- Selector warning banner -->
+          <div v-if="selectorWarning" class="bg-amber-500/10 border border-amber-500/30 rounded-lg px-3 py-2 text-amber-300 text-xs flex items-start gap-2">
+            <span class="shrink-0 mt-0.5">⚠</span>
+            <span>{{ selectorWarning }}</span>
+            <button @click="selectorWarning = ''" class="ml-auto shrink-0 text-amber-300/50 hover:text-amber-300">✕</button>
+          </div>
 
           <p v-if="orderSaved" class="text-green-400 text-xs text-center">Order saved ✓</p>
 
@@ -53,36 +99,39 @@
             <!-- Title -->
             <div class="flex items-center gap-2">
               <label class="text-white/40 text-xs w-16 shrink-0">Title</label>
-              <input
-                v-model="step.title"
-                type="text"
-                class="input-dark flex-1 rounded-md px-3 py-1.5 text-xs"
-                placeholder="Step title…"
-              />
+              <input v-model="step.title" type="text" class="input-dark flex-1 rounded-md px-3 py-1.5 text-xs" placeholder="Step title…" />
             </div>
 
-            <!-- Selector dropdown -->
+            <!-- Element selector -->
             <div class="flex flex-col gap-1.5">
               <div class="flex items-center gap-2">
                 <label class="text-white/40 text-xs w-16 shrink-0">Element</label>
+                <!-- Dropdown of known elements for this route -->
                 <select
                   v-model="step.selectorChoice"
                   @change="onSelectorChoiceChange(step)"
-                  class="select-dark flex-1 text-xs rounded-md px-3 py-1.5 border border-white/10"
+                  class="select-dark flex-1 text-xs rounded-md px-2 py-1.5 border border-white/10 min-w-0"
                 >
-                  <option value="__custom__">Custom selector…</option>
-                  <option v-for="opt in selectorOptionsFor(selectedRoute)" :key="opt.value" :value="opt.value">
+                  <option value="__custom__">Custom / Pick from page…</option>
+                  <option v-for="opt in knownSelectorsFor(selectedRoute)" :key="opt.value" :value="opt.value">
                     {{ opt.label }}
                   </option>
                 </select>
+                <!-- Pick button -->
+                <button
+                  @click="startPicker(step)"
+                  class="shrink-0 text-xs px-2.5 py-1.5 rounded-md bg-teal-500/15 hover:bg-teal-500/25 text-teal-300 hover:text-teal-200 transition-colors border border-teal-500/20"
+                  title="Click an element on the page to select it"
+                >Pick</button>
               </div>
+              <!-- Custom text input (shown when custom/pick mode) -->
               <div v-if="step.selectorChoice === '__custom__'" class="flex items-center gap-2">
                 <span class="w-16 shrink-0"></span>
                 <input
                   v-model="step.selector"
                   type="text"
                   class="input-dark flex-1 font-mono rounded-md px-3 py-1.5 text-xs"
-                  placeholder="#tour-element-id"
+                  placeholder="#element-id or .class-name"
                 />
               </div>
             </div>
@@ -107,15 +156,10 @@
             />
 
             <div class="flex items-center justify-between">
-              <button
-                @click="remove(step)"
-                class="text-xs px-3 py-1.5 rounded-md bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 transition-colors"
-              >Delete</button>
-              <button
-                @click="save(step)"
-                :disabled="saving === step.annId"
-                class="text-xs px-3 py-1.5 rounded-md bg-white/10 hover:bg-white/20 text-white/70 hover:text-white transition-colors disabled:opacity-40"
-              >{{ saving === step.annId ? 'Saving…' : 'Save' }}</button>
+              <button @click="remove(step)" class="text-xs px-3 py-1.5 rounded-md bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 transition-colors">Delete</button>
+              <button @click="save(step)" :disabled="saving === step.annId" class="text-xs px-3 py-1.5 rounded-md bg-white/10 hover:bg-white/20 text-white/70 hover:text-white transition-colors disabled:opacity-40">
+                {{ saving === step.annId ? 'Saving…' : 'Save' }}
+              </button>
             </div>
           </div>
 
@@ -129,28 +173,28 @@
 
             <div class="flex items-center gap-2">
               <label class="text-white/40 text-xs w-16 shrink-0">Title</label>
-              <input
-                v-model="newStep.title"
-                type="text"
-                class="input-dark flex-1 rounded-md px-3 py-1.5 text-xs"
-                placeholder="Step title…"
-              />
+              <input v-model="newStep.title" type="text" class="input-dark flex-1 rounded-md px-3 py-1.5 text-xs" placeholder="Step title…" />
             </div>
 
-            <!-- Selector dropdown for new step -->
+            <!-- Element selector for new step -->
             <div class="flex flex-col gap-1.5">
               <div class="flex items-center gap-2">
                 <label class="text-white/40 text-xs w-16 shrink-0">Element</label>
                 <select
                   v-model="newStep.selectorChoice"
                   @change="onNewSelectorChoiceChange"
-                  class="select-dark flex-1 text-xs rounded-md px-3 py-1.5 border border-white/10"
+                  class="select-dark flex-1 text-xs rounded-md px-2 py-1.5 border border-white/10 min-w-0"
                 >
-                  <option value="__custom__">Custom selector…</option>
-                  <option v-for="opt in selectorOptionsFor(selectedRoute)" :key="opt.value" :value="opt.value">
+                  <option value="__custom__">Custom / Pick from page…</option>
+                  <option v-for="opt in knownSelectorsFor(selectedRoute)" :key="opt.value" :value="opt.value">
                     {{ opt.label }}
                   </option>
                 </select>
+                <button
+                  @click="startPicker('new')"
+                  class="shrink-0 text-xs px-2.5 py-1.5 rounded-md bg-teal-500/15 hover:bg-teal-500/25 text-teal-300 hover:text-teal-200 transition-colors border border-teal-500/20"
+                  title="Click an element on the page to select it"
+                >Pick</button>
               </div>
               <div v-if="newStep.selectorChoice === '__custom__'" class="flex items-center gap-2">
                 <span class="w-16 shrink-0"></span>
@@ -158,7 +202,7 @@
                   v-model="newStep.selector"
                   type="text"
                   class="input-dark flex-1 font-mono rounded-md px-3 py-1.5 text-xs"
-                  placeholder="#tour-element-id"
+                  placeholder="#element-id or .class-name"
                 />
               </div>
             </div>
@@ -181,15 +225,10 @@
             />
 
             <div class="flex items-center justify-between pt-1">
-              <button
-                @click="showAddForm = false"
-                class="text-xs px-3 py-1.5 rounded-md bg-white/5 hover:bg-white/10 text-white/40 hover:text-white/70 transition-colors"
-              >Cancel</button>
-              <button
-                @click="create"
-                :disabled="creating"
-                class="text-xs px-3 py-1.5 rounded-md bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 hover:text-indigo-200 transition-colors disabled:opacity-40"
-              >{{ creating ? 'Creating…' : 'Create' }}</button>
+              <button @click="showAddForm = false" class="text-xs px-3 py-1.5 rounded-md bg-white/5 hover:bg-white/10 text-white/40 hover:text-white/70 transition-colors">Cancel</button>
+              <button @click="create" :disabled="creating" class="text-xs px-3 py-1.5 rounded-md bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 hover:text-indigo-200 transition-colors disabled:opacity-40">
+                {{ creating ? 'Creating…' : 'Create' }}
+              </button>
             </div>
           </div>
         </div>
@@ -204,11 +243,12 @@
         </div>
       </div>
     </div>
+
   </Teleport>
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 import { useAnnotations } from '@/composables/useAnnotations'
 import { useUserStore } from '@/stores/userStore'
 import { TOUR_STEPS_MAP } from '@/data/tourStepsMap'
@@ -231,37 +271,154 @@ const showAddForm = ref(false)
 const creating = ref(false)
 const savingOrder = ref(false)
 const orderSaved = ref(false)
+const selectorWarning = ref('')
 
 const newStep = ref({ title: '', selector: '', selectorChoice: '__custom__', side: 'bottom', label: '' })
 
-// Build selector options for a given route: static from tourStepsMap + live DOM scan for current page
-function selectorOptionsFor(route) {
-  const staticOpts = (TOUR_STEPS_MAP[route] ?? []).map((def) => ({
+// ── Picker state ────────────────────────────────────────────────────────────
+const isPicking = ref(false)
+const pickingFor = ref(null)   // step object or 'new'
+const overlayEl = ref(null)
+const hoveredEl = ref(null)
+const hoverRect = ref(null)
+
+const hoveredTag = computed(() => {
+  const el = hoveredEl.value
+  if (!el) return ''
+  const tag = el.tagName.toLowerCase()
+  const id = el.id ? `#${el.id}` : ''
+  const cls = [...el.classList].filter(c => c.length < 20 && !c.includes(':') && !c.includes('['))
+    .slice(0, 2).map(c => `.${c}`).join('')
+  return `${tag}${id}${cls}`
+})
+
+const hoverHighlightStyle = computed(() => {
+  if (!hoverRect.value) return {}
+  const r = hoverRect.value
+  return {
+    top: `${r.top}px`,
+    left: `${r.left}px`,
+    width: `${r.width}px`,
+    height: `${r.height}px`,
+  }
+})
+
+function getElementAtPoint(x, y) {
+  if (overlayEl.value) overlayEl.value.style.pointerEvents = 'none'
+  const el = document.elementFromPoint(x, y)
+  if (overlayEl.value) overlayEl.value.style.pointerEvents = 'auto'
+  return el
+}
+
+function onPickerMove(e) {
+  const el = getElementAtPoint(e.clientX, e.clientY)
+  if (el && el !== hoveredEl.value) {
+    hoveredEl.value = el
+    hoverRect.value = el.getBoundingClientRect()
+  }
+}
+
+function onPickerClick(e) {
+  const el = getElementAtPoint(e.clientX, e.clientY)
+  if (!el) return cancelPicker()
+
+  const selector = generateSelector(el)
+  const hasId = !!el.id
+
+  if (pickingFor.value === 'new') {
+    newStep.value.selector = selector
+    newStep.value.selectorChoice = resolveChoice(selector, selectedRoute.value)
+    // Auto-fill title from element text if blank
+    if (!newStep.value.title) {
+      const text = el.getAttribute('aria-label') || el.textContent?.trim().slice(0, 40) || ''
+      if (text) newStep.value.title = text
+    }
+  } else {
+    pickingFor.value.selector = selector
+    pickingFor.value.selectorChoice = resolveChoice(selector, selectedRoute.value)
+  }
+
+  if (!hasId) {
+    selectorWarning.value = `No id attribute found on this element — the generated selector "${selector}" may break if the page layout changes. For stability, ask a developer to add a unique id to this element.`
+  }
+
+  isPicking.value = false
+  pickingFor.value = null
+}
+
+function startPicker(target) {
+  selectorWarning.value = ''
+  pickingFor.value = target
+  hoveredEl.value = null
+  hoverRect.value = null
+  isPicking.value = true
+}
+
+function cancelPicker() {
+  isPicking.value = false
+  pickingFor.value = null
+  hoveredEl.value = null
+  hoverRect.value = null
+}
+
+// Escape key listener active only while picking
+function handlePickerKey(e) {
+  if (e.key === 'Escape') cancelPicker()
+}
+watch(isPicking, (val) => {
+  if (val) {
+    document.addEventListener('keydown', handlePickerKey)
+    window.addEventListener('scroll', onScroll, true)
+  } else {
+    document.removeEventListener('keydown', handlePickerKey)
+    window.removeEventListener('scroll', onScroll, true)
+  }
+})
+function onScroll() {
+  if (hoveredEl.value) hoverRect.value = hoveredEl.value.getBoundingClientRect()
+}
+
+// ── Selector generation ──────────────────────────────────────────────────────
+function generateSelector(el) {
+  if (el.id) return `#${el.id}`
+
+  // Walk up to find nearest ancestor with an id
+  const parts = []
+  let current = el
+  while (current && current !== document.body) {
+    if (current.id) {
+      return parts.length
+        ? `#${current.id} ${parts.join(' > ')}`
+        : `#${current.id}`
+    }
+    let part = current.tagName.toLowerCase()
+    const parent = current.parentElement
+    if (parent) {
+      const sameTagSiblings = [...parent.children].filter(c => c.tagName === current.tagName)
+      if (sameTagSiblings.length > 1) {
+        part += `:nth-of-type(${sameTagSiblings.indexOf(current) + 1})`
+      }
+    }
+    parts.unshift(part)
+    current = current.parentElement
+  }
+  return parts.join(' > ')
+}
+
+// ── Selector dropdown helpers ────────────────────────────────────────────────
+function knownSelectorsFor(route) {
+  return (TOUR_STEPS_MAP[route] ?? []).map((def) => ({
     value: def.selector,
     label: `${def.title}  (${def.selector})`,
   }))
-
-  // Also pick up any tour-tagged elements live in the DOM (only meaningful for the current page)
-  if (route === props.routeName) {
-    const known = new Set(staticOpts.map((o) => o.value))
-    document.querySelectorAll('[id^="tour-"]').forEach((el) => {
-      const sel = `#${el.id}`
-      if (!known.has(sel)) {
-        staticOpts.push({ value: sel, label: sel })
-        known.add(sel)
-      }
-    })
-  }
-
-  return staticOpts
 }
 
-// Determine whether a selector is one of the known options for a route
 function resolveChoice(selector, route) {
-  const known = selectorOptionsFor(route).map((o) => o.value)
+  const known = knownSelectorsFor(route).map((o) => o.value)
   return known.includes(selector) ? selector : '__custom__'
 }
 
+// ── Editable steps ───────────────────────────────────────────────────────────
 function buildEditableSteps() {
   const routeAnnotations = dbAnnotations.value[selectedRoute.value] ?? []
   editableSteps.value = routeAnnotations.map((a) => {
@@ -281,15 +438,10 @@ function buildEditableSteps() {
 watch(() => [selectedRoute.value, dbAnnotations.value], buildEditableSteps, { immediate: true, deep: true })
 
 function onSelectorChoiceChange(step) {
-  if (step.selectorChoice !== '__custom__') {
-    step.selector = step.selectorChoice
-  }
+  if (step.selectorChoice !== '__custom__') step.selector = step.selectorChoice
 }
-
 function onNewSelectorChoiceChange() {
-  if (newStep.value.selectorChoice !== '__custom__') {
-    newStep.value.selector = newStep.value.selectorChoice
-  }
+  if (newStep.value.selectorChoice !== '__custom__') newStep.value.selector = newStep.value.selectorChoice
 }
 
 function openAddForm() {
@@ -301,7 +453,7 @@ function slugify(str) {
   return str.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
 }
 
-// Move up/down and immediately persist sort_order for all steps
+// ── Sort order ───────────────────────────────────────────────────────────────
 async function moveUp(i) {
   if (i === 0) return
   const arr = [...editableSteps.value];
@@ -336,6 +488,7 @@ async function persistOrder() {
   }
 }
 
+// ── CRUD ─────────────────────────────────────────────────────────────────────
 async function save(step) {
   saving.value = step.annId
   try {
@@ -391,7 +544,6 @@ async function remove(step) {
 </script>
 
 <style scoped>
-/* Native <select> and <input> styled for dark panel — Tailwind alpha bg doesn't apply to option elements */
 .select-dark {
   background-color: #2a2a3e;
   color: rgba(255, 255, 255, 0.8);
