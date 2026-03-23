@@ -86,8 +86,9 @@
                 v-if="step.selector"
                 class="flex-1 flex items-center gap-2 bg-teal-500/10 border border-teal-500/20 rounded-md px-3 py-1.5"
               >
-                <span class="text-teal-400 text-xs">✓ Element selected</span>
-                <button @click="startPicker(step)" class="ml-auto text-xs text-white/40 hover:text-white/70 transition-colors">Re-pick</button>
+                <span class="text-teal-400 text-xs shrink-0">✓</span>
+                <span class="text-white/70 text-xs truncate">{{ step.pickedLabel || 'Element selected' }}</span>
+                <button @click="startPicker(step)" class="ml-auto shrink-0 text-xs text-white/40 hover:text-white/70 transition-colors">Re-pick</button>
               </div>
               <button
                 v-else
@@ -140,8 +141,9 @@
                 v-if="newStep.selector"
                 class="flex-1 flex items-center gap-2 bg-teal-500/10 border border-teal-500/20 rounded-md px-3 py-1.5"
               >
-                <span class="text-teal-400 text-xs">✓ Element selected</span>
-                <button @click="startPicker('new')" class="ml-auto text-xs text-white/40 hover:text-white/70 transition-colors">Re-pick</button>
+                <span class="text-teal-400 text-xs shrink-0">✓</span>
+                <span class="text-white/70 text-xs truncate">{{ newStep.pickedLabel || 'Element selected' }}</span>
+                <button @click="startPicker('new')" class="ml-auto shrink-0 text-xs text-white/40 hover:text-white/70 transition-colors">Re-pick</button>
               </div>
               <button
                 v-else
@@ -212,7 +214,7 @@ const creating = ref(false)
 const savingOrder = ref(false)
 const orderSaved = ref(false)
 
-const newStep = ref({ title: '', selector: '', side: 'bottom', label: '' })
+const newStep = ref({ title: '', selector: '', pickedLabel: '', side: 'bottom', label: '' })
 
 // ── Element picker ─────────────────────────────────────────────────────────
 const isPicking = ref(false)
@@ -241,15 +243,15 @@ function onPickerClick(e) {
   if (!el) return cancelPicker()
 
   const selector = generateSelector(el)
+  const label = getPickedLabel(el)
 
   if (pickingFor.value === 'new') {
     newStep.value.selector = selector
-    if (!newStep.value.title) {
-      const text = el.getAttribute('aria-label') || el.textContent?.trim().replace(/\s+/g, ' ').slice(0, 40) || ''
-      if (text) newStep.value.title = text
-    }
+    newStep.value.pickedLabel = label
+    if (!newStep.value.title) newStep.value.title = label
   } else {
     pickingFor.value.selector = selector
+    pickingFor.value.pickedLabel = label
   }
 
   isPicking.value = false
@@ -291,39 +293,51 @@ function generateSelector(el) {
   // Own id is ideal
   if (el.id) return `#${el.id}`
 
-  // Walk up and snap to nearest ancestor that has an id
-  let current = el.parentElement
-  while (current && current !== document.body) {
-    if (current.id) return `#${current.id}`
-    current = current.parentElement
-  }
-
-  // No id anywhere — build a minimal class-based selector from the element itself
+  // Build a selector for this exact element (no parent snapping)
   const stableClasses = [...el.classList]
     .filter(c => !c.includes(':') && !c.includes('[') && !c.includes('/') && c.length < 30)
     .slice(0, 3)
   if (stableClasses.length) return el.tagName.toLowerCase() + '.' + stableClasses.join('.')
 
+  // Use immediate parent id as context if available
+  if (el.parentElement?.id) return `#${el.parentElement.id} > ${el.tagName.toLowerCase()}`
+
+  return el.tagName.toLowerCase()
+}
+
+// Derive a human-readable name from the element — shown to admin after picking
+function getPickedLabel(el) {
+  const ariaLabel = el.getAttribute('aria-label')
+  if (ariaLabel) return ariaLabel
+  if (el.id) return el.id
+  const text = el.textContent?.trim().replace(/\s+/g, ' ').slice(0, 40)
+  if (text) return text
+  const firstClass = [...el.classList].find(c => !c.includes(':') && !c.includes('[') && c.length < 30)
+  if (firstClass) return `${el.tagName.toLowerCase()}.${firstClass}`
   return el.tagName.toLowerCase()
 }
 
 // ── Steps ──────────────────────────────────────────────────────────────────
 function buildEditableSteps() {
   const routeAnnotations = dbAnnotations.value[selectedRoute.value] ?? []
-  editableSteps.value = routeAnnotations.map((a) => ({
-    annId: a.id,
-    dbId: a.dbId,
-    title: a.title ?? '',
-    selector: a.selector ?? '',
-    side: a.side ?? 'bottom',
-    label: a.label ?? '',
-  }))
+  editableSteps.value = routeAnnotations.map((a) => {
+    const sel = a.selector ?? ''
+    return {
+      annId: a.id,
+      dbId: a.dbId,
+      title: a.title ?? '',
+      selector: sel,
+      pickedLabel: sel.startsWith('#') ? sel.slice(1) : sel,
+      side: a.side ?? 'bottom',
+      label: a.label ?? '',
+    }
+  })
 }
 
 watch(() => [selectedRoute.value, dbAnnotations.value], buildEditableSteps, { immediate: true, deep: true })
 
 function openAddForm() {
-  newStep.value = { title: '', selector: '', side: 'bottom', label: '' }
+  newStep.value = { title: '', selector: '', pickedLabel: '', side: 'bottom', label: '' }
   showAddForm.value = true
 }
 
