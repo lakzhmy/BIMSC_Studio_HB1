@@ -76,21 +76,21 @@
     </section>
 
     <!-- ── CONCEPT: WHY → HOW → WHAT + A Building that Breathes ─── -->
-    <section id="tour-tower-concept" ref="frameworkSection" class="py-16 px-6 bg-white">
+    <section id="tour-tower-concept" ref="frameworkSection" class="py-8 px-6 bg-white">
       <div class="max-w-5xl mx-auto">
 
-        <h2 class="text-center text-3xl font-light text-slate-800 mb-12 tracking-tight">The Concept</h2>
+        <h2 class="text-center text-3xl font-light text-slate-800 mb-8 tracking-tight">The Concept</h2>
 
         <div class="flex flex-col md:flex-row items-stretch gap-6 md:gap-0">
 
           <!-- ── WHY ── -->
           <div class="framework-card flex-1" :class="{ visible: frameworkVisible }" style="transition-delay: 0ms;">
-            <div class="h-full bg-slate-50 border border-slate-100 rounded-2xl p-6 flex flex-col gap-5">
+            <div class="h-full bg-slate-50 border border-slate-100 rounded-2xl p-4 flex flex-col gap-3">
               <div class="flex items-center gap-2">
                 <span class="font-mono text-xs text-slate-300">01</span>
                 <span class="text-xl font-bold text-amber-500 tracking-widest">WHY</span>
               </div>
-              <div class="w-full bg-white rounded-xl border border-slate-100 overflow-hidden flex items-center justify-center" style="height:120px;">
+              <div class="w-full bg-white rounded-xl border border-slate-100 overflow-hidden flex items-center justify-center" style="height:96px;">
                 <svg viewBox="0 0 120 80" fill="none" class="w-full h-full" stroke-linecap="round" stroke-linejoin="round">
                   <!-- haze overlay -->
                   <ellipse cx="60" cy="38" rx="54" ry="26" fill="#fed7aa" opacity="0.35"/>
@@ -133,12 +133,12 @@
 
           <!-- ── HOW ── -->
           <div class="framework-card flex-1" :class="{ visible: frameworkVisible }" style="transition-delay: 200ms;">
-            <div class="h-full bg-slate-50 border border-slate-100 rounded-2xl p-6 flex flex-col gap-5">
+            <div class="h-full bg-slate-50 border border-slate-100 rounded-2xl p-4 flex flex-col gap-3">
               <div class="flex items-center gap-2">
                 <span class="font-mono text-xs text-slate-300">02</span>
                 <span class="text-xl font-bold text-blue-500 tracking-widest">HOW</span>
               </div>
-              <div class="w-full bg-white rounded-xl border border-slate-100 overflow-hidden flex items-center justify-center" style="height:120px;">
+              <div class="w-full bg-white rounded-xl border border-slate-100 overflow-hidden flex items-center justify-center" style="height:96px;">
                 <svg viewBox="0 0 120 80" fill="none" class="w-full h-full" stroke-linecap="round" stroke-linejoin="round">
                   <!-- input node lines (static, background) -->
                   <line x1="19" y1="20" x2="50" y2="40" stroke="#e2e8f0" stroke-width="1"/>
@@ -193,12 +193,12 @@
 
           <!-- ── WHAT ── -->
           <div class="framework-card flex-1" :class="{ visible: frameworkVisible }" style="transition-delay: 400ms;">
-            <div class="h-full bg-slate-50 border border-slate-100 rounded-2xl p-6 flex flex-col gap-5">
+            <div class="h-full bg-slate-50 border border-slate-100 rounded-2xl p-4 flex flex-col gap-3">
               <div class="flex items-center gap-2">
                 <span class="font-mono text-xs text-slate-300">03</span>
                 <span class="text-xl font-bold text-emerald-500 tracking-widest">WHAT</span>
               </div>
-              <div class="w-full bg-white rounded-xl border border-slate-100 overflow-hidden flex items-center justify-center" style="height:120px;">
+              <div class="w-full bg-white rounded-xl border border-slate-100 overflow-hidden flex items-center justify-center" style="height:96px;">
                 <svg viewBox="0 0 120 80" fill="none" class="w-full h-full" stroke-linecap="round" stroke-linejoin="round">
                   <!-- tower shell -->
                   <rect x="42" y="4" width="36" height="72" rx="3" stroke="#64748b" stroke-width="1.5" fill="#f8fafc"/>
@@ -236,24 +236,21 @@
         </div>
       </div>
 
-      <div class="border-t border-slate-100 mt-14 mb-12 max-w-3xl mx-auto"></div>
+      <div class="border-t border-slate-100 mt-8 mb-6 max-w-3xl mx-auto"></div>
 
       <div id="tour-tower-breathes" class="max-w-3xl mx-auto text-center">
-        <div class="blob blob-extreme mx-auto mb-12"
-          style="width:160px;height:160px;animation-duration:13s;background:linear-gradient(135deg,#10b981 0%,#3b82f6 50%,#ef4444 100%);opacity:0.55;"
-        />
-        <h2 class="text-4xl font-bold text-slate-900 mb-8">A Building that Breathes</h2>
-        <p class="text-lg text-slate-500 leading-relaxed mb-6">
+        <h2 class="text-3xl font-bold text-slate-900 mb-4">A Building that Breathes</h2>
+        <p class="text-base text-slate-500 leading-relaxed mb-3">
           The Lungs is a conceptual hyperbuilding designed around a single biological analogy:
           the tower breathes. Every structural decision, spatial choice, and data flow mirrors
           the rhythm of a respiratory system — intake, distribution, and release.
         </p>
-        <p class="text-lg text-slate-500 leading-relaxed">
+        <p class="text-base text-slate-500 leading-relaxed">
           Three disciplines — Structure, Program, and Data — act as the organs of a single
           living body. Their interdependencies are not constraints; they are the architecture.
           The building performs as a unified organism.
         </p>
-        <div class="mt-10">
+        <div class="mt-6">
           <button
             @click="scrollToSystems"
             class="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-emerald-600 transition-colors border border-slate-200 hover:border-emerald-300 rounded-full px-6 py-2.5"
