@@ -87,7 +87,7 @@ export function useTour() {
       showProgress: true,
       overlayColor: '#1a1a2e',
       overlayOpacity: 0.65,
-      stagePadding: 10,
+      stagePadding: 5,
       stageRadius: 6,
       popoverClass: 'bimsc-tour-popover',
       nextBtnText: 'Next →',

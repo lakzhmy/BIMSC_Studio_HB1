@@ -132,8 +132,25 @@
   color: rgba(255, 255, 255, 0.7);
 }
 
-/* Stage highlight ring */
-.driver-active .driver-overlay {
-  background: rgba(26, 26, 46, 0.65) !important;
+/* Stage overlay SVG path — subtle dim + pulsing red ring */
+.driver-active .driver-overlay path {
+  opacity: 1 !important;        /* override driver.js inline opacity */
+  fill-opacity: 0.12 !important; /* very subtle dim around element */
+  stroke: rgb(192, 57, 43) !important;
+  stroke-width: 3 !important;
+  animation: tour-ring-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes tour-ring-pulse {
+  0%, 100% { stroke-opacity: 1; }
+  50%       { stroke-opacity: 0.35; }
+}
+
+/* Highlighted element — lifted above SVG so it's truly full brightness */
+.driver-active-element {
+  position: relative !important;
+  z-index: 10001 !important;
+  opacity: 1 !important;
+  filter: none !important;
 }
 
