@@ -1,9 +1,8 @@
 <template>
   <Teleport to="body">
 
-    <!-- ── PICKER OVERLAY (shown while picking an element) ─────────────── -->
+    <!-- ── PICKER OVERLAY ──────────────────────────────────────────────────── -->
     <template v-if="isPicking">
-      <!-- Full-screen capture layer -->
       <div
         ref="overlayEl"
         class="fixed inset-0 z-[10002] cursor-crosshair"
@@ -11,33 +10,28 @@
         @click.capture.prevent.stop="onPickerClick"
       />
 
-      <!-- Hover highlight box (pointer-events-none so it doesn't interfere) -->
+      <!-- Highlight box -->
       <div
         v-if="hoverRect"
-        class="pointer-events-none fixed z-[10003] border-2 border-teal-400 rounded"
-        style="transition: top 60ms, left 60ms, width 60ms, height 60ms; box-shadow: 0 0 0 2000px rgba(0,0,0,0.25);"
-        :style="hoverHighlightStyle"
+        class="pointer-events-none fixed z-[10003] rounded"
+        style="border: 2px solid #2dd4bf; box-shadow: 0 0 0 2000px rgba(0,0,0,0.3); transition: all 80ms ease;"
+        :style="{ top: hoverRect.top + 'px', left: hoverRect.left + 'px', width: hoverRect.width + 'px', height: hoverRect.height + 'px' }"
       />
 
-      <!-- Picker instruction bar -->
-      <div class="fixed top-4 left-1/2 -translate-x-1/2 z-[10004] bg-[#1e1e2e] border border-teal-500/40 rounded-full px-5 py-2.5 flex items-center gap-3 text-xs text-white/80 shadow-2xl select-none">
+      <!-- Instruction bar -->
+      <div class="pointer-events-none fixed top-4 left-1/2 -translate-x-1/2 z-[10004] bg-[#1e1e2e] border border-teal-500/40 rounded-full px-5 py-2.5 flex items-center gap-3 text-xs text-white/80 shadow-2xl select-none">
         <span class="w-2 h-2 rounded-full bg-teal-400 animate-pulse shrink-0"></span>
-        <span>Hover to highlight · <strong class="text-white">Click</strong> to select element</span>
-        <button
-          @click.stop="cancelPicker"
-          class="ml-2 text-white/40 hover:text-white transition-colors"
-        >✕ Cancel (Esc)</button>
+        <span>Click any element to select it &nbsp;·&nbsp; <kbd class="opacity-60">Esc</kbd> to cancel</span>
       </div>
 
-      <!-- Element info chip (shows near cursor) -->
-      <div
-        v-if="hoverRect && hoveredTag"
-        class="pointer-events-none fixed z-[10004] bg-teal-900/90 text-teal-200 text-xs font-mono px-2 py-1 rounded"
-        :style="{ top: (hoverRect.bottom + 6) + 'px', left: hoverRect.left + 'px', maxWidth: '320px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }"
-      >{{ hoveredTag }}</div>
+      <!-- Cancel button (separate so it's clickable) -->
+      <button
+        class="fixed top-4 right-6 z-[10004] text-xs text-white/50 hover:text-white bg-[#1e1e2e] border border-white/10 rounded-full px-3 py-2 transition-colors"
+        @click="cancelPicker"
+      >✕ Cancel</button>
     </template>
 
-    <!-- ── MAIN PANEL (hidden while picking) ───────────────────────────── -->
+    <!-- ── MAIN PANEL ──────────────────────────────────────────────────────── -->
     <div
       v-if="!isPicking"
       class="fixed inset-0 z-[10001] flex items-center justify-center"
@@ -60,91 +54,51 @@
         <!-- Steps list -->
         <div class="overflow-y-auto flex-1 p-4 space-y-3">
 
-          <!-- Selector banner: info (teal) or warning (amber) -->
-          <div
-            v-if="selectorWarning"
-            :class="selectorWarning.startsWith('info:')
-              ? 'bg-teal-500/10 border-teal-500/30 text-teal-300'
-              : 'bg-amber-500/10 border-amber-500/30 text-amber-300'"
-            class="border rounded-lg px-3 py-2 text-xs flex items-start gap-2"
-          >
-            <span class="shrink-0 mt-0.5">{{ selectorWarning.startsWith('info:') ? 'ℹ' : '⚠' }}</span>
-            <span>{{ selectorWarning.replace(/^(info|warn):/, '') }}</span>
-            <button @click="selectorWarning = ''" class="ml-auto shrink-0 opacity-50 hover:opacity-100">✕</button>
-          </div>
-
           <p v-if="orderSaved" class="text-green-400 text-xs text-center">Order saved ✓</p>
 
           <!-- Existing steps -->
           <div
             v-for="(step, i) in editableSteps"
             :key="step.dbId ?? step.annId"
-            class="bg-white/5 border border-white/10 rounded-lg p-4 space-y-2"
+            class="bg-white/5 border border-white/10 rounded-lg p-4 space-y-3"
           >
-            <!-- Row: index + order buttons + saved badge -->
+            <!-- Index + order arrows + saved badge -->
             <div class="flex items-center gap-2">
-              <span class="text-white/30 text-xs font-mono w-4 shrink-0">{{ i + 1 }}</span>
+              <span class="text-white/25 text-xs font-mono w-4 shrink-0">{{ i + 1 }}</span>
               <div class="flex gap-1">
-                <button
-                  @click="moveUp(i)"
-                  :disabled="i === 0 || savingOrder"
-                  class="text-white/30 hover:text-white/70 disabled:opacity-20 text-xs px-1.5 py-0.5 rounded hover:bg-white/10 transition-colors leading-none"
-                  title="Move up"
-                >▲</button>
-                <button
-                  @click="moveDown(i)"
-                  :disabled="i === editableSteps.length - 1 || savingOrder"
-                  class="text-white/30 hover:text-white/70 disabled:opacity-20 text-xs px-1.5 py-0.5 rounded hover:bg-white/10 transition-colors leading-none"
-                  title="Move down"
-                >▼</button>
+                <button @click="moveUp(i)" :disabled="i === 0 || savingOrder" class="text-white/30 hover:text-white/70 disabled:opacity-20 text-xs px-1.5 py-0.5 rounded hover:bg-white/10 transition-colors">▲</button>
+                <button @click="moveDown(i)" :disabled="i === editableSteps.length - 1 || savingOrder" class="text-white/30 hover:text-white/70 disabled:opacity-20 text-xs px-1.5 py-0.5 rounded hover:bg-white/10 transition-colors">▼</button>
               </div>
-              <span v-if="savingOrder" class="ml-auto text-white/30 text-xs">Saving order…</span>
+              <span v-if="savingOrder" class="ml-auto text-white/30 text-xs">Saving…</span>
               <span v-else-if="savedIds.has(step.annId)" class="ml-auto text-green-400 text-xs">Saved ✓</span>
             </div>
 
             <!-- Title -->
             <div class="flex items-center gap-2">
-              <label class="text-white/40 text-xs w-16 shrink-0">Title</label>
+              <label class="text-white/40 text-xs w-20 shrink-0">Title</label>
               <input v-model="step.title" type="text" class="input-dark flex-1 rounded-md px-3 py-1.5 text-xs" placeholder="Step title…" />
             </div>
 
-            <!-- Element selector -->
-            <div class="flex flex-col gap-1.5">
-              <div class="flex items-center gap-2">
-                <label class="text-white/40 text-xs w-16 shrink-0">Element</label>
-                <!-- Dropdown of known elements for this route -->
-                <select
-                  v-model="step.selectorChoice"
-                  @change="onSelectorChoiceChange(step)"
-                  class="select-dark flex-1 text-xs rounded-md px-2 py-1.5 border border-white/10 min-w-0"
-                >
-                  <option value="__custom__">Custom / Pick from page…</option>
-                  <option v-for="opt in knownSelectorsFor(selectedRoute)" :key="opt.value" :value="opt.value">
-                    {{ opt.label }}
-                  </option>
-                </select>
-                <!-- Pick button -->
-                <button
-                  @click="startPicker(step)"
-                  class="shrink-0 text-xs px-2.5 py-1.5 rounded-md bg-teal-500/15 hover:bg-teal-500/25 text-teal-300 hover:text-teal-200 transition-colors border border-teal-500/20"
-                  title="Click an element on the page to select it"
-                >Pick</button>
+            <!-- Element picker (no selectors shown to admin) -->
+            <div class="flex items-center gap-2">
+              <label class="text-white/40 text-xs w-20 shrink-0">Element</label>
+              <div
+                v-if="step.selector"
+                class="flex-1 flex items-center gap-2 bg-teal-500/10 border border-teal-500/20 rounded-md px-3 py-1.5"
+              >
+                <span class="text-teal-400 text-xs">✓ Element selected</span>
+                <button @click="startPicker(step)" class="ml-auto text-xs text-white/40 hover:text-white/70 transition-colors">Re-pick</button>
               </div>
-              <!-- Custom text input (shown when custom/pick mode) -->
-              <div v-if="step.selectorChoice === '__custom__'" class="flex items-center gap-2">
-                <span class="w-16 shrink-0"></span>
-                <input
-                  v-model="step.selector"
-                  type="text"
-                  class="input-dark flex-1 font-mono rounded-md px-3 py-1.5 text-xs"
-                  placeholder="#element-id or .class-name"
-                />
-              </div>
+              <button
+                v-else
+                @click="startPicker(step)"
+                class="flex-1 text-xs px-3 py-1.5 rounded-md bg-teal-500/10 hover:bg-teal-500/20 border border-teal-500/20 border-dashed text-teal-400 hover:text-teal-300 transition-colors text-left"
+              >Click to pick an element on the page →</button>
             </div>
 
-            <!-- Side -->
+            <!-- Popover side -->
             <div class="flex items-center gap-2">
-              <label class="text-white/40 text-xs w-16 shrink-0">Side</label>
+              <label class="text-white/40 text-xs w-20 shrink-0">Popover side</label>
               <select v-model="step.side" class="select-dark text-xs rounded-md px-3 py-1.5 border border-white/10">
                 <option value="bottom">bottom</option>
                 <option value="top">top</option>
@@ -153,15 +107,13 @@
               </select>
             </div>
 
-            <!-- Label -->
-            <textarea
-              v-model="step.label"
-              rows="3"
-              class="input-dark w-full rounded-md px-3 py-2 text-xs resize-none"
-              placeholder="Description shown in the tour popover…"
-            />
+            <!-- Description -->
+            <div class="flex flex-col gap-1">
+              <label class="text-white/40 text-xs">Description</label>
+              <textarea v-model="step.label" rows="3" class="input-dark w-full rounded-md px-3 py-2 text-xs resize-none" placeholder="Text shown in the tour popover…" />
+            </div>
 
-            <div class="flex items-center justify-between">
+            <div class="flex items-center justify-between pt-1">
               <button @click="remove(step)" class="text-xs px-3 py-1.5 rounded-md bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 transition-colors">Delete</button>
               <button @click="save(step)" :disabled="saving === step.annId" class="text-xs px-3 py-1.5 rounded-md bg-white/10 hover:bg-white/20 text-white/70 hover:text-white transition-colors disabled:opacity-40">
                 {{ saving === step.annId ? 'Saving…' : 'Save' }}
@@ -174,47 +126,32 @@
           </p>
 
           <!-- Add Step form -->
-          <div v-if="showAddForm" class="bg-white/5 border border-indigo-500/30 rounded-lg p-4 space-y-2">
-            <p class="text-indigo-300 text-xs font-semibold mb-3">New Step</p>
+          <div v-if="showAddForm" class="bg-white/5 border border-indigo-500/30 rounded-lg p-4 space-y-3">
+            <p class="text-indigo-300 text-xs font-semibold">New Step</p>
 
             <div class="flex items-center gap-2">
-              <label class="text-white/40 text-xs w-16 shrink-0">Title</label>
+              <label class="text-white/40 text-xs w-20 shrink-0">Title</label>
               <input v-model="newStep.title" type="text" class="input-dark flex-1 rounded-md px-3 py-1.5 text-xs" placeholder="Step title…" />
             </div>
 
-            <!-- Element selector for new step -->
-            <div class="flex flex-col gap-1.5">
-              <div class="flex items-center gap-2">
-                <label class="text-white/40 text-xs w-16 shrink-0">Element</label>
-                <select
-                  v-model="newStep.selectorChoice"
-                  @change="onNewSelectorChoiceChange"
-                  class="select-dark flex-1 text-xs rounded-md px-2 py-1.5 border border-white/10 min-w-0"
-                >
-                  <option value="__custom__">Custom / Pick from page…</option>
-                  <option v-for="opt in knownSelectorsFor(selectedRoute)" :key="opt.value" :value="opt.value">
-                    {{ opt.label }}
-                  </option>
-                </select>
-                <button
-                  @click="startPicker('new')"
-                  class="shrink-0 text-xs px-2.5 py-1.5 rounded-md bg-teal-500/15 hover:bg-teal-500/25 text-teal-300 hover:text-teal-200 transition-colors border border-teal-500/20"
-                  title="Click an element on the page to select it"
-                >Pick</button>
+            <div class="flex items-center gap-2">
+              <label class="text-white/40 text-xs w-20 shrink-0">Element</label>
+              <div
+                v-if="newStep.selector"
+                class="flex-1 flex items-center gap-2 bg-teal-500/10 border border-teal-500/20 rounded-md px-3 py-1.5"
+              >
+                <span class="text-teal-400 text-xs">✓ Element selected</span>
+                <button @click="startPicker('new')" class="ml-auto text-xs text-white/40 hover:text-white/70 transition-colors">Re-pick</button>
               </div>
-              <div v-if="newStep.selectorChoice === '__custom__'" class="flex items-center gap-2">
-                <span class="w-16 shrink-0"></span>
-                <input
-                  v-model="newStep.selector"
-                  type="text"
-                  class="input-dark flex-1 font-mono rounded-md px-3 py-1.5 text-xs"
-                  placeholder="#element-id or .class-name"
-                />
-              </div>
+              <button
+                v-else
+                @click="startPicker('new')"
+                class="flex-1 text-xs px-3 py-1.5 rounded-md bg-teal-500/10 hover:bg-teal-500/20 border border-teal-500/20 border-dashed text-teal-400 hover:text-teal-300 transition-colors text-left"
+              >Click to pick an element on the page →</button>
             </div>
 
             <div class="flex items-center gap-2">
-              <label class="text-white/40 text-xs w-16 shrink-0">Side</label>
+              <label class="text-white/40 text-xs w-20 shrink-0">Popover side</label>
               <select v-model="newStep.side" class="select-dark text-xs rounded-md px-3 py-1.5 border border-white/10">
                 <option value="bottom">bottom</option>
                 <option value="top">top</option>
@@ -223,16 +160,14 @@
               </select>
             </div>
 
-            <textarea
-              v-model="newStep.label"
-              rows="3"
-              class="input-dark w-full rounded-md px-3 py-2 text-xs resize-none"
-              placeholder="Description shown in the tour popover…"
-            />
+            <div class="flex flex-col gap-1">
+              <label class="text-white/40 text-xs">Description</label>
+              <textarea v-model="newStep.label" rows="3" class="input-dark w-full rounded-md px-3 py-2 text-xs resize-none" placeholder="Text shown in the tour popover…" />
+            </div>
 
             <div class="flex items-center justify-between pt-1">
               <button @click="showAddForm = false" class="text-xs px-3 py-1.5 rounded-md bg-white/5 hover:bg-white/10 text-white/40 hover:text-white/70 transition-colors">Cancel</button>
-              <button @click="create" :disabled="creating" class="text-xs px-3 py-1.5 rounded-md bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 hover:text-indigo-200 transition-colors disabled:opacity-40">
+              <button @click="create" :disabled="creating || !newStep.selector" class="text-xs px-3 py-1.5 rounded-md bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 hover:text-indigo-200 transition-colors disabled:opacity-40">
                 {{ creating ? 'Creating…' : 'Create' }}
               </button>
             </div>
@@ -254,10 +189,9 @@
 </template>
 
 <script setup>
-import { ref, watch, computed } from 'vue'
+import { ref, watch } from 'vue'
 import { useAnnotations } from '@/composables/useAnnotations'
 import { useUserStore } from '@/stores/userStore'
-import { TOUR_STEPS_MAP } from '@/data/tourStepsMap'
 
 const props = defineProps({
   routeName: { type: String, required: true },
@@ -277,37 +211,15 @@ const showAddForm = ref(false)
 const creating = ref(false)
 const savingOrder = ref(false)
 const orderSaved = ref(false)
-const selectorWarning = ref('')
 
-const newStep = ref({ title: '', selector: '', selectorChoice: '__custom__', side: 'bottom', label: '' })
+const newStep = ref({ title: '', selector: '', side: 'bottom', label: '' })
 
-// ── Picker state ────────────────────────────────────────────────────────────
+// ── Element picker ─────────────────────────────────────────────────────────
 const isPicking = ref(false)
 const pickingFor = ref(null)   // step object or 'new'
 const overlayEl = ref(null)
 const hoveredEl = ref(null)
 const hoverRect = ref(null)
-
-const hoveredTag = computed(() => {
-  const el = hoveredEl.value
-  if (!el) return ''
-  const tag = el.tagName.toLowerCase()
-  const id = el.id ? `#${el.id}` : ''
-  const cls = [...el.classList].filter(c => c.length < 20 && !c.includes(':') && !c.includes('['))
-    .slice(0, 2).map(c => `.${c}`).join('')
-  return `${tag}${id}${cls}`
-})
-
-const hoverHighlightStyle = computed(() => {
-  if (!hoverRect.value) return {}
-  const r = hoverRect.value
-  return {
-    top: `${r.top}px`,
-    left: `${r.left}px`,
-    width: `${r.width}px`,
-    height: `${r.height}px`,
-  }
-})
 
 function getElementAtPoint(x, y) {
   if (overlayEl.value) overlayEl.value.style.pointerEvents = 'none'
@@ -328,27 +240,16 @@ function onPickerClick(e) {
   const el = getElementAtPoint(e.clientX, e.clientY)
   if (!el) return cancelPicker()
 
-  const { selector, snappedTo, unstable } = generateSelector(el)
+  const selector = generateSelector(el)
 
   if (pickingFor.value === 'new') {
     newStep.value.selector = selector
-    newStep.value.selectorChoice = resolveChoice(selector, selectedRoute.value)
-    // Auto-fill title from element text if blank
     if (!newStep.value.title) {
-      const text = el.getAttribute('aria-label') || el.textContent?.trim().slice(0, 40) || ''
+      const text = el.getAttribute('aria-label') || el.textContent?.trim().replace(/\s+/g, ' ').slice(0, 40) || ''
       if (text) newStep.value.title = text
     }
   } else {
     pickingFor.value.selector = selector
-    pickingFor.value.selectorChoice = resolveChoice(selector, selectedRoute.value)
-  }
-
-  if (snappedTo) {
-    selectorWarning.value = `info:Snapped to the nearest labelled parent (#${snappedTo}). To highlight a more specific element, add an id directly to it and pick again.`
-  } else if (unstable) {
-    selectorWarning.value = `warn:No id found anywhere in this element's tree. The selector "${selector}" may break if the page structure changes.`
-  } else {
-    selectorWarning.value = ''
   }
 
   isPicking.value = false
@@ -356,7 +257,6 @@ function onPickerClick(e) {
 }
 
 function startPicker(target) {
-  selectorWarning.value = ''
   pickingFor.value = target
   hoveredEl.value = null
   hoverRect.value = null
@@ -370,7 +270,6 @@ function cancelPicker() {
   hoverRect.value = null
 }
 
-// Escape key listener active only while picking
 function handlePickerKey(e) {
   if (e.key === 'Escape') cancelPicker()
 }
@@ -387,70 +286,44 @@ function onScroll() {
   if (hoveredEl.value) hoverRect.value = hoveredEl.value.getBoundingClientRect()
 }
 
-// ── Selector generation ──────────────────────────────────────────────────────
-// Returns { selector, snappedTo } where snappedTo is the id we snapped up to (or null).
+// Generate the most stable short selector possible — admin never sees this
 function generateSelector(el) {
-  // Own id — ideal, no snapping needed
-  if (el.id) return { selector: `#${el.id}`, snappedTo: null }
+  // Own id is ideal
+  if (el.id) return `#${el.id}`
 
-  // Walk up to find the nearest ancestor with an id and use that
+  // Walk up and snap to nearest ancestor that has an id
   let current = el.parentElement
   while (current && current !== document.body) {
-    if (current.id) return { selector: `#${current.id}`, snappedTo: current.id }
+    if (current.id) return `#${current.id}`
     current = current.parentElement
   }
 
-  // No id anywhere — last resort: use tag + classes of the element itself
+  // No id anywhere — build a minimal class-based selector from the element itself
   const stableClasses = [...el.classList]
     .filter(c => !c.includes(':') && !c.includes('[') && !c.includes('/') && c.length < 30)
-    .slice(0, 2)
-  const selector = stableClasses.length
-    ? el.tagName.toLowerCase() + '.' + stableClasses.join('.')
-    : el.tagName.toLowerCase()
-  return { selector, snappedTo: null, unstable: true }
+    .slice(0, 3)
+  if (stableClasses.length) return el.tagName.toLowerCase() + '.' + stableClasses.join('.')
+
+  return el.tagName.toLowerCase()
 }
 
-// ── Selector dropdown helpers ────────────────────────────────────────────────
-function knownSelectorsFor(route) {
-  return (TOUR_STEPS_MAP[route] ?? []).map((def) => ({
-    value: def.selector,
-    label: `${def.title}  (${def.selector})`,
-  }))
-}
-
-function resolveChoice(selector, route) {
-  const known = knownSelectorsFor(route).map((o) => o.value)
-  return known.includes(selector) ? selector : '__custom__'
-}
-
-// ── Editable steps ───────────────────────────────────────────────────────────
+// ── Steps ──────────────────────────────────────────────────────────────────
 function buildEditableSteps() {
   const routeAnnotations = dbAnnotations.value[selectedRoute.value] ?? []
-  editableSteps.value = routeAnnotations.map((a) => {
-    const sel = a.selector ?? ''
-    return {
-      annId: a.id,
-      dbId: a.dbId,
-      title: a.title ?? '',
-      selector: sel,
-      selectorChoice: resolveChoice(sel, selectedRoute.value),
-      side: a.side ?? 'bottom',
-      label: a.label ?? '',
-    }
-  })
+  editableSteps.value = routeAnnotations.map((a) => ({
+    annId: a.id,
+    dbId: a.dbId,
+    title: a.title ?? '',
+    selector: a.selector ?? '',
+    side: a.side ?? 'bottom',
+    label: a.label ?? '',
+  }))
 }
 
 watch(() => [selectedRoute.value, dbAnnotations.value], buildEditableSteps, { immediate: true, deep: true })
 
-function onSelectorChoiceChange(step) {
-  if (step.selectorChoice !== '__custom__') step.selector = step.selectorChoice
-}
-function onNewSelectorChoiceChange() {
-  if (newStep.value.selectorChoice !== '__custom__') newStep.value.selector = newStep.value.selectorChoice
-}
-
 function openAddForm() {
-  newStep.value = { title: '', selector: '', selectorChoice: '__custom__', side: 'bottom', label: '' }
+  newStep.value = { title: '', selector: '', side: 'bottom', label: '' }
   showAddForm.value = true
 }
 
@@ -458,7 +331,7 @@ function slugify(str) {
   return str.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
 }
 
-// ── Sort order ───────────────────────────────────────────────────────────────
+// ── Sort order ────────────────────────────────────────────────────────────
 async function moveUp(i) {
   if (i === 0) return
   const arr = [...editableSteps.value];
@@ -466,7 +339,6 @@ async function moveUp(i) {
   editableSteps.value = arr
   await persistOrder()
 }
-
 async function moveDown(i) {
   if (i === editableSteps.value.length - 1) return
   const arr = [...editableSteps.value];
@@ -474,7 +346,6 @@ async function moveDown(i) {
   editableSteps.value = arr
   await persistOrder()
 }
-
 async function persistOrder() {
   savingOrder.value = true
   try {
@@ -493,7 +364,7 @@ async function persistOrder() {
   }
 }
 
-// ── CRUD ─────────────────────────────────────────────────────────────────────
+// ── CRUD ──────────────────────────────────────────────────────────────────
 async function save(step) {
   saving.value = step.annId
   try {
@@ -553,25 +424,14 @@ async function remove(step) {
   background-color: #2a2a3e;
   color: rgba(255, 255, 255, 0.8);
 }
-.select-dark:focus {
-  outline: none;
-  border-color: rgba(255, 255, 255, 0.35);
-}
-.select-dark option {
-  background-color: #1e1e2e;
-  color: rgba(255, 255, 255, 0.85);
-}
+.select-dark:focus { outline: none; border-color: rgba(255,255,255,0.35); }
+.select-dark option { background-color: #1e1e2e; color: rgba(255,255,255,0.85); }
 
 .input-dark {
-  background-color: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.75);
+  background-color: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.75);
 }
-.input-dark:focus {
-  outline: none;
-  border-color: rgba(255, 255, 255, 0.3);
-}
-.input-dark::placeholder {
-  color: rgba(255, 255, 255, 0.2);
-}
+.input-dark:focus { outline: none; border-color: rgba(255,255,255,0.3); }
+.input-dark::placeholder { color: rgba(255,255,255,0.2); }
 </style>
