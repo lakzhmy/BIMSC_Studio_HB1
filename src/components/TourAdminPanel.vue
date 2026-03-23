@@ -200,7 +200,7 @@ const props = defineProps({
 })
 defineEmits(['close'])
 
-const ALL_ROUTES = ['dashboard', 'kpi', 'kpi-map', 'timeline', 'viewer', 'stress-test', 'login', 'tower']
+const ALL_ROUTES = ['dashboard', 'kpi', 'kpi-map', 'timeline', 'viewer', 'stress-test', 'login']
 
 const { dbAnnotations, saveAnnotation, updateAnnotation, updateAnnotationSilent, deleteAnnotation, loadAnnotations } = useAnnotations()
 const userStore = useUserStore()
