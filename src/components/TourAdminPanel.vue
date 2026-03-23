@@ -60,11 +60,17 @@
         <!-- Steps list -->
         <div class="overflow-y-auto flex-1 p-4 space-y-3">
 
-          <!-- Selector warning banner -->
-          <div v-if="selectorWarning" class="bg-amber-500/10 border border-amber-500/30 rounded-lg px-3 py-2 text-amber-300 text-xs flex items-start gap-2">
-            <span class="shrink-0 mt-0.5">⚠</span>
-            <span>{{ selectorWarning }}</span>
-            <button @click="selectorWarning = ''" class="ml-auto shrink-0 text-amber-300/50 hover:text-amber-300">✕</button>
+          <!-- Selector banner: info (teal) or warning (amber) -->
+          <div
+            v-if="selectorWarning"
+            :class="selectorWarning.startsWith('info:')
+              ? 'bg-teal-500/10 border-teal-500/30 text-teal-300'
+              : 'bg-amber-500/10 border-amber-500/30 text-amber-300'"
+            class="border rounded-lg px-3 py-2 text-xs flex items-start gap-2"
+          >
+            <span class="shrink-0 mt-0.5">{{ selectorWarning.startsWith('info:') ? 'ℹ' : '⚠' }}</span>
+            <span>{{ selectorWarning.replace(/^(info|warn):/, '') }}</span>
+            <button @click="selectorWarning = ''" class="ml-auto shrink-0 opacity-50 hover:opacity-100">✕</button>
           </div>
 
           <p v-if="orderSaved" class="text-green-400 text-xs text-center">Order saved ✓</p>
@@ -322,8 +328,7 @@ function onPickerClick(e) {
   const el = getElementAtPoint(e.clientX, e.clientY)
   if (!el) return cancelPicker()
 
-  const selector = generateSelector(el)
-  const hasId = !!el.id
+  const { selector, snappedTo, unstable } = generateSelector(el)
 
   if (pickingFor.value === 'new') {
     newStep.value.selector = selector
@@ -338,8 +343,12 @@ function onPickerClick(e) {
     pickingFor.value.selectorChoice = resolveChoice(selector, selectedRoute.value)
   }
 
-  if (!hasId) {
-    selectorWarning.value = `No id attribute found on this element — the generated selector "${selector}" may break if the page layout changes. For stability, ask a developer to add a unique id to this element.`
+  if (snappedTo) {
+    selectorWarning.value = `info:Snapped to the nearest labelled parent (#${snappedTo}). To highlight a more specific element, add an id directly to it and pick again.`
+  } else if (unstable) {
+    selectorWarning.value = `warn:No id found anywhere in this element's tree. The selector "${selector}" may break if the page structure changes.`
+  } else {
+    selectorWarning.value = ''
   }
 
   isPicking.value = false
@@ -379,30 +388,26 @@ function onScroll() {
 }
 
 // ── Selector generation ──────────────────────────────────────────────────────
+// Returns { selector, snappedTo } where snappedTo is the id we snapped up to (or null).
 function generateSelector(el) {
-  if (el.id) return `#${el.id}`
+  // Own id — ideal, no snapping needed
+  if (el.id) return { selector: `#${el.id}`, snappedTo: null }
 
-  // Walk up to find nearest ancestor with an id
-  const parts = []
-  let current = el
+  // Walk up to find the nearest ancestor with an id and use that
+  let current = el.parentElement
   while (current && current !== document.body) {
-    if (current.id) {
-      return parts.length
-        ? `#${current.id} ${parts.join(' > ')}`
-        : `#${current.id}`
-    }
-    let part = current.tagName.toLowerCase()
-    const parent = current.parentElement
-    if (parent) {
-      const sameTagSiblings = [...parent.children].filter(c => c.tagName === current.tagName)
-      if (sameTagSiblings.length > 1) {
-        part += `:nth-of-type(${sameTagSiblings.indexOf(current) + 1})`
-      }
-    }
-    parts.unshift(part)
+    if (current.id) return { selector: `#${current.id}`, snappedTo: current.id }
     current = current.parentElement
   }
-  return parts.join(' > ')
+
+  // No id anywhere — last resort: use tag + classes of the element itself
+  const stableClasses = [...el.classList]
+    .filter(c => !c.includes(':') && !c.includes('[') && !c.includes('/') && c.length < 30)
+    .slice(0, 2)
+  const selector = stableClasses.length
+    ? el.tagName.toLowerCase() + '.' + stableClasses.join('.')
+    : el.tagName.toLowerCase()
+  return { selector, snappedTo: null, unstable: true }
 }
 
 // ── Selector dropdown helpers ────────────────────────────────────────────────
