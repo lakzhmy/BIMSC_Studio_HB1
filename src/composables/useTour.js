@@ -10,7 +10,7 @@ const { dbAnnotations, loadAnnotations } = useAnnotations()
 const HARDCODED_TOURS = {
   tower: [
     {
-      element: '#tour-tower-hero',
+      element: '#tour-tower-title',
       popover: {
         title: 'HB01 — The Lungs',
         description: 'A hyperbuilding studio project set in Santiago, Chile. The tower is a conceptual exploration of a building that functions as a living respiratory system — drawing air in, filtering it through its structure, and releasing it clean.',
@@ -18,7 +18,7 @@ const HARDCODED_TOURS = {
       },
     },
     {
-      element: '#tour-tower-concept',
+      element: '#tour-tower-breathes',
       popover: {
         title: 'A Building that Breathes',
         description: 'The central design concept: every structural decision, spatial layout, and data flow mirrors the rhythm of a respiratory system — intake, distribution, and release. Structure, Program, and Data act as the organs of a single living body.',

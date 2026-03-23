@@ -48,7 +48,7 @@
         />
       </div>
 
-      <div class="text-center z-10">
+      <div id="tour-tower-title" class="text-center z-10">
         <h1 class="text-6xl font-bold text-slate-900 tracking-tight mb-3">
           HB01 — The Lungs
         </h1>
@@ -66,7 +66,7 @@
 
     <!-- ── DESIGN CONCEPT ────────────────────────────────────── -->
     <section id="tour-tower-concept" class="py-32 px-6">
-      <div class="max-w-3xl mx-auto text-center">
+      <div id="tour-tower-breathes" class="max-w-3xl mx-auto text-center">
         <div class="blob blob-extreme mx-auto mb-16"
           style="width:200px;height:200px;animation-duration:13s;background:linear-gradient(135deg,#10b981 0%,#3b82f6 50%,#ef4444 100%);opacity:0.55;"
         />
