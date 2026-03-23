@@ -56,6 +56,17 @@
         <span class="inline-block text-xs font-medium tracking-widest uppercase text-slate-400 bg-slate-100 rounded-full px-4 py-1.5">
           Santiago, Chile &nbsp;·&nbsp; Conceptual Design &nbsp;·&nbsp; MACAD 2026
         </span>
+        <div class="mt-10">
+          <button
+            @click="scrollToConcept"
+            class="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-emerald-600 transition-colors border border-slate-200 hover:border-emerald-300 rounded-full px-6 py-2.5"
+          >
+            Explore the Concept
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M6 1v10M1 7l5 4 5-4"/>
+            </svg>
+          </button>
+        </div>
       </div>
 
       <div class="absolute bottom-8 flex flex-col items-center gap-1 text-slate-300">
@@ -64,12 +75,11 @@
       </div>
     </section>
 
-    <!-- ── WHY → HOW → WHAT FRAMEWORK ─────────────────────────── -->
-    <section id="why-how-what" ref="frameworkSection" class="py-24 px-6 bg-white border-b border-slate-100">
+    <!-- ── CONCEPT: WHY → HOW → WHAT + A Building that Breathes ─── -->
+    <section id="tour-tower-concept" ref="frameworkSection" class="py-16 px-6 bg-white">
       <div class="max-w-5xl mx-auto">
 
-        <p class="text-center text-xs tracking-[0.25em] text-slate-400 uppercase mb-3">The Framework</p>
-        <h2 class="text-center text-3xl font-light text-slate-800 mb-16 tracking-tight">Apply the Golden Circle</h2>
+        <h2 class="text-center text-3xl font-light text-slate-800 mb-12 tracking-tight">The Concept</h2>
 
         <div class="flex flex-col md:flex-row items-stretch gap-6 md:gap-0">
 
@@ -78,7 +88,7 @@
             <div class="h-full bg-slate-50 border border-slate-100 rounded-2xl p-6 flex flex-col gap-5">
               <div class="flex items-center gap-2">
                 <span class="font-mono text-xs text-slate-300">01</span>
-                <span class="text-xl font-bold text-emerald-500 tracking-widest">WHY</span>
+                <span class="text-xl font-bold text-amber-500 tracking-widest">WHY</span>
               </div>
               <div class="w-full bg-white rounded-xl border border-slate-100 overflow-hidden flex items-center justify-center" style="height:120px;">
                 <svg viewBox="0 0 120 80" fill="none" class="w-full h-full" stroke-linecap="round" stroke-linejoin="round">
@@ -116,8 +126,8 @@
           <!-- connector WHY → HOW -->
           <div class="hidden md:flex items-center justify-center w-12 flex-shrink-0 self-center">
             <svg viewBox="0 0 48 20" width="48" height="20" fill="none">
-              <path d="M 2 10 H 38" stroke="#10b981" stroke-width="1.5" stroke-dasharray="4 3" class="flow-connector"/>
-              <path d="M 34 5 L 44 10 L 34 15" stroke="#10b981" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M 2 10 H 38" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4 3" class="flow-connector"/>
+              <path d="M 34 5 L 44 10 L 34 15" stroke="#cbd5e1" stroke-width="1" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
           </div>
 
@@ -176,8 +186,8 @@
           <!-- connector HOW → WHAT -->
           <div class="hidden md:flex items-center justify-center w-12 flex-shrink-0 self-center">
             <svg viewBox="0 0 48 20" width="48" height="20" fill="none">
-              <path d="M 2 10 H 38" stroke="#10b981" stroke-width="1.5" stroke-dasharray="4 3" class="flow-connector"/>
-              <path d="M 34 5 L 44 10 L 34 15" stroke="#10b981" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M 2 10 H 38" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4 3" class="flow-connector"/>
+              <path d="M 34 5 L 44 10 L 34 15" stroke="#cbd5e1" stroke-width="1" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
           </div>
 
@@ -225,13 +235,12 @@
 
         </div>
       </div>
-    </section>
 
-    <!-- ── DESIGN CONCEPT ────────────────────────────────────── -->
-    <section id="tour-tower-concept" class="py-32 px-6">
+      <div class="border-t border-slate-100 mt-14 mb-12 max-w-3xl mx-auto"></div>
+
       <div id="tour-tower-breathes" class="max-w-3xl mx-auto text-center">
-        <div class="blob blob-extreme mx-auto mb-16"
-          style="width:200px;height:200px;animation-duration:13s;background:linear-gradient(135deg,#10b981 0%,#3b82f6 50%,#ef4444 100%);opacity:0.55;"
+        <div class="blob blob-extreme mx-auto mb-12"
+          style="width:160px;height:160px;animation-duration:13s;background:linear-gradient(135deg,#10b981 0%,#3b82f6 50%,#ef4444 100%);opacity:0.55;"
         />
         <h2 class="text-4xl font-bold text-slate-900 mb-8">A Building that Breathes</h2>
         <p class="text-lg text-slate-500 leading-relaxed mb-6">
@@ -802,6 +811,11 @@ const hoveredSeg = ref(null)
 const hoveredBar = ref(null)
 const hoveredStep = ref(null)
 const hoveredLandmark = ref(null)
+
+// ── Scroll to concept section ────────────────────────────────
+const scrollToConcept = () => {
+  document.getElementById('tour-tower-concept').scrollIntoView({ behavior: 'smooth' })
+}
 
 // ── Framework section reveal ──────────────────────────────────
 const frameworkVisible = ref(false)
