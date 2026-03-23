@@ -288,30 +288,53 @@ function onScroll() {
   if (hoveredEl.value) hoverRect.value = hoveredEl.value.getBoundingClientRect()
 }
 
-// Generate the most stable short selector possible — admin never sees this
+// Generate a precise selector anchored to the nearest id ancestor, then a
+// top-down path (with :nth-of-type disambiguation) to the exact element.
+// Admin never sees this string.
 function generateSelector(el) {
-  // Own id is ideal
   if (el.id) return `#${el.id}`
 
-  // Build a selector for this exact element (no parent snapping)
-  const stableClasses = [...el.classList]
-    .filter(c => !c.includes(':') && !c.includes('[') && !c.includes('/') && c.length < 30)
-    .slice(0, 3)
-  if (stableClasses.length) return el.tagName.toLowerCase() + '.' + stableClasses.join('.')
+  // Walk up collecting path segments; stop when we hit an id-bearing ancestor
+  const segments = [] // [el's segment, parent segment, ...] — reversed at end
+  let current = el
+  let anchorId = null
 
-  // Use immediate parent id as context if available
-  if (el.parentElement?.id) return `#${el.parentElement.id} > ${el.tagName.toLowerCase()}`
+  while (current && current !== document.body) {
+    if (current.id && current !== el) {
+      anchorId = current.id
+      break
+    }
+    const tag = current.tagName.toLowerCase()
+    const stableClasses = [...current.classList]
+      .filter(c => !c.includes(':') && !c.includes('[') && !c.includes('/') && c.length < 30)
+      .slice(0, 2)
+    let seg = stableClasses.length ? `${tag}.${stableClasses.join('.')}` : tag
+    if (current.parentElement) {
+      const sameSiblings = [...current.parentElement.children].filter(c => c.tagName === current.tagName)
+      if (sameSiblings.length > 1) seg += `:nth-of-type(${sameSiblings.indexOf(current) + 1})`
+    }
+    segments.push(seg)
+    current = current.parentElement
+  }
 
-  return el.tagName.toLowerCase()
+  const path = segments.reverse().join(' > ')
+  return anchorId ? `#${anchorId} > ${path}` : path
 }
 
-// Derive a human-readable name from the element — shown to admin after picking
+// Derive a human-readable name from the element — shown to admin after picking.
+// Uses only direct text content (not nested children) to avoid concatenated noise.
 function getPickedLabel(el) {
   const ariaLabel = el.getAttribute('aria-label')
   if (ariaLabel) return ariaLabel
   if (el.id) return el.id
-  const text = el.textContent?.trim().replace(/\s+/g, ' ').slice(0, 40)
-  if (text) return text
+  // Direct text nodes only — avoids scooping up all descendant text
+  const directText = [...el.childNodes]
+    .filter(n => n.nodeType === Node.TEXT_NODE)
+    .map(n => n.textContent.trim())
+    .filter(Boolean)
+    .join(' ')
+    .slice(0, 40)
+  if (directText) return directText
   const firstClass = [...el.classList].find(c => !c.includes(':') && !c.includes('[') && c.length < 30)
   if (firstClass) return `${el.tagName.toLowerCase()}.${firstClass}`
   return el.tagName.toLowerCase()
@@ -320,15 +343,12 @@ function getPickedLabel(el) {
 // ── Steps ──────────────────────────────────────────────────────────────────
 function buildEditableSteps() {
   const routeAnnotations = dbAnnotations.value[selectedRoute.value] ?? []
+  // Preserve labels that were set by the picker this session — don't re-derive
+  // from the DOM (querySelector can match the wrong element for generic selectors)
+  const cachedLabels = Object.fromEntries(editableSteps.value.map(s => [s.annId, s.pickedLabel]))
   editableSteps.value = routeAnnotations.map((a) => {
     const sel = a.selector ?? ''
-    let pickedLabel = sel.startsWith('#') ? sel.slice(1) : sel
-    if (sel) {
-      try {
-        const el = document.querySelector(sel)
-        if (el) pickedLabel = getPickedLabel(el)
-      } catch { /* invalid selector — keep fallback */ }
-    }
+    const pickedLabel = cachedLabels[a.id] || (sel.startsWith('#') ? sel.slice(1) : sel)
     return {
       annId: a.id,
       dbId: a.dbId,
