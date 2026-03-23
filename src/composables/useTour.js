@@ -86,7 +86,7 @@ export function useTour() {
     const driverObj = driver({
       showProgress: true,
       overlayColor: '#1a1a2e',
-      overlayOpacity: 0.08,
+      overlayOpacity: 0.65,
       stagePadding: 10,
       stageRadius: 6,
       popoverClass: 'bimsc-tour-popover',
