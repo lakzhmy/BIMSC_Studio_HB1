@@ -64,6 +64,169 @@
       </div>
     </section>
 
+    <!-- ── WHY → HOW → WHAT FRAMEWORK ─────────────────────────── -->
+    <section id="why-how-what" ref="frameworkSection" class="py-24 px-6 bg-white border-b border-slate-100">
+      <div class="max-w-5xl mx-auto">
+
+        <p class="text-center text-xs tracking-[0.25em] text-slate-400 uppercase mb-3">The Framework</p>
+        <h2 class="text-center text-3xl font-light text-slate-800 mb-16 tracking-tight">Apply the Golden Circle</h2>
+
+        <div class="flex flex-col md:flex-row items-stretch gap-6 md:gap-0">
+
+          <!-- ── WHY ── -->
+          <div class="framework-card flex-1" :class="{ visible: frameworkVisible }" style="transition-delay: 0ms;">
+            <div class="h-full bg-slate-50 border border-slate-100 rounded-2xl p-6 flex flex-col gap-5">
+              <div class="flex items-center gap-2">
+                <span class="font-mono text-xs text-slate-300">01</span>
+                <span class="text-xl font-bold text-emerald-500 tracking-widest">WHY</span>
+              </div>
+              <div class="w-full bg-white rounded-xl border border-slate-100 overflow-hidden flex items-center justify-center" style="height:120px;">
+                <svg viewBox="0 0 120 80" fill="none" class="w-full h-full" stroke-linecap="round" stroke-linejoin="round">
+                  <!-- haze overlay -->
+                  <ellipse cx="60" cy="38" rx="54" ry="26" fill="#fed7aa" opacity="0.35"/>
+                  <!-- city buildings -->
+                  <rect x="4"   y="52" width="13" height="26" rx="1" fill="#cbd5e1"/>
+                  <rect x="20"  y="43" width="14" height="35" rx="1" fill="#94a3b8"/>
+                  <rect x="37"  y="54" width="11" height="24" rx="1" fill="#cbd5e1"/>
+                  <rect x="52"  y="38" width="16" height="40" rx="1" fill="#64748b"/>
+                  <rect x="71"  y="48" width="12" height="30" rx="1" fill="#94a3b8"/>
+                  <rect x="86"  y="44" width="14" height="34" rx="1" fill="#cbd5e1"/>
+                  <rect x="103" y="56" width="11" height="22" rx="1" fill="#cbd5e1"/>
+                  <!-- ground -->
+                  <line x1="0" y1="78" x2="120" y2="78" stroke="#e2e8f0" stroke-width="1"/>
+                  <!-- smoke particles rising -->
+                  <circle r="2.5" fill="#fb923c" opacity="0.8">
+                    <animateMotion dur="3.2s" repeatCount="indefinite" begin="0s" path="M 27 55 C 24 42 30 28 22 8"/>
+                  </circle>
+                  <circle r="2" fill="#f97316" opacity="0.7">
+                    <animateMotion dur="2.8s" repeatCount="indefinite" begin="1.1s" path="M 60 45 C 63 32 56 18 68 4"/>
+                  </circle>
+                  <circle r="2.5" fill="#fb923c" opacity="0.6">
+                    <animateMotion dur="3.6s" repeatCount="indefinite" begin="2s" path="M 80 52 C 83 38 77 22 84 6"/>
+                  </circle>
+                </svg>
+              </div>
+              <div>
+                <p class="text-sm font-semibold text-slate-700 leading-snug mb-1">The Core Problem</p>
+                <p class="text-sm text-slate-500 leading-relaxed">Santiago's urban air quality crisis demands a new architectural response</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- connector WHY → HOW -->
+          <div class="hidden md:flex items-center justify-center w-12 flex-shrink-0 self-center">
+            <svg viewBox="0 0 48 20" width="48" height="20" fill="none">
+              <path d="M 2 10 H 38" stroke="#10b981" stroke-width="1.5" stroke-dasharray="4 3" class="flow-connector"/>
+              <path d="M 34 5 L 44 10 L 34 15" stroke="#10b981" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+
+          <!-- ── HOW ── -->
+          <div class="framework-card flex-1" :class="{ visible: frameworkVisible }" style="transition-delay: 200ms;">
+            <div class="h-full bg-slate-50 border border-slate-100 rounded-2xl p-6 flex flex-col gap-5">
+              <div class="flex items-center gap-2">
+                <span class="font-mono text-xs text-slate-300">02</span>
+                <span class="text-xl font-bold text-blue-500 tracking-widest">HOW</span>
+              </div>
+              <div class="w-full bg-white rounded-xl border border-slate-100 overflow-hidden flex items-center justify-center" style="height:120px;">
+                <svg viewBox="0 0 120 80" fill="none" class="w-full h-full" stroke-linecap="round" stroke-linejoin="round">
+                  <!-- input node lines (static, background) -->
+                  <line x1="19" y1="20" x2="50" y2="40" stroke="#e2e8f0" stroke-width="1"/>
+                  <line x1="19" y1="40" x2="50" y2="40" stroke="#e2e8f0" stroke-width="1"/>
+                  <line x1="19" y1="60" x2="50" y2="40" stroke="#e2e8f0" stroke-width="1"/>
+                  <!-- input nodes -->
+                  <circle cx="12" cy="20" r="7" stroke="#94a3b8" stroke-width="1.2" fill="#f8fafc"/>
+                  <text x="12" y="23" text-anchor="middle" font-size="5" fill="#64748b" font-family="monospace">ENV</text>
+                  <circle cx="12" cy="40" r="7" stroke="#94a3b8" stroke-width="1.2" fill="#f8fafc"/>
+                  <text x="12" y="43" text-anchor="middle" font-size="5" fill="#64748b" font-family="monospace">WND</text>
+                  <circle cx="12" cy="60" r="7" stroke="#94a3b8" stroke-width="1.2" fill="#f8fafc"/>
+                  <text x="12" y="63" text-anchor="middle" font-size="5" fill="#64748b" font-family="monospace">SUN</text>
+                  <!-- center processing diamond -->
+                  <polygon points="50,28 62,40 50,52 38,40" stroke="#3b82f6" stroke-width="1.5" fill="#eff6ff"/>
+                  <text x="50" y="43" text-anchor="middle" font-size="4.5" fill="#3b82f6" font-family="monospace">DATA</text>
+                  <!-- output line to tower -->
+                  <line x1="62" y1="40" x2="84" y2="40" stroke="#e2e8f0" stroke-width="1"/>
+                  <!-- tower form result -->
+                  <rect x="86" y="18" width="26" height="44" rx="2" stroke="#10b981" stroke-width="1.5" fill="#f0fdf4"/>
+                  <ellipse cx="99" cy="30" rx="5" ry="5" stroke="#10b981" stroke-width="1" fill="#bbf7d0"/>
+                  <ellipse cx="99" cy="44" rx="5" ry="5" stroke="#10b981" stroke-width="1" fill="#bbf7d0"/>
+                  <!-- animated flow dots: inputs → diamond -->
+                  <circle r="2" fill="#3b82f6" opacity="0.8">
+                    <animateMotion dur="2s" repeatCount="indefinite" begin="0s" path="M 19 20 L 50 40"/>
+                  </circle>
+                  <circle r="2" fill="#3b82f6" opacity="0.8">
+                    <animateMotion dur="2s" repeatCount="indefinite" begin="0.7s" path="M 19 40 L 50 40"/>
+                  </circle>
+                  <circle r="2" fill="#3b82f6" opacity="0.8">
+                    <animateMotion dur="2s" repeatCount="indefinite" begin="1.4s" path="M 19 60 L 50 40"/>
+                  </circle>
+                  <!-- animated flow dot: diamond → tower -->
+                  <circle r="2" fill="#10b981" opacity="0.9">
+                    <animateMotion dur="1.4s" repeatCount="indefinite" begin="0.5s" path="M 62 40 L 84 40"/>
+                  </circle>
+                </svg>
+              </div>
+              <div>
+                <p class="text-sm font-semibold text-slate-700 leading-snug mb-1">The Data Logic</p>
+                <p class="text-sm text-slate-500 leading-relaxed">Environmental data and airflow analysis drive every structural and spatial decision</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- connector HOW → WHAT -->
+          <div class="hidden md:flex items-center justify-center w-12 flex-shrink-0 self-center">
+            <svg viewBox="0 0 48 20" width="48" height="20" fill="none">
+              <path d="M 2 10 H 38" stroke="#10b981" stroke-width="1.5" stroke-dasharray="4 3" class="flow-connector"/>
+              <path d="M 34 5 L 44 10 L 34 15" stroke="#10b981" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+
+          <!-- ── WHAT ── -->
+          <div class="framework-card flex-1" :class="{ visible: frameworkVisible }" style="transition-delay: 400ms;">
+            <div class="h-full bg-slate-50 border border-slate-100 rounded-2xl p-6 flex flex-col gap-5">
+              <div class="flex items-center gap-2">
+                <span class="font-mono text-xs text-slate-300">03</span>
+                <span class="text-xl font-bold text-emerald-500 tracking-widest">WHAT</span>
+              </div>
+              <div class="w-full bg-white rounded-xl border border-slate-100 overflow-hidden flex items-center justify-center" style="height:120px;">
+                <svg viewBox="0 0 120 80" fill="none" class="w-full h-full" stroke-linecap="round" stroke-linejoin="round">
+                  <!-- tower shell -->
+                  <rect x="42" y="4" width="36" height="72" rx="3" stroke="#64748b" stroke-width="1.5" fill="#f8fafc"/>
+                  <!-- porous core holes -->
+                  <ellipse cx="60" cy="20" rx="8" ry="6" stroke="#10b981" stroke-width="1.2" fill="#d1fae5"/>
+                  <ellipse cx="60" cy="40" rx="8" ry="6" stroke="#10b981" stroke-width="1.2" fill="#d1fae5"/>
+                  <ellipse cx="60" cy="60" rx="8" ry="6" stroke="#10b981" stroke-width="1.2" fill="#d1fae5"/>
+                  <!-- dirty air in label arrow (bottom-left, gray) -->
+                  <path d="M 10 72 L 38 62" stroke="#94a3b8" stroke-width="1.2"/>
+                  <path d="M 34 61 L 38 62 L 37 66" stroke="#94a3b8" stroke-width="1.2"/>
+                  <text x="4" y="79" font-size="5" fill="#94a3b8" font-family="monospace">dirty</text>
+                  <!-- clean air out label arrow (top-right, green) -->
+                  <path d="M 82 18 L 108 8" stroke="#10b981" stroke-width="1.2"/>
+                  <path d="M 104 7 L 108 8 L 107 12" stroke="#10b981" stroke-width="1.2"/>
+                  <text x="88" y="6" font-size="5" fill="#10b981" font-family="monospace">clean</text>
+                  <!-- animated green flow dots (bottom → top through pores) -->
+                  <circle r="2.5" fill="#10b981" opacity="0.9">
+                    <animateMotion dur="2.4s" repeatCount="indefinite" begin="0s" path="M 60 74 L 60 4"/>
+                  </circle>
+                  <circle r="2" fill="#34d399" opacity="0.7">
+                    <animateMotion dur="2.4s" repeatCount="indefinite" begin="0.8s" path="M 60 74 L 60 4"/>
+                  </circle>
+                  <circle r="1.5" fill="#6ee7b7" opacity="0.6">
+                    <animateMotion dur="2.4s" repeatCount="indefinite" begin="1.6s" path="M 60 74 L 60 4"/>
+                  </circle>
+                </svg>
+              </div>
+              <div>
+                <p class="text-sm font-semibold text-slate-700 leading-snug mb-1">The Architecture</p>
+                <p class="text-sm text-slate-500 leading-relaxed">A porous tower core that breathes, filters, and circulates air as its primary structure</p>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
     <!-- ── DESIGN CONCEPT ────────────────────────────────────── -->
     <section id="tour-tower-concept" class="py-32 px-6">
       <div id="tour-tower-breathes" class="max-w-3xl mx-auto text-center">
@@ -640,6 +803,22 @@ const hoveredBar = ref(null)
 const hoveredStep = ref(null)
 const hoveredLandmark = ref(null)
 
+// ── Framework section reveal ──────────────────────────────────
+const frameworkVisible = ref(false)
+const frameworkSection = ref(null)
+onMounted(() => {
+  const frameworkObs = new IntersectionObserver(
+    ([entry]) => {
+      if (entry.isIntersecting) {
+        frameworkVisible.value = true
+        frameworkObs.disconnect()
+      }
+    },
+    { threshold: 0.2 }
+  )
+  if (frameworkSection.value) frameworkObs.observe(frameworkSection.value)
+})
+
 // ── KPI ring IntersectionObserver ────────────────────────────
 const ringsVisible = ref(false)
 const kpiSection = ref(null)
@@ -734,6 +913,26 @@ const headlineStats = [
 </script>
 
 <style scoped>
+/* ── Framework card reveal animation ────────────────────── */
+.framework-card {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+.framework-card.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ── Connector arrow flow animation ──────────────────────── */
+@keyframes flowArrow {
+  0%   { stroke-dashoffset: 14; }
+  100% { stroke-dashoffset: 0; }
+}
+.flow-connector {
+  animation: flowArrow 1.2s linear infinite;
+}
+
 /* ── Blob base ────────────────────────────────────────────── */
 .blob {
   border-radius: 50%;
