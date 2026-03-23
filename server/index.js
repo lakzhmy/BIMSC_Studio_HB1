@@ -408,7 +408,7 @@ function isAnnotationAdmin(name) {
 // GET all annotations (public)
 app.get('/api/annotations', async (req, res) => {
   try {
-    const result = await query('SELECT * FROM annotations ORDER BY route, id')
+    const result = await query('SELECT * FROM annotations ORDER BY route, sort_order, id')
     res.json(result.rows)
   } catch (err) {
     console.error('[db] annotations fetch failed:', err.message)

@@ -80,6 +80,17 @@ async function updateAnnotation(id, data) {
   return res.json()
 }
 
+// Silent variant — does NOT reload annotations; caller must reload when done
+async function updateAnnotationSilent(id, data) {
+  const res = await fetch(`/api/annotations/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+  if (!res.ok) throw new Error((await res.json()).error)
+  return res.json()
+}
+
 async function deleteAnnotation(id, userName) {
   const res = await fetch(`/api/annotations/${id}?user_name=${encodeURIComponent(userName)}`, {
     method: 'DELETE',
@@ -130,6 +141,7 @@ export function useAnnotations() {
     loadAnnotations,
     saveAnnotation,
     updateAnnotation,
+    updateAnnotationSilent,
     deleteAnnotation,
   }
 }
