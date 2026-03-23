@@ -76,7 +76,7 @@
     </section>
 
     <!-- ── CONCEPT: WHY → HOW → WHAT + A Building that Breathes ─── -->
-    <section id="tour-tower-concept" ref="frameworkSection" class="py-8 px-6 bg-white">
+    <section id="tour-tower-concept" ref="frameworkSection" class="min-h-screen flex flex-col justify-center py-8 px-6 bg-white">
       <div class="max-w-5xl mx-auto">
 
         <h2 class="text-center text-3xl font-light text-slate-800 mb-8 tracking-tight">The Concept</h2>
