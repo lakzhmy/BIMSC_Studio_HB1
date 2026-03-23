@@ -25,6 +25,7 @@
         </div>
 
         <button
+          id="tour-login-signin"
           @click="signIn"
           class="w-full flex items-center justify-center gap-3 px-6 py-3 bg-white border-2 border-slate-200 rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-all shadow-sm"
         >
@@ -41,6 +42,7 @@
       <!-- Public tower link -->
       <div class="text-center mt-6">
         <router-link
+          id="tour-login-explore"
           to="/tower"
           class="text-sm text-slate-400 hover:text-slate-600 transition-colors"
         >

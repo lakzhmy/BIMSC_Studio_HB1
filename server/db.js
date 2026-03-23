@@ -123,6 +123,58 @@ export async function initDb() {
     EXCEPTION WHEN duplicate_column THEN NULL;
     END $$
   `)
+  // Migration: add selector, title, side columns for fully-dynamic step definitions
+  await query(`ALTER TABLE annotations ADD COLUMN IF NOT EXISTS selector TEXT`)
+  await query(`ALTER TABLE annotations ADD COLUMN IF NOT EXISTS title    TEXT`)
+  await query(`ALTER TABLE annotations ADD COLUMN IF NOT EXISTS side     TEXT DEFAULT 'bottom'`)
+  // Backfill selector/title/side for existing rows that predate this migration
+  await query(`
+    UPDATE annotations SET
+      selector = CASE ann_id
+        WHEN 'kpi-health'        THEN '#tour-kpi-health'
+        WHEN 'milestone'         THEN '#tour-milestone'
+        WHEN 'team-health'       THEN '#tour-team-health'
+        WHEN 'team-members'      THEN '#tour-team-members'
+        WHEN 'kpi-table'         THEN '#tour-kpi-table'
+        WHEN 'kpi-radar'         THEN '#tour-kpi-radar'
+        WHEN 'kpi-network'       THEN '#tour-kpi-network'
+        WHEN 'kpi-map-filter'    THEN '#tour-kpi-map-filter'
+        WHEN 'timeline-track'    THEN '#tour-timeline-track'
+        WHEN 'timeline-add'      THEN '#tour-timeline-add'
+        WHEN 'viewer-3d'         THEN '#tour-viewer-3d'
+        WHEN 'stress-game'       THEN '#tour-stress-game'
+        WHEN 'stress-leaderboard' THEN '#tour-stress-leaderboard'
+        ELSE selector
+      END,
+      title = CASE ann_id
+        WHEN 'kpi-health'        THEN 'KPI Health'
+        WHEN 'milestone'         THEN 'Milestones'
+        WHEN 'team-health'       THEN 'Team Health'
+        WHEN 'team-members'      THEN 'Team Members'
+        WHEN 'kpi-table'         THEN 'KPI Cards'
+        WHEN 'kpi-radar'         THEN 'Performance Radar'
+        WHEN 'kpi-network'       THEN 'Dependency Network'
+        WHEN 'kpi-map-filter'    THEN 'Team Filters'
+        WHEN 'timeline-track'    THEN 'Timeline Track'
+        WHEN 'timeline-add'      THEN 'Add Milestone'
+        WHEN 'viewer-3d'         THEN '3D Model Viewer'
+        WHEN 'stress-game'       THEN 'Stress Game'
+        WHEN 'stress-leaderboard' THEN 'Leaderboard'
+        ELSE title
+      END,
+      side = CASE ann_id
+        WHEN 'team-members'      THEN 'top'
+        WHEN 'kpi-table'         THEN 'top'
+        WHEN 'kpi-radar'         THEN 'top'
+        WHEN 'kpi-network'       THEN 'right'
+        WHEN 'timeline-track'    THEN 'top'
+        WHEN 'viewer-3d'         THEN 'right'
+        WHEN 'stress-game'       THEN 'right'
+        WHEN 'stress-leaderboard' THEN 'left'
+        ELSE 'bottom'
+      END
+    WHERE selector IS NULL
+  `)
   console.log('[db] annotations table ready')
 
   await query(`
@@ -167,23 +219,34 @@ export async function initDb() {
   const { rows: annCount } = await query('SELECT count(*)::int AS c FROM annotations')
   if (annCount[0].c === 0) {
     await query(`
-      INSERT INTO annotations (route, ann_id, arrow_path, label, label_anchor, color) VALUES
-        ('dashboard','kpi-health','[[0.08,0.50],[0.06,0.40],[0.14,0.32],[0.22,0.34]]','KPI health and Warning detecting\nbased on set targets.\nConnected to the KPI Tab.','{"x":0.03,"y":0.51}','#c0392b'),
-        ('dashboard','milestone','[[0.38,0.62],[0.40,0.52],[0.42,0.42],[0.44,0.34]]','Milestones summary to keep\nthe motivation up. Connected\nto the Timeline Tab.','{"x":0.28,"y":0.62}','#c0392b'),
-        ('dashboard','team-health','[[0.88,0.50],[0.90,0.42],[0.86,0.34],[0.76,0.34]]','Team Health calculated\nfrom the "Stress Test"\nmini game.','{"x":0.82,"y":0.51}','#c0392b'),
-        ('dashboard','team-members','[[0.84,0.86],[0.78,0.82],[0.60,0.76],[0.48,0.72]]','Team members with their\npersonal avatar and info.','{"x":0.78,"y":0.87}','#c0392b'),
-        ('kpi','kpi-table','[[0.08,0.48],[0.06,0.38],[0.12,0.30],[0.24,0.32]]','KPI cards pulled live from\nGoogle Sheets. Green = on target,\nRed = outside target range.','{"x":0.03,"y":0.49}','#c0392b'),
-        ('kpi','kpi-radar','[[0.80,0.56],[0.82,0.48],[0.78,0.40],[0.68,0.42]]','Radar chart: relative KPI\nperformance per team.\nUse toggles to filter teams.','{"x":0.74,"y":0.57}','#c0392b'),
-        ('kpi-map','kpi-network','[[0.08,0.52],[0.06,0.42],[0.14,0.36],[0.28,0.42]]','KPI dependency network.\nNodes represent design parameters.\nDrag to reorganise.','{"x":0.03,"y":0.53}','#c0392b'),
-        ('kpi-map','kpi-map-filter','[[0.82,0.24],[0.84,0.18],[0.88,0.14],[0.92,0.13]]','Filter by team to highlight\nrelevant KPI connections.','{"x":0.72,"y":0.25}','#c0392b'),
-        ('timeline','timeline-track','[[0.10,0.46],[0.08,0.36],[0.16,0.28],[0.30,0.32]]','Weekly milestone track.\nEach lane = one team.\nToday marker shows current week.','{"x":0.04,"y":0.47}','#c0392b'),
-        ('timeline','timeline-add','[[0.76,0.22],[0.80,0.17],[0.86,0.14],[0.90,0.15]]','Add Milestone to log\nteam deliverables.','{"x":0.66,"y":0.22}','#c0392b'),
-        ('viewer','viewer-3d','[[0.10,0.54],[0.08,0.44],[0.16,0.36],[0.30,0.42]]','3D model viewer powered by\nSpeckle. Navigate with mouse.\nToggle model versions on the right.','{"x":0.04,"y":0.55}','#c0392b'),
-        ('stress-test','stress-game','[[0.10,0.56],[0.08,0.46],[0.16,0.38],[0.30,0.44]]','Pop the blobs to score.\nYour result becomes your\npersonal Health score.','{"x":0.03,"y":0.57}','#c0392b'),
-        ('stress-test','stress-leaderboard','[[0.82,0.50],[0.84,0.42],[0.80,0.36],[0.72,0.38]]','Team calmness ranking\nand health breakdown\nper member.','{"x":0.76,"y":0.51}','#c0392b')
+      INSERT INTO annotations (route, ann_id, selector, title, side, arrow_path, label, label_anchor, color) VALUES
+        ('dashboard','kpi-health',   '#tour-kpi-health',        'KPI Health',          'bottom', '[[0.08,0.50],[0.06,0.40],[0.14,0.32],[0.22,0.34]]', 'KPI health and Warning detecting\nbased on set targets.\nConnected to the KPI Tab.',             '{"x":0.03,"y":0.51}','#c0392b'),
+        ('dashboard','milestone',    '#tour-milestone',          'Milestones',          'bottom', '[[0.38,0.62],[0.40,0.52],[0.42,0.42],[0.44,0.34]]', 'Milestones summary to keep\nthe motivation up. Connected\nto the Timeline Tab.',                   '{"x":0.28,"y":0.62}','#c0392b'),
+        ('dashboard','team-health',  '#tour-team-health',        'Team Health',         'bottom', '[[0.88,0.50],[0.90,0.42],[0.86,0.34],[0.76,0.34]]', 'Team Health calculated\nfrom the "Stress Test"\nmini game.',                                  '{"x":0.82,"y":0.51}','#c0392b'),
+        ('dashboard','team-members', '#tour-team-members',       'Team Members',        'top',    '[[0.84,0.86],[0.78,0.82],[0.60,0.76],[0.48,0.72]]', 'Team members with their\npersonal avatar and info.',                                    '{"x":0.78,"y":0.87}','#c0392b'),
+        ('kpi','kpi-table',          '#tour-kpi-table',          'KPI Cards',           'top',    '[[0.08,0.48],[0.06,0.38],[0.12,0.30],[0.24,0.32]]', 'KPI cards pulled live from\nGoogle Sheets. Green = on target,\nRed = outside target range.','{"x":0.03,"y":0.49}','#c0392b'),
+        ('kpi','kpi-radar',          '#tour-kpi-radar',          'Performance Radar',   'top',    '[[0.80,0.56],[0.82,0.48],[0.78,0.40],[0.68,0.42]]', 'Radar chart: relative KPI\nperformance per team.\nUse toggles to filter teams.',              '{"x":0.74,"y":0.57}','#c0392b'),
+        ('kpi-map','kpi-network',    '#tour-kpi-network',        'Dependency Network',  'right',  '[[0.08,0.52],[0.06,0.42],[0.14,0.36],[0.28,0.42]]', 'KPI dependency network.\nNodes represent design parameters.\nDrag to reorganise.',          '{"x":0.03,"y":0.53}','#c0392b'),
+        ('kpi-map','kpi-map-filter', '#tour-kpi-map-filter',     'Team Filters',        'bottom', '[[0.82,0.24],[0.84,0.18],[0.88,0.14],[0.92,0.13]]', 'Filter by team to highlight\nrelevant KPI connections.',                                '{"x":0.72,"y":0.25}','#c0392b'),
+        ('timeline','timeline-track','#tour-timeline-track',     'Timeline Track',      'top',    '[[0.10,0.46],[0.08,0.36],[0.16,0.28],[0.30,0.32]]', 'Weekly milestone track.\nEach lane = one team.\nToday marker shows current week.',           '{"x":0.04,"y":0.47}','#c0392b'),
+        ('timeline','timeline-add',  '#tour-timeline-add',       'Add Milestone',       'bottom', '[[0.76,0.22],[0.80,0.17],[0.86,0.14],[0.90,0.15]]', 'Add Milestone to log\nteam deliverables.',                                             '{"x":0.66,"y":0.22}','#c0392b'),
+        ('viewer','viewer-3d',       '#tour-viewer-3d',          '3D Model Viewer',     'right',  '[[0.10,0.54],[0.08,0.44],[0.16,0.36],[0.30,0.42]]', '3D model viewer powered by\nSpeckle. Navigate with mouse.\nToggle model versions on the right.','{"x":0.04,"y":0.55}','#c0392b'),
+        ('stress-test','stress-game','#tour-stress-game',        'Stress Game',         'right',  '[[0.10,0.56],[0.08,0.46],[0.16,0.38],[0.30,0.44]]', 'Pop the blobs to score.\nYour result becomes your\npersonal Health score.',                 '{"x":0.03,"y":0.57}','#c0392b'),
+        ('stress-test','stress-leaderboard','#tour-stress-leaderboard','Leaderboard',   'left',   '[[0.82,0.50],[0.84,0.42],[0.80,0.36],[0.72,0.38]]', 'Team calmness ranking\nand health breakdown\nper member.',                              '{"x":0.76,"y":0.51}','#c0392b')
     `)
     console.log('[db] annotations seeded with defaults')
   }
+
+  // Seed login and tower page hints (insert only if missing — works on existing DBs too)
+  await query(`
+    INSERT INTO annotations (route, ann_id, selector, title, side, arrow_path, label, label_anchor, color) VALUES
+      ('login', 'login-signin',  '#tour-login-signin',  'Sign In',           'bottom', '[]', 'Sign in with your Google account to access the BIMSC Studio dashboard and collaborate with your team.', '{}', '#c0392b'),
+      ('login', 'login-explore', '#tour-login-explore', 'Explore the Tower', 'top',    '[]', 'Take a peek at HB01 — The Lungs — without signing in. Explore the design systems behind the hyperbuilding.', '{}', '#c0392b'),
+      ('tower', 'tower-hero',    '#tour-tower-hero',    'The Project',       'bottom', '[]', 'HB01 "The Lungs" — a hyperbuilding designed to breathe. Scroll to explore the concept behind the project.', '{}', '#c0392b'),
+      ('tower', 'tower-systems', '#tour-tower-systems', 'Three Systems',     'bottom', '[]', 'Three interconnected systems — Structure, Program, and Data — drive the design logic of this building.', '{}', '#c0392b')
+    ON CONFLICT (route, ann_id) DO NOTHING
+  `)
+  console.log('[db] login/tower annotations ensured')
 
   // Upsert KPI map nodes (update names/descriptions, preserve cx/cy positions)
   await query(`

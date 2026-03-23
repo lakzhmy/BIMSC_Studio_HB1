@@ -27,4 +27,13 @@ export const TOUR_STEPS_MAP = {
     { annId: 'stress-game',        selector: '#tour-stress-game',        title: 'Stress Game',    side: 'right'  },
     { annId: 'stress-leaderboard', selector: '#tour-stress-leaderboard', title: 'Leaderboard',    side: 'left'   },
   ],
+  // Login and Tower: seeded in DB and shown on their respective public pages
+  login: [
+    { annId: 'login-signin',  selector: '#tour-login-signin',  title: 'Sign In',           side: 'bottom' },
+    { annId: 'login-explore', selector: '#tour-login-explore', title: 'Explore the Tower', side: 'top'    },
+  ],
+  tower: [
+    { annId: 'tower-hero',    selector: '#tour-tower-hero',    title: 'The Project',   side: 'bottom' },
+    { annId: 'tower-systems', selector: '#tour-tower-systems', title: 'Three Systems', side: 'bottom' },
+  ],
 }

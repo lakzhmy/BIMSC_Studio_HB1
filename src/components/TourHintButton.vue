@@ -44,7 +44,7 @@ const userStore = useUserStore()
 
 const adminPanelOpen = ref(false)
 
-const HIDDEN_ROUTES = ['login', 'auth-success', 'profile']
+const HIDDEN_ROUTES = ['auth-success', 'profile']
 
 const showHintButton = computed(() => {
   return !HIDDEN_ROUTES.includes(route.name)

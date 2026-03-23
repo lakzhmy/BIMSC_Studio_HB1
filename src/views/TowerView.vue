@@ -2,7 +2,7 @@
   <div class="min-h-screen bg-gradient-to-b from-slate-50 to-white">
 
     <!-- ── HERO ─────────────────────────────────────────────── -->
-    <section class="relative min-h-screen flex flex-col items-center justify-center px-6 overflow-hidden">
+    <section id="tour-tower-hero" class="relative min-h-screen flex flex-col items-center justify-center px-6 overflow-hidden">
 
       <router-link
         to="/"
@@ -85,7 +85,7 @@
     </section>
 
     <!-- ── THREE SYSTEMS ─────────────────────────────────────── -->
-    <section class="py-24 px-6 bg-slate-50">
+    <section id="tour-tower-systems" class="py-24 px-6 bg-slate-50">
       <div class="max-w-5xl mx-auto">
 
         <h2 class="text-4xl font-bold text-slate-900 text-center mb-4">Three Systems. One Tower.</h2>

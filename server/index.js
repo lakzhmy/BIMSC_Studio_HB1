@@ -418,25 +418,39 @@ app.get('/api/annotations', async (req, res) => {
 
 // POST create an annotation (admin only)
 app.post('/api/annotations', async (req, res) => {
-  const { route: annRoute, ann_id, arrow_path, label, label_anchor, color, user_name } = req.body
+  const { route: annRoute, ann_id, selector, title, side, arrow_path, label, label_anchor, color, user_name } = req.body
   if (!user_name || !isAnnotationAdmin(user_name)) {
     return res.status(403).json({ error: 'Not authorized to manage annotations' })
   }
-  if (!annRoute || !ann_id || !arrow_path || !label || !label_anchor) {
-    return res.status(400).json({ error: 'route, ann_id, arrow_path, label, and label_anchor are required' })
+  if (!annRoute || !ann_id || !label) {
+    return res.status(400).json({ error: 'route, ann_id, and label are required' })
   }
   try {
     const result = await query(
-      `INSERT INTO annotations (route, ann_id, arrow_path, label, label_anchor, color, created_by)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `INSERT INTO annotations (route, ann_id, selector, title, side, arrow_path, label, label_anchor, color, created_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
        ON CONFLICT (route, ann_id) DO UPDATE SET
+         selector     = EXCLUDED.selector,
+         title        = EXCLUDED.title,
+         side         = EXCLUDED.side,
          arrow_path   = EXCLUDED.arrow_path,
          label        = EXCLUDED.label,
          label_anchor = EXCLUDED.label_anchor,
          color        = EXCLUDED.color,
          updated_at   = NOW()
        RETURNING *`,
-      [annRoute, ann_id, JSON.stringify(arrow_path), label, JSON.stringify(label_anchor), color || '#c0392b', user_name]
+      [
+        annRoute,
+        ann_id,
+        selector || null,
+        title || null,
+        side || 'bottom',
+        JSON.stringify(arrow_path || []),
+        label,
+        JSON.stringify(label_anchor || {}),
+        color || '#c0392b',
+        user_name,
+      ]
     )
     res.status(201).json(result.rows[0])
   } catch (err) {
@@ -448,21 +462,27 @@ app.post('/api/annotations', async (req, res) => {
 // PUT update an annotation (admin only)
 app.put('/api/annotations/:id', async (req, res) => {
   const { id } = req.params
-  const { arrow_path, label, label_anchor, color, sort_order, user_name } = req.body
+  const { selector, title, side, arrow_path, label, label_anchor, color, sort_order, user_name } = req.body
   if (!user_name || !isAnnotationAdmin(user_name)) {
     return res.status(403).json({ error: 'Not authorized to manage annotations' })
   }
   try {
     const result = await query(
       `UPDATE annotations SET
-        arrow_path   = COALESCE($1, arrow_path),
-        label        = COALESCE($2, label),
-        label_anchor = COALESCE($3, label_anchor),
-        color        = COALESCE($4, color),
-        sort_order   = COALESCE($5, sort_order),
+        selector     = COALESCE($1, selector),
+        title        = COALESCE($2, title),
+        side         = COALESCE($3, side),
+        arrow_path   = COALESCE($4, arrow_path),
+        label        = COALESCE($5, label),
+        label_anchor = COALESCE($6, label_anchor),
+        color        = COALESCE($7, color),
+        sort_order   = COALESCE($8, sort_order),
         updated_at   = NOW()
-       WHERE id = $6 RETURNING *`,
+       WHERE id = $9 RETURNING *`,
       [
+        selector || null,
+        title || null,
+        side || null,
         arrow_path ? JSON.stringify(arrow_path) : null,
         label || null,
         label_anchor ? JSON.stringify(label_anchor) : null,

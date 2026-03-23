@@ -29,6 +29,9 @@ function groupByRoute(rows) {
     map[row.route].push({
       dbId: row.id,
       id: row.ann_id,
+      selector: row.selector ?? null,
+      title: row.title ?? '',
+      side: row.side ?? 'bottom',
       arrowPath,
       label: row.label,
       labelAnchor,
