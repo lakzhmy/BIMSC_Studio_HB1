@@ -56,21 +56,12 @@
         <span class="inline-block text-xs font-medium tracking-widest uppercase text-slate-400 bg-slate-100 rounded-full px-4 py-1.5">
           Santiago, Chile &nbsp;·&nbsp; Conceptual Design &nbsp;·&nbsp; MACAD 2026
         </span>
-        <div class="mt-10 flex flex-col sm:flex-row items-center justify-center gap-3">
+        <div class="mt-10">
           <button
             @click="scrollToConcept"
             class="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-emerald-600 transition-colors border border-slate-200 hover:border-emerald-300 rounded-full px-6 py-2.5"
           >
             Explore the Concept
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M6 1v10M1 7l5 4 5-4"/>
-            </svg>
-          </button>
-          <button
-            @click="scrollToSystems"
-            class="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-emerald-600 transition-colors border border-slate-200 hover:border-emerald-300 rounded-full px-6 py-2.5"
-          >
-            Explore the Teams
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
               <path d="M6 1v10M1 7l5 4 5-4"/>
             </svg>
@@ -262,6 +253,17 @@
           living body. Their interdependencies are not constraints; they are the architecture.
           The building performs as a unified organism.
         </p>
+        <div class="mt-10">
+          <button
+            @click="scrollToSystems"
+            class="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-emerald-600 transition-colors border border-slate-200 hover:border-emerald-300 rounded-full px-6 py-2.5"
+          >
+            Explore the Teams
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M6 1v10M1 7l5 4 5-4"/>
+            </svg>
+          </button>
+        </div>
       </div>
     </section>
 
