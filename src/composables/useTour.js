@@ -10,14 +10,6 @@ const { dbAnnotations, loadAnnotations } = useAnnotations()
 const HARDCODED_TOURS = {
   tower: [
     {
-      element: '#tour-tower-breathes',
-      popover: {
-        title: 'A Building that Breathes',
-        description: 'The central design concept: every structural decision, spatial layout, and data flow mirrors the rhythm of a respiratory system — intake, distribution, and release. Structure, Program, and Data act as the organs of a single living body.',
-        side: 'bottom', align: 'center',
-      },
-    },
-    {
       element: '#tour-tower-structure',
       popover: {
         title: 'Structure',
