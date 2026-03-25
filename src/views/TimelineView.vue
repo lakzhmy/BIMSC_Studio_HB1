@@ -82,7 +82,7 @@
               <div class="absolute inset-0 grid grid-cols-10 gap-2 z-20">
                 <div v-for="week in courseTimeline" :key="week.week" class="relative">
                   <!-- Today chip + dashed line — rendered inside the correct week's column -->
-                  <template v-if="week.week === currentWeekMarker">
+                  <template v-if="week.week === currentWeekMarker && showTodayMarker">
                     <div
                       class="group absolute -translate-x-1/2 top-0 -translate-y-8 z-[50] pointer-events-auto"
                       :style="{ left: todayColumnLeft + '%' }"
@@ -441,11 +441,15 @@ const currentWeekMarker = computed(() => Math.min(10, Math.floor(currentWeekFrac
 
 
 // How far through the current week today is (0–1), used to position the
-// Today chip inside its column. Clamped to 98 so the chip never overflows the right edge.
+// Today chip inside its column. Clamped to 90 so the chip never overflows the right edge.
 const todayColumnLeft = computed(() => {
   const frac = currentWeekFraction.value - currentWeekMarker.value
-  return Math.max(0, Math.min(98, frac * 100))
+  return Math.max(0, Math.min(90, frac * 100))
 })
+
+// Hide the Today marker once we're past the last week's end date (end of week 10 = Mar 22)
+const COURSE_END = new Date(2026, 2, 22, 23, 59, 59)
+const showTodayMarker = computed(() => new Date() <= COURSE_END)
 
 // Formatted date/time string for the tooltip
 const currentDateTimeString = computed(() => {
